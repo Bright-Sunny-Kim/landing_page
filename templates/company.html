@@ -43,6 +43,10 @@
                         <span class="info-label">소속 기업</span>
                         <span class="info-value" id="val-company">{{ company_name }}</span>
                     </div>
+                    <div class="info-item">
+                        <span class="info-label">요청하신 업무</span>
+                        <span class="info-value" id="val-task">{{ task_type }}</span>
+                    </div>
                 </div>
             </section>
             
@@ -54,6 +58,7 @@
                             <tr>
                                 <th>기업명</th>
                                 <th>담당자</th>
+                                <th>요청 업무</th>
                                 <th>등록일시</th>
                             </tr>
                         </thead>
@@ -62,6 +67,7 @@
                             <tr>
                                 <td class="col-company">{{ partner.company }}</td>
                                 <td>{{ partner.username }}</td>
+                                <td class="col-task">{{ partner.task_type }}</td>
                                 <td class="col-date">{{ partner.created_at }}</td>
                             </tr>
                             {% endfor %}

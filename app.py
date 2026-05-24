@@ -9,12 +9,10 @@ DB_PATH = 'database.db'
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
-    # 결과를 dict 형태로 가져올 수 있도록 설정
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
-    # 데이터베이스 파일 및 테이블이 존재하지 않으면 초기 생성
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -23,6 +21,7 @@ def init_db():
             email TEXT UNIQUE NOT NULL,
             company TEXT NOT NULL,
             username TEXT NOT NULL,
+            task_type TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -43,40 +42,37 @@ def login():
     email = request.form.get('email').strip()
     company = request.form.get('company').strip()
     username = request.form.get('username').strip()
+    task_type = request.form.get('task_type')
     
-    if not (email and company and username):
+    if not (email and company and username and task_type):
         return redirect(url_for('index'))
         
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # 이메일로 기존 회원 여부 확인
         cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
         user = cursor.fetchone()
         
         if user is None:
-            # 이메일이 없는 경우 자동 회원가입 진행
+            # 신규 가입
             cursor.execute('''
-                INSERT INTO users (email, company, username) 
-                VALUES (?, ?, ?)
-            ''', (email, company, username))
+                INSERT INTO users (email, company, username, task_type) 
+                VALUES (?, ?, ?, ?)
+            ''', (email, company, username, task_type))
             conn.commit()
-            
-            session['email'] = email
-            session['company'] = company
-            session['username'] = username
         else:
-            # 기존 회원인 경우 정보 업데이트 후 로그인 (유연한 대처)
+            # 기존 정보 업데이트
             cursor.execute('''
-                UPDATE users SET company = ?, username = ? 
+                UPDATE users SET company = ?, username = ?, task_type = ? 
                 WHERE email = ?
-            ''', (company, username, email))
+            ''', (company, username, task_type, email))
             conn.commit()
             
-            session['email'] = email
-            session['company'] = company
-            session['username'] = username
+        session['email'] = email
+        session['company'] = company
+        session['username'] = username
+        session['task_type'] = task_type
             
     except sqlite3.Error as e:
         print(f"Database error: {e}")
@@ -91,10 +87,10 @@ def company_page(company_name):
     if 'company' not in session or session['company'] != company_name:
         return redirect(url_for('index'))
         
-    # 전체 파트너사 목록 조회
+    # 전체 파트너사 목록 조회 (요청 업무 포함)
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT company, username, created_at FROM users ORDER BY id DESC')
+    cursor.execute('SELECT company, username, task_type, created_at FROM users ORDER BY id DESC')
     partners = cursor.fetchall()
     conn.close()
     
@@ -102,6 +98,7 @@ def company_page(company_name):
                            company_name=company_name, 
                            username=session.get('username'), 
                            email=session.get('email'),
+                           task_type=session.get('task_type'),
                            partners=partners)
 
 @app.route('/logout')

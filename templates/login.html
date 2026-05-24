@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="이메일, 회사명, 담당자 입력을 통해 맞춤형 회사 페이지로 진입할 수 있는 프리미엄 로그인 포털입니다.">
-    <title>Premium Portal - 로그인</title>
+    <meta name="description" content="회계법인 혜안 고객 포털입니다. 로그인하여 고객 전용 대시보드로 이동하세요.">
+    <title>회계법인 혜안 - 로그인</title>
     <!-- Google Fonts: Outfit & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,10 +23,10 @@
             <header class="card-header">
                 <div class="logo">
                     <span class="logo-icon">✦</span>
-                    <span class="logo-text">Nexus</span>
+                    <span class="logo-text">Hyean</span>
                 </div>
-                <h1 id="main-heading">프리미엄 포털에 오신 것을 환영합니다</h1>
-                <p class="subtitle">계정 세부 정보를 입력하여 개인화된 대시보드를 시작해 보세요.</p>
+                <h1 id="main-heading">환영합니다! 회계법인혜안입니다.</h1>
+                <p class="subtitle">로그인하여 고객님의 페이지로 이동하세요</p>
             </header>
             
             <form action="{{ url_for('login') }}" method="POST" class="login-form" id="login-form">
@@ -45,6 +45,19 @@
                 <div class="input-group">
                     <input type="text" id="username" name="username" required autocomplete="off" placeholder=" ">
                     <label for="username">담당자 이름</label>
+                    <span class="bar"></span>
+                </div>
+                
+                <div class="input-group select-group">
+                    <select id="task_type" name="task_type" required>
+                        <option value="" disabled selected hidden></option>
+                        <option value="회계감사">회계감사</option>
+                        <option value="세무 자문">세무 자문</option>
+                        <option value="장부기장">장부기장</option>
+                        <option value="경영컨설팅">경영컨설팅</option>
+                        <option value="기타">기타</option>
+                    </select>
+                    <label for="task_type">해당 업무</label>
                     <span class="bar"></span>
                 </div>
                 
