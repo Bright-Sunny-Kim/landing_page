@@ -47,7 +47,9 @@
                         <tbody>
                             {% for partner in partners %}
                             <tr>
-                                <td class="col-company">{{ partner.company }}</td>
+                                <td class="col-company">
+                                    <a href="{{ url_for('company_page', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
+                                </td>
                                 <td>{{ partner.username }}</td>
                                 <td class="col-task">{{ partner.task_type }}</td>
                                 <td class="col-date">{{ partner.created_at }}</td>

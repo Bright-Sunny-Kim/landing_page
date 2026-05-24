@@ -670,6 +670,20 @@ textarea:focus {
     font-size: 12px;
 }
 
+/* Partner Redirection Link in table */
+.partner-link {
+    font-weight: 600;
+    color: #a78bfa;
+    text-decoration: none;
+    transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.partner-link:hover {
+    color: #c084fc;
+    text-shadow: 0 0 8px rgba(192, 132, 252, 0.4);
+    text-decoration: underline;
+}
+
 /* Dashboard Footer */
 .dashboard-footer {
     display: flex;

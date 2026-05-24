@@ -52,13 +52,17 @@ def index():
         return redirect(url_for('company_page', company_name=session['company']))
     return render_template('login.html')
 
-# 비동기 이메일 체크 API 신설
+# 비동기 이메일 체크 API
 @app.route('/check-email', methods=['POST'])
 def check_email():
     data = request.get_json() or {}
     email = data.get('email', '').strip()
     if not email:
         return jsonify({'exists': False})
+        
+    # 마스터 이메일인 경우 무조건 가입된 것으로 판단하여 패스시킴
+    if email == MASTER_EMAIL:
+        return jsonify({'exists': True})
         
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -84,7 +88,33 @@ def login():
     cursor = conn.cursor()
     
     try:
-        # 이메일로 가입 정보 확인
+        # 마스터 계정은 예외 처리
+        if email == MASTER_EMAIL:
+            cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+            user = cursor.fetchone()
+            
+            if user:
+                session['email'] = user['email']
+                session['company'] = user['company']
+                session['username'] = user['username']
+                session['task_type'] = user['task_type']
+            else:
+                # 최초 가동 등으로 DB에 마스터 계정이 없을 시 자동 더미 등록 처리
+                cursor.execute('''
+                    INSERT INTO users (email, company, username, task_type) 
+                    VALUES (?, ?, ?, ?)
+                ''', (MASTER_EMAIL, '회계법인 혜안', '마스터관리자', '기타'))
+                conn.commit()
+                
+                session['email'] = MASTER_EMAIL
+                session['company'] = '회계법인 혜안'
+                session['username'] = '마스터관리자'
+                session['task_type'] = '기타'
+                
+            conn.close()
+            return redirect(url_for('master_page'))
+            
+        # 일반 계정 처리
         cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
         user = cursor.fetchone()
         
@@ -97,7 +127,6 @@ def login():
         else:
             # 2) 신규 회원: 회사명, 담당자이름, 해당업무가 다 작성되어야 가입 가능
             if not (company and username and task_type):
-                # 추가 정보 누락 시 다시 첫 페이지로
                 return redirect(url_for('index'))
                 
             cursor.execute('''
@@ -115,10 +144,12 @@ def login():
         print(f"Database error: {e}")
         return redirect(url_for('index'))
     finally:
-        conn.close()
+        # 혹시 위에서 닫히지 않은 경우를 대비하여 close 처리
+        try:
+            conn.close()
+        except sqlite3.ProgrammingError:
+            pass
         
-    if email == MASTER_EMAIL:
-        return redirect(url_for('master_page'))
     return redirect(url_for('company_page', company_name=session['company']))
 
 @app.route('/company/<company_name>')
