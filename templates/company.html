@@ -46,6 +46,30 @@
                 </div>
             </section>
             
+            <section class="partners-section">
+                <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
+                <div class="table-container">
+                    <table class="partners-table">
+                        <thead>
+                            <tr>
+                                <th>기업명</th>
+                                <th>담당자</th>
+                                <th>등록일시</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for partner in partners %}
+                            <tr>
+                                <td class="col-company">{{ partner.company }}</td>
+                                <td>{{ partner.username }}</td>
+                                <td class="col-date">{{ partner.created_at }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
             <footer class="dashboard-footer">
                 <a href="{{ url_for('logout') }}" id="btn-logout" class="btn-logout">
                     <span>안전하게 로그아웃</span>

@@ -10,3 +10,4 @@ ENV/
 .idea/
 instance/
 .DS_Store
+*.db
