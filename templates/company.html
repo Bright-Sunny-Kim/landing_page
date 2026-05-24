@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ company_name }} 기업 회원을 위한 개인화 웰컴 포털 페이지입니다.">
+    <title>{{ company_name }} - Welcome Portal</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="background-decor">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+    
+    <main class="dashboard-container">
+        <div class="glass-card dashboard-card">
+            <header class="dashboard-header">
+                <div class="status-badge">
+                    <span class="pulse-dot"></span>
+                    <span>인증된 기업 파트너</span>
+                </div>
+                <h1 id="dashboard-heading"><span class="company-highlight">{{ company_name }}</span> 포털</h1>
+                <p class="welcome-message">환영합니다, <strong>{{ username }}</strong> 님. 기업 전용 공간에 정상적으로 연결되었습니다.</p>
+            </header>
+            
+            <section class="user-info-section">
+                <div class="info-card">
+                    <div class="info-item">
+                        <span class="info-label">담당자 이름</span>
+                        <span class="info-value" id="val-username">{{ username }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">접속 이메일</span>
+                        <span class="info-value" id="val-email">{{ email }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">소속 기업</span>
+                        <span class="info-value" id="val-company">{{ company_name }}</span>
+                    </div>
+                </div>
+            </section>
+            
+            <footer class="dashboard-footer">
+                <a href="{{ url_for('logout') }}" id="btn-logout" class="btn-logout">
+                    <span>안전하게 로그아웃</span>
+                    <svg class="btn-exit-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 16L21 12M21 12L17 8M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </footer>
+        </div>
+    </main>
+    
+    <!-- Script JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

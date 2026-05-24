@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="이메일, 회사명, 담당자 입력을 통해 맞춤형 회사 페이지로 진입할 수 있는 프리미엄 로그인 포털입니다.">
+    <title>Premium Portal - 로그인</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="background-decor">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+    
+    <main class="login-container">
+        <div class="glass-card">
+            <header class="card-header">
+                <div class="logo">
+                    <span class="logo-icon">✦</span>
+                    <span class="logo-text">Nexus</span>
+                </div>
+                <h1 id="main-heading">프리미엄 포털에 오신 것을 환영합니다</h1>
+                <p class="subtitle">계정 세부 정보를 입력하여 개인화된 대시보드를 시작해 보세요.</p>
+            </header>
+            
+            <form action="{{ url_for('login') }}" method="POST" class="login-form" id="login-form">
+                <div class="input-group">
+                    <input type="email" id="email" name="email" required autocomplete="off" placeholder=" ">
+                    <label for="email">이메일 주소</label>
+                    <span class="bar"></span>
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" id="company" name="company" required autocomplete="off" placeholder=" ">
+                    <label for="company">회사명</label>
+                    <span class="bar"></span>
+                </div>
+                
+                <div class="input-group">
+                    <input type="text" id="username" name="username" required autocomplete="off" placeholder=" ">
+                    <label for="username">담당자 이름</label>
+                    <span class="bar"></span>
+                </div>
+                
+                <button type="submit" id="btn-submit" class="btn-submit">
+                    <span>로그인 및 대시보드 입장</span>
+                    <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </main>
+    
+    <!-- Script JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
