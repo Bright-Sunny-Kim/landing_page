@@ -1,7 +1,13 @@
 import os
+import re
 import sqlite3
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
+
+def get_safe_path_name(name):
+    # 경로 위험 문자를 제거하되, 한글/영문/숫자 문자는 보존
+    cleaned = re.sub(r'[\x00\\/:*?"<>|]', '', name).strip()
+    return cleaned if cleaned else "unknown"
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -139,15 +145,11 @@ def submit_request():
         
     # 파일이 존재하는 경우 회원 이름 전용 폴더에 저장
     if not is_file_empty:
-        # 안전한 폴더 이름 지정을 위해 secure_filename 처리
-        safe_username = secure_filename(username)
-        if not safe_username:
-            safe_username = "unknown_user"
-            
+        safe_username = get_safe_path_name(username)
         user_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], safe_username)
         os.makedirs(user_upload_dir, exist_ok=True)
         
-        filename = secure_filename(file.filename)
+        filename = get_safe_path_name(file.filename)
         file.save(os.path.join(user_upload_dir, filename))
         
     return redirect(url_for('company_page', company_name=session['company'], success='true'))
