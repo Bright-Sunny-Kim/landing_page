@@ -30,39 +30,46 @@
             </header>
             
             <form action="{{ url_for('login') }}" method="POST" class="login-form" id="login-form">
+                <!-- 이메일 입력 (기본 노출 및 항상 필수) -->
                 <div class="input-group">
                     <input type="email" id="email" name="email" required autocomplete="off" placeholder=" ">
                     <label for="email">이메일 주소</label>
                     <span class="bar"></span>
                 </div>
                 
-                <div class="input-group">
-                    <input type="text" id="company" name="company" required autocomplete="off" placeholder=" ">
-                    <label for="company">회사명</label>
-                    <span class="bar"></span>
-                </div>
+                <!-- 실시간 이메일 상태 헬퍼 메시지 -->
+                <p class="email-status-msg" id="email-status-msg"></p>
                 
-                <div class="input-group">
-                    <input type="text" id="username" name="username" required autocomplete="off" placeholder=" ">
-                    <label for="username">담당자 이름</label>
-                    <span class="bar"></span>
-                </div>
-                
-                <div class="input-group select-group">
-                    <select id="task_type" name="task_type" required>
-                        <option value="" disabled selected hidden></option>
-                        <option value="회계감사">회계감사</option>
-                        <option value="세무 자문">세무 자문</option>
-                        <option value="장부기장">장부기장</option>
-                        <option value="경영컨설팅">경영컨설팅</option>
-                        <option value="기타">기타</option>
-                    </select>
-                    <label for="task_type">해당 업무</label>
-                    <span class="bar"></span>
+                <!-- 신규 가입 시에만 열릴 동적 추가 필드 그룹 -->
+                <div class="additional-fields hidden" id="additional-fields">
+                    <div class="input-group">
+                        <input type="text" id="company" name="company" autocomplete="off" placeholder=" ">
+                        <label for="company">회사명</label>
+                        <span class="bar"></span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <input type="text" id="username" name="username" autocomplete="off" placeholder=" ">
+                        <label for="username">담당자 이름</label>
+                        <span class="bar"></span>
+                    </div>
+                    
+                    <div class="input-group select-group">
+                        <select id="task_type" name="task_type">
+                            <option value="" disabled selected hidden></option>
+                            <option value="회계감사">회계감사</option>
+                            <option value="세무 자문">세무 자문</option>
+                            <option value="장부기장">장부기장</option>
+                            <option value="경영컨설팅">경영컨설팅</option>
+                            <option value="기타">기타</option>
+                        </select>
+                        <label for="task_type">해당 업무</label>
+                        <span class="bar"></span>
+                    </div>
                 </div>
                 
                 <button type="submit" id="btn-submit" class="btn-submit">
-                    <span>로그인 및 대시보드 입장</span>
+                    <span>로그인</span>
                     <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>

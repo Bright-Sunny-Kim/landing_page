@@ -11,3 +11,4 @@ ENV/
 instance/
 .DS_Store
 *.db
+uploads/

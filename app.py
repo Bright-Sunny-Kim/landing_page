@@ -52,42 +52,64 @@ def index():
         return redirect(url_for('company_page', company_name=session['company']))
     return render_template('login.html')
 
+# 비동기 이메일 체크 API 신설
+@app.route('/check-email', methods=['POST'])
+def check_email():
+    data = request.get_json() or {}
+    email = data.get('email', '').strip()
+    if not email:
+        return jsonify({'exists': False})
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+    user = cursor.fetchone()
+    conn.close()
+    
+    if user:
+        return jsonify({'exists': True})
+    return jsonify({'exists': False})
+
 @app.route('/login', methods=['POST'])
 def login():
-    email = request.form.get('email').strip()
-    company = request.form.get('company').strip()
-    username = request.form.get('username').strip()
-    task_type = request.form.get('task_type')
+    email = request.form.get('email', '').strip()
+    company = request.form.get('company', '').strip()
+    username = request.form.get('username', '').strip()
+    task_type = request.form.get('task_type', '')
     
-    if not (email and company and username and task_type):
+    if not email:
         return redirect(url_for('index'))
         
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
+        # 이메일로 가입 정보 확인
         cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
         user = cursor.fetchone()
         
-        if user is None:
-            # 신규 가입
+        if user:
+            # 1) 기존 회원: 이메일만으로 로그인 처리 가능 (DB 데이터 세션 주입)
+            session['email'] = user['email']
+            session['company'] = user['company']
+            session['username'] = user['username']
+            session['task_type'] = user['task_type']
+        else:
+            # 2) 신규 회원: 회사명, 담당자이름, 해당업무가 다 작성되어야 가입 가능
+            if not (company and username and task_type):
+                # 추가 정보 누락 시 다시 첫 페이지로
+                return redirect(url_for('index'))
+                
             cursor.execute('''
                 INSERT INTO users (email, company, username, task_type) 
                 VALUES (?, ?, ?, ?)
             ''', (email, company, username, task_type))
             conn.commit()
-        else:
-            # 기존 정보 업데이트
-            cursor.execute('''
-                UPDATE users SET company = ?, username = ?, task_type = ? 
-                WHERE email = ?
-            ''', (company, username, task_type, email))
-            conn.commit()
             
-        session['email'] = email
-        session['company'] = company
-        session['username'] = username
-        session['task_type'] = task_type
+            session['email'] = email
+            session['company'] = company
+            session['username'] = username
+            session['task_type'] = task_type
             
     except sqlite3.Error as e:
         print(f"Database error: {e}")
@@ -138,12 +160,10 @@ def submit_request():
     help_text = request.form.get('help_text', '').strip()
     file = request.files.get('file')
     
-    # 조건부 검증: 텍스트와 파일 둘 다 빈 경우 에러 처리
     is_file_empty = not file or file.filename == ''
     if not help_text and is_file_empty:
         return jsonify({'error': '문의 사항을 작성하거나 파일을 첨부해 주세요.'}), 400
         
-    # 파일이 존재하는 경우 회원 이름 전용 폴더에 저장
     if not is_file_empty:
         safe_username = get_safe_path_name(username)
         user_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], safe_username)

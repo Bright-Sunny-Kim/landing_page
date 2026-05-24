@@ -142,7 +142,7 @@ h1 {
 .login-form {
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: 28px;
 }
 
 .input-group {
@@ -234,6 +234,54 @@ h1 {
     transform: rotate(180deg);
 }
 
+/* Email Status Message Styling */
+.email-status-msg {
+    font-size: 12px;
+    margin-top: -12px;
+    margin-bottom: 4px;
+    line-height: 1.4;
+    transition: color 0.3s ease;
+    color: var(--text-secondary);
+}
+
+.email-status-msg.success {
+    color: #10b981; /* 초록색 - 기존 가입 확인 */
+}
+
+.email-status-msg.info {
+    color: #a78bfa; /* 보라색 - 신규 등록 필요 */
+}
+
+.email-status-msg.error {
+    color: #ef4444; /* 빨간색 - 형식 에러 */
+}
+
+/* Sliding Animation for Additional Fields */
+.additional-fields {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+    transition: max-height 0.4s cubic-bezier(0, 1, 0, 1), 
+                opacity 0.3s ease, 
+                gap 0.4s ease, 
+                margin 0.4s ease;
+}
+
+.additional-fields.show {
+    max-height: 350px;
+    opacity: 1;
+    gap: 28px;
+    margin-top: 12px;
+    margin-bottom: 8px;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.4s ease-in, 
+                gap 0.4s ease, 
+                margin 0.4s ease;
+}
+
 /* Button Submit */
 .btn-submit {
     position: relative;
@@ -289,7 +337,7 @@ h1 {
 }
 
 .dashboard-card.master-card {
-    max-width: 800px; /* 마스터 대시보드는 표 조회를 위해 좀 더 넓게 설정 */
+    max-width: 800px;
 }
 
 .status-badge {
@@ -430,6 +478,10 @@ textarea:focus {
 }
 
 /* File Upload Field */
+.file-upload-wrapper {
+    width: 100%;
+}
+
 .file-input-hidden {
     display: none;
 }
@@ -542,7 +594,7 @@ textarea:focus {
 }
 
 .table-container {
-    max-height: 350px; /* 마스터 대시보드에서는 세로 길이를 살짝 늘림 */
+    max-height: 350px;
     overflow-y: auto;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.01);
@@ -576,7 +628,7 @@ textarea:focus {
 
 .partners-table th,
 .partners-table td {
-    padding: 14px 18px; /* 패딩을 약간 늘려 가독성 확보 */
+    padding: 14px 18px;
 }
 
 .partners-table th {
