@@ -95,7 +95,6 @@ def login():
 
 @app.route('/company/<company_name>')
 def company_page(company_name):
-    # 로그인 세션 확인 및 마스터인 경우 마스터 페이지로 안내
     if 'email' not in session:
         return redirect(url_for('index'))
         
@@ -105,7 +104,6 @@ def company_page(company_name):
     if session['company'] != company_name:
         return redirect(url_for('index'))
         
-    # 성공 메시지 여부 획득 (문의 제출 후 리다이렉트 시 사용)
     success = request.args.get('success', 'false') == 'true'
     
     return render_template('company.html', 
@@ -114,11 +112,9 @@ def company_page(company_name):
 
 @app.route('/master')
 def master_page():
-    # 보안 권한 검증: 마스터 이메일인지 체크
     if 'email' not in session or session['email'] != MASTER_EMAIL:
         return redirect(url_for('index'))
         
-    # 전체 파트너사 목록 조회
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT company, username, task_type, created_at FROM users ORDER BY id DESC')
@@ -132,17 +128,28 @@ def submit_request():
     if 'email' not in session:
         return jsonify({'error': '세션이 만료되었습니다. 다시 로그인해 주세요.'}), 401
         
-    # 문의 및 파일 데이터 받기
-    help_text = request.form.get('help_text')
+    username = session.get('username')
+    help_text = request.form.get('help_text', '').strip()
     file = request.files.get('file')
     
-    if file and file.filename != '':
-        filename = secure_filename(file.filename)
-        # 로컬 업로드 폴더에 저장
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    # 조건부 검증: 텍스트와 파일 둘 다 빈 경우 에러 처리
+    is_file_empty = not file or file.filename == ''
+    if not help_text and is_file_empty:
+        return jsonify({'error': '문의 사항을 작성하거나 파일을 첨부해 주세요.'}), 400
         
-    # 여기서는 접수 완료 상태로 세션 유지 후 다시 기업 포털로 이동
-    # 프로덕션에서는 이 문의를 추가 DB 테이블에 보존할 수 있음
+    # 파일이 존재하는 경우 회원 이름 전용 폴더에 저장
+    if not is_file_empty:
+        # 안전한 폴더 이름 지정을 위해 secure_filename 처리
+        safe_username = secure_filename(username)
+        if not safe_username:
+            safe_username = "unknown_user"
+            
+        user_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], safe_username)
+        os.makedirs(user_upload_dir, exist_ok=True)
+        
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(user_upload_dir, filename))
+        
     return redirect(url_for('company_page', company_name=session['company'], success='true'))
 
 @app.route('/logout')

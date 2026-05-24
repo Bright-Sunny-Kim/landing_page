@@ -36,22 +36,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 2. 파일 첨부명 실시간 미리보기 (마이크로 인터랙션)
+    // 2. 파일 첨부명 실시간 미리보기 및 업무 요청 폼 조건부 유효성 체크
+    const requestForm = document.getElementById('request-form');
     const fileInput = document.getElementById('file');
     const fileNamePreview = document.getElementById('file-name-preview');
+    const requestSubmitBtn = document.getElementById('btn-request-submit');
 
+    // 파일 선택 이벤트 연동
     if (fileInput && fileNamePreview) {
         fileInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files.length > 0) {
                 const name = e.target.files[0].name;
                 fileNamePreview.textContent = name;
-                fileNamePreview.style.color = '#a78bfa'; // 파일이 선택되면 글자색 변경
+                fileNamePreview.style.color = '#a78bfa';
                 fileNamePreview.style.fontWeight = '500';
             } else {
                 fileNamePreview.textContent = '선택된 파일 없음';
                 fileNamePreview.style.color = 'var(--text-secondary)';
                 fileNamePreview.style.fontWeight = 'normal';
             }
+        });
+    }
+
+    // 업무 요청 폼 조건부 제출 검사
+    if (requestForm && requestSubmitBtn) {
+        requestForm.addEventListener('submit', (e) => {
+            const helpText = document.getElementById('help_text').value.trim();
+            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+            // 문의 글과 첨부파일 둘 다 비어있을 때만 경고 후 전송 차단
+            if (!helpText && !hasFile) {
+                e.preventDefault();
+                alert('문의 사항을 작성하거나 파일을 첨부해 주세요.');
+                return;
+            }
+
+            // 제출 시 비주얼 피드백
+            requestSubmitBtn.disabled = true;
+            requestSubmitBtn.style.opacity = '0.8';
+            requestSubmitBtn.querySelector('span').textContent = 'Submitting...';
         });
     }
 });

@@ -36,10 +36,10 @@
             {% endif %}
             
             <!-- 업무 요청 폼 -->
-            <form action="{{ url_for('submit_request') }}" method="POST" enctype="multipart/form-data" class="request-form">
+            <form action="{{ url_for('submit_request') }}" method="POST" enctype="multipart/form-data" class="request-form" id="request-form">
                 <div class="form-group-block">
                     <label for="help_text" class="field-label">무엇을 도와 드릴까요?</label>
-                    <textarea id="help_text" name="help_text" required rows="5" placeholder="혜안 회계법인에 요청하실 세무 자문, 기장 대리, 감사 등의 상세 내용을 작성해 주세요."></textarea>
+                    <textarea id="help_text" name="help_text" rows="5" placeholder="혜안 회계법인에 요청하실 세무 자문, 기장 대리, 감사 등의 상세 내용을 작성해 주세요."></textarea>
                 </div>
                 
                 <div class="form-group-block">
@@ -55,7 +55,7 @@
                 </div>
                 
                 <button type="submit" id="btn-request-submit" class="btn-submit">
-                    <span>업무 요청 제출하기</span>
+                    <span>submit</span>
                     <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
