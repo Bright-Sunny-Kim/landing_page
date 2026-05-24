@@ -1,6 +1,7 @@
 // Premium Interaction JavaScript
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. 로그인 폼 유효성 체크
     const loginForm = document.getElementById('login-form');
     const submitBtn = document.getElementById('btn-submit');
 
@@ -9,15 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const emailInput = document.getElementById('email');
             const companyInput = document.getElementById('company');
             const usernameInput = document.getElementById('username');
+            const taskInput = document.getElementById('task_type');
 
-            // 기본 유효성 체크
-            if (!emailInput.value.trim() || !companyInput.value.trim() || !usernameInput.value.trim()) {
+            if (!emailInput.value.trim() || !companyInput.value.trim() || !usernameInput.value.trim() || !taskInput.value) {
                 e.preventDefault();
                 alert('모든 필드를 입력해 주세요.');
                 return;
             }
 
-            // 이메일 정규식 유효성 체크
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(emailInput.value.trim())) {
                 e.preventDefault();
@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 제출 시 마이크로 애니메이션 및 상태 변경
             submitBtn.disabled = true;
             submitBtn.style.opacity = '0.8';
             submitBtn.querySelector('span').textContent = '데이터 처리 중...';
@@ -37,5 +36,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 인풋 필드에 포커스 되었을 때 추가 비주얼 효과가 필요하다면 여기에 추가 작성 가능
+    // 2. 파일 첨부명 실시간 미리보기 (마이크로 인터랙션)
+    const fileInput = document.getElementById('file');
+    const fileNamePreview = document.getElementById('file-name-preview');
+
+    if (fileInput && fileNamePreview) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                const name = e.target.files[0].name;
+                fileNamePreview.textContent = name;
+                fileNamePreview.style.color = '#a78bfa'; // 파일이 선택되면 글자색 변경
+                fileNamePreview.style.fontWeight = '500';
+            } else {
+                fileNamePreview.textContent = '선택된 파일 없음';
+                fileNamePreview.style.color = 'var(--text-secondary)';
+                fileNamePreview.style.fontWeight = 'normal';
+            }
+        });
+    }
 });

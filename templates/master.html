@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="회계법인 혜안 마스터 관리자 포털입니다.">
+    <title>Hyean Master Portal</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="background-decor">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+    
+    <main class="dashboard-container">
+        <div class="glass-card dashboard-card master-card">
+            <header class="dashboard-header">
+                <div class="status-badge master-badge">
+                    <span class="pulse-dot"></span>
+                    <span>마스터 관리자 권한</span>
+                </div>
+                <h1 id="dashboard-heading">혜안 <span class="company-highlight">Master</span> 포털</h1>
+                <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 파트너사 가입 현황을 조회합니다.</p>
+            </header>
+            
+            <section class="partners-section">
+                <div class="section-header-flex">
+                    <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
+                    <span class="partner-count">총 <strong>{{ partners|length }}</strong>개 기업</span>
+                </div>
+                <div class="table-container">
+                    <table class="partners-table">
+                        <thead>
+                            <tr>
+                                <th>기업명</th>
+                                <th>담당자</th>
+                                <th>요청 업무</th>
+                                <th>등록일시</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for partner in partners %}
+                            <tr>
+                                <td class="col-company">{{ partner.company }}</td>
+                                <td>{{ partner.username }}</td>
+                                <td class="col-task">{{ partner.task_type }}</td>
+                                <td class="col-date">{{ partner.created_at }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <footer class="dashboard-footer">
+                <a href="{{ url_for('logout') }}" id="btn-logout" class="btn-logout">
+                    <span>안전하게 로그아웃</span>
+                    <svg class="btn-exit-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 16L21 12M21 12L17 8M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+            </footer>
+        </div>
+    </main>
+    
+    <!-- Script JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

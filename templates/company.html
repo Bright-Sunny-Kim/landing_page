@@ -25,56 +25,42 @@
                     <span class="pulse-dot"></span>
                     <span>인증된 기업 파트너</span>
                 </div>
-                <h1 id="dashboard-heading"><span class="company-highlight">{{ company_name }}</span> 포털</h1>
-                <p class="welcome-message">환영합니다, <strong>{{ username }}</strong> 님. 기업 전용 공간에 정상적으로 연결되었습니다.</p>
+                <h1 id="dashboard-heading"><span class="company-highlight">{{ company_name }}</span> 전용 공간</h1>
             </header>
             
-            <section class="user-info-section">
-                <div class="info-card">
-                    <div class="info-item">
-                        <span class="info-label">담당자 이름</span>
-                        <span class="info-value" id="val-username">{{ username }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">접속 이메일</span>
-                        <span class="info-value" id="val-email">{{ email }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">소속 기업</span>
-                        <span class="info-value" id="val-company">{{ company_name }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">요청하신 업무</span>
-                        <span class="info-value" id="val-task">{{ task_type }}</span>
-                    </div>
-                </div>
-            </section>
+            {% if success %}
+            <div class="alert-success-box">
+                <span class="alert-icon">✓</span>
+                <span class="alert-text">문의사항과 첨부파일이 성공적으로 접수되었습니다.</span>
+            </div>
+            {% endif %}
             
-            <section class="partners-section">
-                <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
-                <div class="table-container">
-                    <table class="partners-table">
-                        <thead>
-                            <tr>
-                                <th>기업명</th>
-                                <th>담당자</th>
-                                <th>요청 업무</th>
-                                <th>등록일시</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for partner in partners %}
-                            <tr>
-                                <td class="col-company">{{ partner.company }}</td>
-                                <td>{{ partner.username }}</td>
-                                <td class="col-task">{{ partner.task_type }}</td>
-                                <td class="col-date">{{ partner.created_at }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            <!-- 업무 요청 폼 -->
+            <form action="{{ url_for('submit_request') }}" method="POST" enctype="multipart/form-data" class="request-form">
+                <div class="form-group-block">
+                    <label for="help_text" class="field-label">무엇을 도와 드릴까요?</label>
+                    <textarea id="help_text" name="help_text" required rows="5" placeholder="혜안 회계법인에 요청하실 세무 자문, 기장 대리, 감사 등의 상세 내용을 작성해 주세요."></textarea>
                 </div>
-            </section>
+                
+                <div class="form-group-block">
+                    <label class="field-label">파일을 올려주세요</label>
+                    <div class="file-upload-wrapper">
+                        <input type="file" id="file" name="file" class="file-input-hidden">
+                        <label for="file" class="file-drop-area">
+                            <span class="upload-cloud-icon">↑</span>
+                            <span class="file-select-btn">파일 선택하기</span>
+                            <span class="file-name-preview" id="file-name-preview">선택된 파일 없음</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="submit" id="btn-request-submit" class="btn-submit">
+                    <span>업무 요청 제출하기</span>
+                    <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </form>
             
             <footer class="dashboard-footer">
                 <a href="{{ url_for('logout') }}" id="btn-logout" class="btn-logout">

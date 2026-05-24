@@ -254,6 +254,7 @@ h1 {
     transition: all 0.3s ease;
     margin-top: 16px;
     overflow: hidden;
+    width: 100%;
 }
 
 .btn-submit:hover {
@@ -287,6 +288,10 @@ h1 {
     max-width: 100%;
 }
 
+.dashboard-card.master-card {
+    max-width: 800px; /* 마스터 대시보드는 표 조회를 위해 좀 더 넓게 설정 */
+}
+
 .status-badge {
     display: inline-flex;
     align-items: center;
@@ -300,6 +305,33 @@ h1 {
     font-weight: 500;
     margin-bottom: 20px;
     align-self: center;
+}
+
+.status-badge.master-badge {
+    background: rgba(167, 139, 250, 0.1);
+    border-color: rgba(167, 139, 250, 0.25);
+    color: #a78bfa;
+}
+
+.status-badge.master-badge .pulse-dot {
+    background: #a78bfa;
+    box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7);
+    animation: pulse-master 1.6s infinite;
+}
+
+@keyframes pulse-master {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(167, 139, 250, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(167, 139, 250, 0);
+    }
 }
 
 .pulse-dot {
@@ -352,49 +384,142 @@ h1 {
     color: var(--text-primary);
 }
 
-/* User Info Section */
-.user-info-section {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 24px;
-    margin-bottom: 40px;
-}
-
-.info-card {
+/* Request Form Styling (For company portal) */
+.request-form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 28px;
+    margin-bottom: 40px;
+    width: 100%;
 }
 
-.info-item {
+.form-group-block {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.field-label {
+    font-family: var(--font-header);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: left;
+    letter-spacing: -0.2px;
+}
+
+textarea {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+    outline: none;
+    resize: none;
+    transition: all 0.3s ease;
+}
+
+textarea:focus {
+    border-color: #a78bfa;
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 0 15px rgba(167, 139, 250, 0.15);
+}
+
+/* File Upload Field */
+.file-input-hidden {
+    display: none;
+}
+
+.file-drop-area {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    justify-content: center;
+    border: 2px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 28px;
+    background: rgba(255, 255, 255, 0.01);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
 }
 
-.info-item:last-child {
-    padding-bottom: 0;
-    border-bottom: none;
+.file-drop-area:hover {
+    border-color: #a78bfa;
+    background: rgba(167, 139, 250, 0.03);
 }
 
-.info-label {
-    color: var(--text-secondary);
+.upload-cloud-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: bold;
+}
+
+.file-select-btn {
     font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: background 0.2s ease;
+}
+
+.file-drop-area:hover .file-select-btn {
+    background: #6366f1;
+    border-color: #6366f1;
+}
+
+.file-name-preview {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Alert Box */
+.alert-success-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin-bottom: 28px;
+    width: 100%;
+}
+
+.alert-icon {
+    color: var(--success-color);
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.alert-text {
+    font-size: 14px;
+    color: #e6fcf5;
     font-weight: 500;
 }
 
-.info-value {
-    font-family: var(--font-header);
-    font-weight: 600;
-    font-size: 15px;
-}
-
-/* Partners Table Styles */
+/* Partners Table Styles (For master portal) */
 .partners-section {
     margin-bottom: 40px;
+    width: 100%;
+}
+
+.section-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 16px;
     width: 100%;
 }
 
@@ -402,13 +527,22 @@ h1 {
     font-family: var(--font-header);
     font-size: 18px;
     font-weight: 600;
-    margin-bottom: 16px;
     color: var(--text-primary);
-    text-align: left;
+    margin: 0;
+}
+
+.partner-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.partner-count strong {
+    color: #a78bfa;
+    font-weight: 600;
 }
 
 .table-container {
-    max-height: 250px;
+    max-height: 350px; /* 마스터 대시보드에서는 세로 길이를 살짝 늘림 */
     overflow-y: auto;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.01);
@@ -442,7 +576,7 @@ h1 {
 
 .partners-table th,
 .partners-table td {
-    padding: 12px 16px;
+    padding: 14px 18px; /* 패딩을 약간 늘려 가독성 확보 */
 }
 
 .partners-table th {
@@ -488,6 +622,8 @@ h1 {
 .dashboard-footer {
     display: flex;
     justify-content: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 24px;
 }
 
 .btn-logout {
