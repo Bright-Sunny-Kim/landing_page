@@ -157,9 +157,14 @@ def company_page(company_name):
     if 'email' not in session:
         return redirect(url_for('index'))
         
+    # 마스터 계정은 튕겨나가지 않고 모든 파트너사의 포털을 다 볼 수 있도록 허용
     if session['email'] == MASTER_EMAIL:
-        return redirect(url_for('master_page'))
+        success = request.args.get('success', 'false') == 'true'
+        return render_template('company.html', 
+                               company_name=company_name,
+                               success=success)
         
+    # 일반 파트너는 자기 회사 페이지가 아니면 첫 화면으로 튕김
     if session['company'] != company_name:
         return redirect(url_for('index'))
         
