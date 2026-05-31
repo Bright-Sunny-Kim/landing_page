@@ -14,7 +14,7 @@ def get_safe_path_name(name):
     return cleaned if cleaned else "unknown"
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
 
 # 세션 유지 시간 기본 설정 (30일)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
