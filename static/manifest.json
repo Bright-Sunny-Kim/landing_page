@@ -1,0 +1,17 @@
+{
+  "name": "HyeAn_DSKim",
+  "short_name": "HyeAn",
+  "description": "혜안 파트너스 전용 관리 앱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/static/icons/icon-512x512.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

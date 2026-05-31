@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="회계법인 혜안 마스터 관리자 포털입니다.">
     <title>Hyean Master Portal</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-512x512.svg') }}">
     <!-- Google Fonts: Outfit & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,8 +30,52 @@
                     <span>마스터 관리자 권한</span>
                 </div>
                 <h1 id="dashboard-heading">혜안 <span class="company-highlight">Master</span> 포털</h1>
-                <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 파트너사 가입 현황을 조회합니다.</p>
+                <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 통합 관리 대시보드입니다.</p>
             </header>
+            
+            <style>
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 1.5rem;
+                    margin-bottom: 2rem;
+                }
+                .stat-card {
+                    background: rgba(20,20,20,0.4);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border: 1px solid rgba(255,255,255,0.05);
+                    text-align: center;
+                }
+                .stat-title {
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                    margin-bottom: 0.5rem;
+                }
+                .stat-value {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    color: var(--accent-color);
+                }
+                .stat-value.pending {
+                    color: #fbbf24;
+                }
+            </style>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">가입 파트너사</div>
+                    <div class="stat-value">{{ stats.total_partners }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">총 누적 파일 수</div>
+                    <div class="stat-value">{{ stats.total_files }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">대기중인 업무</div>
+                    <div class="stat-value pending">{{ stats.pending_tasks }}</div>
+                </div>
+            </div>
             
             <section class="partners-section">
                 <div class="section-header-flex">
@@ -48,7 +96,7 @@
                             {% for partner in partners %}
                             <tr>
                                 <td class="col-company">
-                                    <a href="{{ url_for('company_page', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
+                                    <a href="{{ url_for('master_detail', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
                                 </td>
                                 <td>{{ partner.username }}</td>
                                 <td class="col-task">{{ partner.task_type }}</td>

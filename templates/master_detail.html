@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ company_info.company }} 상세 관리 포털">
+    <title>{{ company_info.company }} - Master Detail</title>
+    <!-- PWA Settings -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-512x512.svg') }}">
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Style CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-back:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateX(-3px);
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            background: rgba(20,20,20,0.4);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 3rem;
+        }
+        .info-item h3 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+        }
+        .info-item p {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .status-select {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .status-select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        .status-select option {
+            background: #1a1a1a;
+            color: white;
+        }
+        .btn-download {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            background: var(--accent-gradient);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: opacity 0.3s ease;
+        }
+        .btn-download:hover {
+            opacity: 0.8;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-decor">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+    
+    <main class="dashboard-container">
+        <div class="glass-card dashboard-card master-card">
+            <div class="detail-header">
+                <a href="{{ url_for('master_page') }}" class="btn-back">
+                    &larr; 돌아가기
+                </a>
+                <div class="status-badge master-badge">
+                    <span class="pulse-dot"></span>
+                    <span>상세 관리 모드</span>
+                </div>
+            </div>
+            
+            <header class="dashboard-header" style="text-align: left;">
+                <h1 id="dashboard-heading"><span class="company-highlight">{{ company_info.company }}</span> 업무 상세 내역</h1>
+            </header>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <h3>담당자 명</h3>
+                    <p>{{ company_info.username }}</p>
+                </div>
+                <div class="info-item">
+                    <h3>이메일 (계정)</h3>
+                    <p>{{ company_info.email }}</p>
+                </div>
+                <div class="info-item">
+                    <h3>주요 업무 타입</h3>
+                    <p>{{ company_info.task_type }}</p>
+                </div>
+                <div class="info-item">
+                    <h3>최초 가입일</h3>
+                    <p>{{ company_info.created_at[:10] }}</p>
+                </div>
+            </div>
+
+            <section class="partners-section">
+                <div class="section-header-flex">
+                    <h2 class="section-title">업로드된 파일 및 업무 진행 상태</h2>
+                    <span class="partner-count">총 <strong>{{ files|length }}</strong>건</span>
+                </div>
+                
+                {% if files %}
+                <div class="table-container">
+                    <table class="partners-table">
+                        <thead>
+                            <tr>
+                                <th>파일명</th>
+                                <th>요청 사항 (메시지)</th>
+                                <th>업로드 일시</th>
+                                <th>상태 관리</th>
+                                <th>다운로드</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for f in files %}
+                            <tr>
+                                <td class="col-company" style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ f.file_name }}">
+                                    {{ f.file_name or '이름 없음' }}
+                                </td>
+                                <td>{{ f.help_text or '-' }}</td>
+                                <td class="col-date">{{ f.created_at[:16] }}</td>
+                                <td>
+                                    <select class="status-select" data-id="{{ f.id }}">
+                                        <option value="대기중" {% if f.status == '대기중' %}selected{% endif %}>대기중 (Pending)</option>
+                                        <option value="처리중" {% if f.status == '처리중' %}selected{% endif %}>처리중 (In Progress)</option>
+                                        <option value="완료" {% if f.status == '완료' %}selected{% endif %}>완료 (Completed)</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    {% if f.file_url %}
+                                    <a href="{{ f.public_url }}" target="_blank" class="btn-download">새 탭에서 열기</a>
+                                    {% else %}
+                                    <span style="color:var(--text-secondary); font-size:0.8rem;">첨부 없음</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    해당 파트너사가 아직 업로드한 파일이 없습니다.
+                </div>
+                {% endif %}
+            </section>
+            
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const selects = document.querySelectorAll('.status-select');
+            selects.forEach(select => {
+                select.addEventListener('change', async (e) => {
+                    const fileId = e.target.getAttribute('data-id');
+                    const newStatus = e.target.value;
+                    
+                    e.target.disabled = true;
+                    try {
+                        const response = await fetch('/update-status', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ id: fileId, status: newStatus })
+                        });
+                        const result = await response.json();
+                        if(result.success) {
+                            // 깜빡임 효과 (선택적)
+                            e.target.style.borderColor = '#4ade80';
+                            setTimeout(() => e.target.style.borderColor = '', 1000);
+                        } else {
+                            alert('상태 변경 실패: ' + result.error);
+                        }
+                    } catch (err) {
+                        alert('통신 오류가 발생했습니다.');
+                    } finally {
+                        e.target.disabled = false;
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
