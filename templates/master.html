@@ -22,102 +22,189 @@
         <div class="circle circle-2"></div>
     </div>
     
-    <main class="dashboard-container">
-        <div class="glass-card dashboard-card master-card">
-            <header class="dashboard-header">
-                <div class="status-badge master-badge">
-                    <span class="pulse-dot"></span>
-                    <span>마스터 관리자 권한</span>
+    <div class="master-container">
+        <!-- 좌측 관리자 사이드바 -->
+        <aside class="master-sidebar">
+            <div class="master-sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">✦</span>
+                    <span class="logo-text">Hyean Admin</span>
                 </div>
-                <h1 id="dashboard-heading">혜안 <span class="company-highlight">Master</span> 포털</h1>
-                <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 통합 관리 대시보드입니다.</p>
-            </header>
-            
-            <style>
-                .stats-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 1.5rem;
-                    margin-bottom: 2rem;
-                }
-                .stat-card {
-                    background: rgba(20,20,20,0.4);
-                    padding: 1.5rem;
-                    border-radius: 12px;
-                    border: 1px solid rgba(255,255,255,0.05);
-                    text-align: center;
-                }
-                .stat-title {
-                    font-size: 0.9rem;
-                    color: var(--text-secondary);
-                    margin-bottom: 0.5rem;
-                }
-                .stat-value {
-                    font-size: 2rem;
-                    font-weight: 700;
-                    color: var(--accent-color);
-                }
-                .stat-value.pending {
-                    color: #fbbf24;
-                }
-            </style>
-            
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-title">가입 파트너사</div>
-                    <div class="stat-value">{{ stats.total_partners }}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-title">총 누적 파일 수</div>
-                    <div class="stat-value">{{ stats.total_files }}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-title">대기중인 업무</div>
-                    <div class="stat-value pending">{{ stats.pending_tasks }}</div>
+                <div class="master-profile-box">
+                    <div class="master-profile-avatar">M</div>
+                    <div class="master-profile-info">
+                        <span class="master-profile-name">마스터 관리자</span>
+                        <span class="master-profile-role">cpaeastsun@gmail.com</span>
+                    </div>
                 </div>
             </div>
             
-            <section class="partners-section">
-                <div class="section-header-flex">
-                    <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
-                    <span class="partner-count">총 <strong>{{ partners|length }}</strong>개 기업</span>
-                </div>
-                <div class="table-container">
-                    <table class="partners-table">
-                        <thead>
-                            <tr>
-                                <th>기업명</th>
-                                <th>담당자</th>
-                                <th>요청 업무</th>
-                                <th>등록일시</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for partner in partners %}
-                            <tr>
-                                <td class="col-company">
-                                    <a href="{{ url_for('master_detail', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
-                                </td>
-                                <td>{{ partner.username }}</td>
-                                <td class="col-task">{{ partner.task_type }}</td>
-                                <td class="col-date">{{ partner.created_at }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+            <ul class="master-menu-list">
+                <li class="master-menu-item active" data-menu="home">
+                    <a href="#home">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                        <span>대시보드 홈</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="partners">
+                    <a href="#partners">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 8 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                        <span>파트너사 관리</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="requests">
+                    <a href="#requests">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                        <span>업무 요청 관리</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="repository">
+                    <a href="#repository">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z"/></svg>
+                        <span>통합 문서 보관함</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="announcements">
+                    <a href="#announcements">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-3 12H7v-2h10v2zm0-4H7V8h10v2z"/></svg>
+                        <span>공지 및 알림 관리</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="calendar">
+                    <a href="#calendar">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
+                        <span>세무 일정 캘린더</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="chat">
+                    <a href="#chat">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+                        <span>실시간 자문 상담</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="billing">
+                    <a href="#billing">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                        <span>수수료 및 청구 관리</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="analytics">
+                    <a href="#analytics">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                        <span>시스템 통계 및 리포트</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="settings">
+                    <a href="#settings">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3-1.07-3-3s1.07-3 3-3 3 1.07 3 3-1.07 3-3 3z"/></svg>
+                        <span>포털 시스템 설정</span>
+                    </a>
+                </li>
+            </ul>
             
-            <footer class="dashboard-footer">
-                <a href="{{ url_for('logout') }}" id="btn-logout" class="btn-logout">
+            <div class="master-sidebar-footer">
+                <a href="{{ url_for('logout') }}" id="btn-sidebar-logout" class="btn-logout">
                     <span>안전하게 로그아웃</span>
-                    <svg class="btn-exit-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17 16L21 12M21 12L17 8M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
                 </a>
-            </footer>
-        </div>
-    </main>
+            </div>
+        </aside>
+
+        <!-- 우측 메인 콘텐츠 영역 -->
+        <main class="master-main-content" id="master-main-content">
+            <div class="glass-card dashboard-card master-card" id="home-dashboard-view">
+                <header class="dashboard-header">
+                    <div class="status-badge master-badge">
+                        <span class="pulse-dot"></span>
+                        <span>마스터 관리자 권한</span>
+                    </div>
+                    <h1 id="dashboard-heading">혜안 <span class="company-highlight">Master</span> 포털</h1>
+                    <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 통합 관리 대시보드입니다.</p>
+                </header>
+                
+                <style>
+                    .stats-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                        gap: 1.5rem;
+                        margin-bottom: 2rem;
+                    }
+                    .stat-card {
+                        background: rgba(20,20,20,0.4);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.05);
+                        text-align: center;
+                    }
+                    .stat-title {
+                        font-size: 0.9rem;
+                        color: var(--text-secondary);
+                        margin-bottom: 0.5rem;
+                    }
+                    .stat-value {
+                        font-size: 2rem;
+                        font-weight: 700;
+                        color: var(--accent-color);
+                    }
+                    .stat-value.pending {
+                        color: #fbbf24;
+                    }
+                </style>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">가입 파트너사</div>
+                        <div class="stat-value">{{ stats.total_partners }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">총 누적 파일 수</div>
+                        <div class="stat-value">{{ stats.total_files }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">대기중인 업무</div>
+                        <div class="stat-value pending">{{ stats.pending_tasks }}</div>
+                    </div>
+                </div>
+                
+                <section class="partners-section">
+                    <div class="section-header-flex">
+                        <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
+                        <span class="partner-count">총 <strong>{{ partners|length }}</strong>개 기업</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="partners-table">
+                            <thead>
+                                <tr>
+                                    <th>기업명</th>
+                                    <th>담당자</th>
+                                    <th>요청 업무</th>
+                                    <th>등록일시</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for partner in partners %}
+                                <tr>
+                                    <td class="col-company">
+                                        <a href="{{ url_for('master_detail', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
+                                    </td>
+                                    <td>{{ partner.username }}</td>
+                                    <td class="col-task">{{ partner.task_type }}</td>
+                                    <td class="col-date">{{ partner.created_at }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <footer class="dashboard-footer" style="display: none;">
+                    <!-- 사이드바에 로그아웃이 있으므로 본문 하단은 모바일 대비용으로 백업 유지 (CSS로 숨김 처리) -->
+                    <a href="{{ url_for('logout') }}" id="btn-logout" class="btn-logout">
+                        <span>안전하게 로그아웃</span>
+                    </a>
+                </footer>
+            </div>
+        </main>
+    </div>
     
     <!-- Script JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>

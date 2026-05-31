@@ -374,6 +374,137 @@ document.addEventListener('DOMContentLoaded', () => {
             requestSubmitBtn.querySelector('span').textContent = 'Submitting...';
         });
     }
+
+    // 4. 마스터 관리자 사이드바 클릭 상호작용 및 Mock 화면 렌더링
+    const sidebarMenuItems = document.querySelectorAll('.master-menu-item');
+    const masterMainContent = document.getElementById('master-main-content');
+    const homeDashboardView = document.getElementById('home-dashboard-view');
+    const detailDashboardView = document.getElementById('detail-dashboard-view');
+
+    // 각 메뉴명에 대응하는 한글 정보 및 설명 정의
+    const menuMockData = {
+        requests: {
+            title: '📥 업무 요청 관리',
+            desc: '모든 파트너사에서 요청한 실시간 감사, 세무 자문 및 기장 대행 건을 진행 상태별로 필터링하고 일괄 관리할 수 있는 통합 관리 보드입니다. 실시간 업무 현황을 간편하게 제어하세요.',
+            icon: '📥',
+            placeholder: '모든 파트너사 요청 실시간 모니터링 준비 중'
+        },
+        repository: {
+            title: '📂 통합 문서 보관함',
+            desc: '각 기업 파트너사가 업로드한 증빙 서류 파일 및 세무조정계산서, 재무제표 등 완료 보고서를 Supabase Storage 버킷과 동기화하여 보안 보관하고 다운로드할 수 있는 문서 전용 드라이브 공간입니다.',
+            icon: '📂',
+            placeholder: '기업별 보안 문서 보관 및 공유 드라이브 준비 중'
+        },
+        announcements: {
+            title: '📢 공지 및 알림 관리',
+            desc: '회계법인 혜안 파트너 포털에 접속하는 기업 회원들을 대상으로 긴급 세무 일정 알림, 시스템 공지사항, 팝업 메시지를 등록하고 우선순위별로 편집하여 일괄 게시하는 중앙 알림 컨트롤러입니다.',
+            icon: '📢',
+            placeholder: '파트너사 타겟팅 긴급 공지 등록기 준비 중'
+        },
+        calendar: {
+            title: '📅 세무 일정 캘린더',
+            desc: '법인세, 부가가치세, 원천세 신고 등 월별 주요 국가 세무 일정표와 각 파트너사 담당자와의 세무 대면 상담 및 법인 회계 감사 방문 실사 스케줄을 한눈에 관리하는 통합 세무 캘린더입니다.',
+            icon: '📅',
+            placeholder: '국세청 세무 신고 스케줄러 & 방문 상담 캘린더 준비 중'
+        },
+        chat: {
+            title: '💬 실시간 자문 상담',
+            desc: '비즈니스 파트너사 담당자가 실시간으로 문의하는 세무/회계 관련 일상 자문 건에 대해 회계사가 즉시 답변하고 자료 조회를 제공하는 실시간 질의응답 아카이브 및 채팅 관리 패널입니다.',
+            icon: '💬',
+            placeholder: '1:1 파트너사 실시간 세무 자문 채팅창 준비 중'
+        },
+        billing: {
+            title: '💳 수수료 및 청구 관리',
+            desc: '매월 발생하는 기장 서비스 수수료, 연간 세무조정 수수료, 인수합병(M&A) 및 재무 감사 실사 용역 비용 청구서를 안전하게 발행하고 완납/미납 결제 여부를 통합 대조하는 빌링 대시보드입니다.',
+            icon: '💳',
+            placeholder: '기업 수수료 청구서 및 정기 기장료 수납 추적기 준비 중'
+        },
+        analytics: {
+            title: '📈 시스템 통계 및 리포트',
+            desc: '연도별/월별 신규 파트너사 유치 통계, 누적 파일 전송 데이터 사용량, 기장 대리 수요 추이 분석 그래프 및 월별 업무 처리 효율성을 다각도로 시각화하여 경영 분석을 돕는 통합 리포트 화면입니다.',
+            icon: '📈',
+            placeholder: '통합 경영 통계 시각화 및 리포팅 모듈 준비 중'
+        },
+        settings: {
+            title: '⚙️ 포털 시스템 설정',
+            desc: '최고 관리자(Master) 계정 관리 및 추가 부회계사 권한 부여, 파트너사 포털 접근 차단/해제 IP 제어, 시스템 보안 감사 로그 모니터링 및 PWA 설치형 웹 사이트의 캐시 리프레시 설정을 관리하는 시스템 패널입니다.',
+            icon: '⚙️',
+            placeholder: '보안 접근 제어 및 서브 관리자 권한 설정 센터 준비 중'
+        }
+    };
+
+    if (sidebarMenuItems.length > 0 && masterMainContent) {
+        sidebarMenuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                const menu = item.getAttribute('data-menu');
+                
+                // 만약 상세 페이지(master_detail.html)에서 홈이 아닌 다른 Mock 메뉴를 클릭했을 때는 목록 페이지(/master)로 넘어가서 탭이 열리도록 링크 이동 허용
+                if (detailDashboardView && menu !== 'partners') {
+                    // detail view가 켜져 있으면, href 경로를 타서 목록 페이지로 이동하게 둠 (e.preventDefault 하지 않음)
+                    return;
+                }
+                
+                // 1. 홈 대시보드 탭 활성화 처리
+                if (menu === 'home' || menu === 'partners') {
+                    // 기본 상세 뷰 또는 홈 뷰 활성화
+                    if (homeDashboardView) {
+                        e.preventDefault();
+                        
+                        // 사이드바 active 갱신
+                        sidebarMenuItems.forEach(i => i.classList.remove('active'));
+                        const targetItem = document.querySelector(`.master-menu-item[data-menu="home"]`) || item;
+                        targetItem.classList.add('active');
+                        
+                        // 기존에 로드된 Mock 뷰들 다 제거
+                        const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+                        activeMocks.forEach(m => m.remove());
+                        
+                        // 홈 보이기
+                        homeDashboardView.style.display = 'block';
+                    }
+                    return;
+                }
+                
+                // 2. Mock 8개 메뉴 탭 클릭 시 (e.preventDefault로 가상 렌더링)
+                e.preventDefault();
+                
+                // 사이드바 active 클래스 토글
+                sidebarMenuItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                // 기존 대시보드 뷰 숨기기
+                if (homeDashboardView) homeDashboardView.style.display = 'none';
+                if (detailDashboardView) detailDashboardView.style.display = 'none';
+                
+                // 기존에 열려있던 다른 Mock 뷰 제거
+                const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+                activeMocks.forEach(m => m.remove());
+                
+                // 새 Mock HTML 생성 및 인젝션
+                const data = menuMockData[menu];
+                if (data) {
+                    const mockHtml = `
+                        <div class="mock-dashboard">
+                            <header class="mock-header">
+                                <h1 class="mock-title">${data.title}</h1>
+                            </header>
+                            
+                            <div class="glass-card dashboard-card master-card mock-placeholder-card">
+                                <span class="mock-placeholder-icon">${data.icon}</span>
+                                <h3 class="mock-placeholder-title">${data.placeholder}</h3>
+                                <p class="mock-placeholder-desc">${data.desc}</p>
+                                <div class="status-badge" style="background: rgba(167, 139, 250, 0.08); border-color: rgba(167, 139, 250, 0.2); color: #a78bfa; margin-top: 10px; margin-bottom: 0;">
+                                    <span class="pulse-dot" style="background: #a78bfa; box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.4);"></span>
+                                    <span>회계법인 혜안 IT 지원팀 개발 예정인 화면입니다</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    masterMainContent.insertAdjacentHTML('beforeend', mockHtml);
+                }
+            });
+        });
+    }
 });
 
 // PWA Service Worker Registration
