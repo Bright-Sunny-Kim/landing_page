@@ -99,24 +99,47 @@ body {
 .logo {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     margin-bottom: 24px;
     justify-content: center;
 }
 
-.logo-icon {
-    font-size: 24px;
+.logo-img {
+    height: 34px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.15));
+    transition: transform 0.3s ease;
+}
+
+.logo-img:hover {
+    transform: scale(1.05);
+}
+
+.logo-text-admin,
+.logo-text-portal {
+    font-family: var(--font-header);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     background: var(--primary-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    font-weight: 800;
+    border-left: 1px solid rgba(255, 255, 255, 0.18);
+    padding-left: 10px;
+    height: 18px;
+    display: flex;
+    align-items: center;
 }
 
-.logo-text {
-    font-family: var(--font-header);
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+.logo-container-company {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    width: 100%;
 }
 
 /* Headers */
