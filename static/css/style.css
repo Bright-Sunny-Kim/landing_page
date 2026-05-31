@@ -1158,3 +1158,102 @@ textarea:focus {
     z-index: -1;
     border-radius: 4px;
 }
+
+/* Login Split Card (Wide Layout) */
+.login-split-card {
+    max-width: 900px !important; /* 기존 max-width 무력화 및 확장 */
+    width: 100%;
+    display: flex;
+    gap: 48px;
+    align-items: stretch;
+    padding: 48px;
+}
+
+.login-intro-side {
+    flex: 1.1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    text-align: left;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    padding-right: 48px;
+}
+
+.login-intro-side .logo {
+    justify-content: flex-start;
+    margin-bottom: 24px;
+    width: auto;
+}
+
+.login-intro-side #main-heading {
+    align-items: flex-start;
+    text-align: left;
+    margin-bottom: 16px;
+}
+
+.intro-description {
+    color: var(--text-secondary);
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin-top: 12px;
+}
+
+.login-form-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.form-side-header {
+    margin-bottom: 24px;
+}
+
+.form-title {
+    font-family: var(--font-header);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.form-side-header .subtitle {
+    margin-bottom: 0;
+    text-align: left;
+    font-size: 13px;
+}
+
+/* Responsive Split Layout */
+@media (max-width: 800px) {
+    .login-split-card {
+        flex-direction: column;
+        gap: 32px;
+        padding: 32px 24px;
+        max-width: 500px !important;
+    }
+    
+    .login-intro-side {
+        border-right: none;
+        padding-right: 0;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .login-intro-side .logo {
+        justify-content: center;
+    }
+    
+    .login-intro-side #main-heading {
+        align-items: center;
+        text-align: center;
+    }
+    
+    .intro-description {
+        display: none; /* 모바일 등 좁은 화면에서는 생략하여 스크롤 유발 최소화 */
+    }
+    
+    .form-side-header {
+        display: none; /* 모바일에서는 좌측 인트로가 상단으로 올라가므로 폼 타이틀은 생략 */
+    }
+}
