@@ -10,7 +10,7 @@
 - **프레임워크**: Python / Flask (버전 3.0.0 이상)
 - **배포 환경**: Render 클라우드 (Web Service, `gunicorn` 사용)
 - **도메인**: `https://hyean-dskim.com`
-- **데이터베이스 및 스토리지**: Supabase (PostgreSQL 호환)
+- **데이터베이스 및 스토리지**: Supabase (PostgreSQL 호환, pgvector 확장 사용)
 - **디자인 테마**: Glassmorphism (유리 질감), 오로라 보라색 포인트 (`#a78bfa`, `#6366f1`)
 - **브랜드 로고**: 혜안 공식 로고 이미지를 다크 모드용 투명 화이트 마스크(`logo_light.png`)로 가공 반영 및 Portal, Admin, Partner 서브 배지 텍스트 조합 적용
 - **모바일 최적화**: PWA(Progressive Web App) 적용 완료 및 미디어 쿼리(992px 이하) 기반 모바일 메뉴 슬라이더 최적화 완료
@@ -38,6 +38,11 @@
 - `GET /master/<company_name>` : 특정 파트너사가 업로드한 파일 및 요청 사항 상세 내역 조회 (`master_detail.html`).
   - 상세 관리 도중 사이드바 메뉴 클릭 시 목록 페이지(`/master`)로 자동 리다이렉트 및 탭 활성화 분기 처리.
 - `POST /update-status` : 개별 요청 건의 처리 상태(`대기중`, `처리중`, `완료`)를 비동기(AJAX)로 업데이트.
+
+### 📊 AI 감사 자동화 API
+- `POST /master/audit-analyze/<string:company_name>` : **회사 종합 AI 감사 위험 분석 API**.
+  - 해당 피감사인이 올린 모든 시산표(T/B) 데이터프레임을 다운로드 및 순차 파싱하여 일괄 병합합니다.
+  - 종합 변동성(Vertical/Horizontal) 분석을 가동하여 Outlier 계정을 식별하고 K-GAAP RAG 비교 매칭을 통해 완성도 높은 3단계('감사 목표 - 수행 절차 - 감사 결과 및 결론') 구조의 감사 조서 마크다운 문서를 합성합니다.
 
 ---
 
