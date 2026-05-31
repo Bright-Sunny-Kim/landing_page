@@ -245,6 +245,9 @@
                                     <th>업로드 일시</th>
                                     <th>상태 관리</th>
                                     <th>다운로드</th>
+                                    {% if company_info.task_type == '회계감사' %}
+                                    <th>AI 감사 분석</th>
+                                    {% endif %}
                                 </tr>
                             </thead>
                             <tbody>
@@ -269,6 +272,15 @@
                                         <span style="color:var(--text-secondary); font-size:0.8rem;">첨부 없음</span>
                                         {% endif %}
                                     </td>
+                                    {% if company_info.task_type == '회계감사' %}
+                                    <td>
+                                        {% if f.file_url %}
+                                        <button class="btn-audit-analyze btn-download" data-id="{{ f.id }}" style="background: linear-gradient(135deg, #a78bfa, #6366f1); border: none; cursor: pointer; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 500; font-size: 0.85rem; color: white;">AI 조서 생성</button>
+                                        {% else %}
+                                        <span style="color:var(--text-secondary); font-size:0.8rem;">파일 없음</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -278,6 +290,91 @@
                     <div class="empty-state">
                         해당 파트너사가 아직 업로드한 파일이 없습니다.
                     </div>
+                    {% endif %}
+
+                    {% if company_info.task_type == '회계감사' %}
+                    <!-- AI 감사 자동화 보고서 섹션 -->
+                    <section id="audit-report-section" style="display: none; margin-top: 3.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2.5rem; text-align: left;">
+                        <div class="section-header-flex" style="margin-bottom: 1.5rem;">
+                            <h2 class="section-title" style="font-size: 1.5rem; display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="font-size: 1.8rem;">📊</span> AI 감사 위험 변동성 분석 & 조서 초안
+                            </h2>
+                            <button id="btn-download-wp" class="btn-download" style="background: #10b981; border: none; cursor: pointer; padding: 0.5rem 1rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                📥 감사 조서 (.md) 다운로드
+                            </button>
+                        </div>
+                        
+                        <!-- 중요성 기준 요약 정보 -->
+                        <div class="info-grid" style="margin-top: 1rem; margin-bottom: 2rem; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2);">
+                            <div class="info-item">
+                                <h3>피감사인 자산총계 (추정)</h3>
+                                <p id="audit-assets" style="color: var(--text-primary); font-family: 'Outfit', sans-serif;">-</p>
+                            </div>
+                            <div class="info-item">
+                                <h3>피감사인 매출액 (추정)</h3>
+                                <p id="audit-sales" style="color: var(--text-primary); font-family: 'Outfit', sans-serif;">-</p>
+                            </div>
+                            <div class="info-item" style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem;">
+                                <h3>수행중요성금액 (Performance Materiality)</h3>
+                                <p id="audit-materiality" style="color: #ef4444; font-family: 'Outfit', sans-serif; font-weight: 700;">-</p>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+                            <!-- 식별된 감사 위험 카드 -->
+                            <div class="glass-card" style="background: rgba(20,20,20,0.45); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.15);">
+                                <h3 style="color: #f87171; margin-bottom: 1.2rem; font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(239, 68, 68, 0.1); padding-bottom: 0.5rem;">
+                                    <span>🚨</span> 식별된 왜곡표시 감사 위험 (Audit Risks)
+                                </h3>
+                                <div id="audit-risks-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                                    <!-- 동적 삽입 -->
+                                </div>
+                            </div>
+                            
+                            <!-- 매칭 K-GAAP 조항 -->
+                            <div class="glass-card" style="background: rgba(20,20,20,0.45); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                                <h3 style="color: #a78bfa; margin-bottom: 1.2rem; font-size: 1.1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(99, 102, 241, 0.1); padding-bottom: 0.5rem;">
+                                    <span>📖</span> 매칭된 K-GAAP 회계기준서 (RAG)
+                                </h3>
+                                <div id="audit-standards-container" style="display: flex; flex-direction: column; gap: 1rem; max-height: 350px; overflow-y: auto; padding-right: 0.3rem;">
+                                    <!-- 동적 삽입 -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 이상 항목 변동 분석 표 -->
+                        <div class="glass-card" style="background: rgba(20,20,20,0.3); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 2.5rem;">
+                            <h3 style="color: var(--text-primary); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">📊 T/B 변동성 수평·수직 분석 이상치 (Outliers)</h3>
+                            <div class="table-container">
+                                <table class="partners-table" style="font-size: 0.9rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>계정과목</th>
+                                            <th style="text-align: right;">전기 잔액</th>
+                                            <th style="text-align: right;">당기 잔액</th>
+                                            <th style="text-align: right;">변동액</th>
+                                            <th style="text-align: right;">변동률</th>
+                                            <th style="text-align: right;">자산비율</th>
+                                            <th>검토 의견</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="audit-variance-table-body">
+                                        <!-- 동적 삽입 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 조서 에디터/렌더러 -->
+                        <div class="glass-card" style="background: rgba(15,15,15,0.6); padding: 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                            <h3 style="color: var(--text-primary); margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.7rem;">
+                                <span>📝</span> 최종 감사 조서 초안 (Audit Working Paper Draft)
+                            </h3>
+                            <div id="audit-working-paper-content" style="background: rgba(5,5,5,0.75); color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.95rem; line-height: 1.65; padding: 2rem; border-radius: 10px; overflow-x: auto; white-space: pre-wrap; max-height: 600px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); text-align: left;">
+                                <!-- 동적 삽입 -->
+                            </div>
+                        </div>
+                    </section>
                     {% endif %}
                 </section>
             </div>
@@ -316,6 +413,171 @@
                     }
                 });
             });
+
+            {% if company_info.task_type == '회계감사' %}
+            // AI 감사 분석 버튼 클릭 핸들러
+            const auditButtons = document.querySelectorAll('.btn-audit-analyze');
+            const auditReportSection = document.getElementById('audit-report-section');
+            let generatedWorkingPaperMd = ""; // 다운로드용 글로벌 변수
+            let clientCompanyName = "{{ company_info.company }}";
+            
+            auditButtons.forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const fileId = e.target.getAttribute('data-id');
+                    
+                    e.target.disabled = true;
+                    e.target.innerText = '분석 중...';
+                    
+                    // 로딩 처리
+                    auditReportSection.style.display = 'none';
+                    
+                    try {
+                        const response = await fetch(`/master/audit-analyze/${fileId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        const result = await response.json();
+                        if (result.success) {
+                            // 1. 추정 금액 셋팅
+                            document.getElementById('audit-assets').innerText = result.total_assets.toLocaleString() + ' 원';
+                            document.getElementById('audit-sales').innerText = result.total_sales.toLocaleString() + ' 원';
+                            document.getElementById('audit-materiality').innerText = result.performance_materiality.toLocaleString() + ' 원';
+                            
+                            // 2. 식별된 위험 렌더링
+                            const risksContainer = document.getElementById('audit-risks-container');
+                            risksContainer.innerHTML = '';
+                            result.risk_signals.forEach(sig => {
+                                const card = document.createElement('div');
+                                card.style.background = 'rgba(239, 68, 68, 0.08)';
+                                card.style.borderLeft = '4px solid #ef4444';
+                                card.style.padding = '1rem';
+                                card.style.borderRadius = '0 8px 8px 0';
+                                card.style.borderTop = '1px solid rgba(239, 68, 68, 0.15)';
+                                card.style.borderRight = '1px solid rgba(239, 68, 68, 0.15)';
+                                card.style.borderBottom = '1px solid rgba(239, 68, 68, 0.15)';
+                                card.innerHTML = `
+                                    <h4 style="color:#f87171; font-weight:600; margin-bottom:0.3rem;">[위험] ${sig.Category}</h4>
+                                    <p style="font-size:0.9rem; color:#f3f4f6; margin-bottom:0.5rem; line-height:1.45;">${sig.Description}</p>
+                                    <span style="font-size:0.8rem; background:rgba(255,255,255,0.08); padding:0.2rem 0.5rem; border-radius:4px; color:#d1d5db; border:1px solid rgba(255,255,255,0.1);">대상: ${sig.TargetAccount}</span>
+                                `;
+                                risksContainer.appendChild(card);
+                            });
+                            
+                            // 3. 매칭 기준서 렌더링
+                            const standardsContainer = document.getElementById('audit-standards-container');
+                            standardsContainer.innerHTML = '';
+                            result.matched_standards.forEach(std => {
+                                const card = document.createElement('div');
+                                card.style.background = 'rgba(99, 102, 241, 0.08)';
+                                card.style.borderLeft = '4px solid #6366f1';
+                                card.style.padding = '1rem';
+                                card.style.borderRadius = '0 8px 8px 0';
+                                card.style.borderTop = '1px solid rgba(99, 102, 241, 0.15)';
+                                card.style.borderRight = '1px solid rgba(99, 102, 241, 0.15)';
+                                card.style.borderBottom = '1px solid rgba(99, 102, 241, 0.15)';
+                                card.style.marginBottom = '0.5rem';
+                                card.innerHTML = `
+                                    <h4 style="color:#a78bfa; font-weight:600; margin-bottom:0.3rem;">${std.standard_no} ${std.paragraph_no}</h4>
+                                    <h5 style="color:#c084fc; font-size:0.85rem; margin-bottom:0.4rem; font-weight:500;">${std.title}</h5>
+                                    <p style="font-size:0.82rem; color:#d1d5db; line-height:1.45; font-style:italic;">"${std.content}"</p>
+                                `;
+                                standardsContainer.appendChild(card);
+                            });
+                            
+                            // 4. 변동성 분석 표 채우기
+                            const tableBody = document.getElementById('audit-variance-table-body');
+                            tableBody.innerHTML = '';
+                            
+                            if (result.outliers && result.outliers.length > 0) {
+                                result.outliers.forEach(row => {
+                                    const tr = document.createElement('tr');
+                                    const valSign = row.Variance >= 0 ? '+' : '';
+                                    const valColor = row.Variance >= 0 ? '#f87171' : '#60a5fa';
+                                    
+                                    tr.innerHTML = `
+                                        <td style="font-weight:500; color:#fff;">${row.Account}</td>
+                                        <td style="text-align:right;">${row.Prior.toLocaleString()}</td>
+                                        <td style="text-align:right;">${row.Current.toLocaleString()}</td>
+                                        <td style="text-align:right; color:${valColor}; font-weight:500;">
+                                            ${valSign}${row.Variance.toLocaleString()}
+                                        </td>
+                                        <td style="text-align:right; color:${valColor}; font-weight:500;">
+                                            ${valSign}${row.VariancePct.toFixed(1)}%
+                                        </td>
+                                        <td style="text-align:right;">${row.VerticalPct.toFixed(2)}%</td>
+                                        <td>
+                                            <span style="color:#ef4444; font-weight:600; font-size:0.8rem; background:rgba(239,68,68,0.1); padding:0.15rem 0.4rem; border-radius:4px; border:1px solid rgba(239,68,68,0.2);">
+                                                ⚠️ 중요변동
+                                            </span>
+                                        </td>
+                                    `;
+                                    tableBody.appendChild(tr);
+                                });
+                            } else {
+                                tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-secondary);">수행중요성금액을 초과하는 이상 항목(Outlier)이 감지되지 않았습니다.</td></tr>';
+                            }
+                            
+                            // 5. 감사조서 마크다운 주입
+                            generatedWorkingPaperMd = result.working_paper_md;
+                            document.getElementById('audit-working-paper-content').innerText = result.working_paper_md;
+                            
+                            // 섹션 표출 및 스크롤
+                            auditReportSection.style.display = 'block';
+                            setTimeout(() => {
+                                auditReportSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 100);
+                            
+                            e.target.style.borderColor = '#4ade80';
+                            e.target.style.background = 'rgba(74, 222, 128, 0.2)';
+                            e.target.innerText = '분석 완료';
+                            setTimeout(() => {
+                                e.target.style.borderColor = '';
+                                e.target.style.background = '';
+                                e.target.disabled = false;
+                                e.target.innerText = 'AI 조서 생성';
+                            }, 2000);
+                            
+                        } else {
+                            alert('분석 실패: ' + result.error);
+                            e.target.disabled = false;
+                            e.target.innerText = 'AI 조서 생성';
+                        }
+                    } catch (err) {
+                        alert('분석 요청 중 오류가 발생했습니다.');
+                        e.target.disabled = false;
+                        e.target.innerText = 'AI 조서 생성';
+                        console.error(err);
+                    }
+                });
+            });
+            
+            // 다운로드 버튼 핸들러
+            const downloadWpBtn = document.getElementById('btn-download-wp');
+            if (downloadWpBtn) {
+                downloadWpBtn.addEventListener('click', () => {
+                    if (!generatedWorkingPaperMd) {
+                        alert("생성된 감사 조서가 없습니다.");
+                        return;
+                    }
+                    
+                    const blob = new Blob([generatedWorkingPaperMd], { type: 'text/markdown;charset=utf-8;' });
+                    const link = document.createElement("a");
+                    const url = URL.createObjectURL(blob);
+                    
+                    // 파일명에 날짜와 회사명 적용
+                    const dateStr = new Date().toISOString().slice(0,10);
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", `감사조서_${clientCompanyName}_${dateStr}.md`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            }
+            {% endif %}
         });
     </script>
 </body>
