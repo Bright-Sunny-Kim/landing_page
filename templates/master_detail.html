@@ -229,6 +229,25 @@
                     </div>
                 </div>
 
+                {% if company_info.task_type == '회계감사' %}
+                <!-- 회사 종합 AI 감사 위험 분석 패널 -->
+                <div class="glass-card" style="margin-bottom: 2.5rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); padding: 1.5rem 2rem; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; text-align: left;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <h2 style="color: #a78bfa; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>📊</span> 회사 종합 AI 감사 자동화 엔진
+                        </h2>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin: 0;">
+                            피감사인(<strong>{{ company_info.company }}</strong>)이 업로드한 모든 재무 파일을 일괄 취합하고 연계 분석하여 통합 감사 위험 식별 및 표준 K-GAAP 근거 중심의 감사 조서(Working Paper) 초안을 원클릭으로 일괄 작성합니다.
+                        </p>
+                    </div>
+                    <div>
+                        <button id="btn-comprehensive-audit" class="btn-download" style="background: linear-gradient(135deg, #a78bfa, #6366f1); border: none; cursor: pointer; padding: 0.8rem 1.6rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: transform 0.2s ease;">
+                            <span>⚡</span> 회사 종합 AI 감사 조서 생성
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+
                 <section class="partners-section">
                     <div class="section-header-flex">
                         <h2 class="section-title">업로드된 파일 및 업무 진행 상태</h2>
@@ -245,9 +264,6 @@
                                     <th>업로드 일시</th>
                                     <th>상태 관리</th>
                                     <th>다운로드</th>
-                                    {% if company_info.task_type == '회계감사' %}
-                                    <th>AI 감사 분석</th>
-                                    {% endif %}
                                 </tr>
                             </thead>
                             <tbody>
@@ -272,15 +288,6 @@
                                         <span style="color:var(--text-secondary); font-size:0.8rem;">첨부 없음</span>
                                         {% endif %}
                                     </td>
-                                    {% if company_info.task_type == '회계감사' %}
-                                    <td>
-                                        {% if f.file_url %}
-                                        <button class="btn-audit-analyze btn-download" data-id="{{ f.id }}" style="background: linear-gradient(135deg, #a78bfa, #6366f1); border: none; cursor: pointer; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 500; font-size: 0.85rem; color: white;">AI 조서 생성</button>
-                                        {% else %}
-                                        <span style="color:var(--text-secondary); font-size:0.8rem;">파일 없음</span>
-                                        {% endif %}
-                                    </td>
-                                    {% endif %}
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -415,24 +422,23 @@
             });
 
             {% if company_info.task_type == '회계감사' %}
-            // AI 감사 분석 버튼 클릭 핸들러
-            const auditButtons = document.querySelectorAll('.btn-audit-analyze');
+            // 회사 종합 AI 감사 분석 버튼 클릭 핸들러
+            const compAuditBtn = document.getElementById('btn-comprehensive-audit');
             const auditReportSection = document.getElementById('audit-report-section');
             let generatedWorkingPaperMd = ""; // 다운로드용 글로벌 변수
             let clientCompanyName = "{{ company_info.company }}";
             
-            auditButtons.forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const fileId = e.target.getAttribute('data-id');
-                    
-                    e.target.disabled = true;
-                    e.target.innerText = '분석 중...';
+            if (compAuditBtn) {
+                compAuditBtn.addEventListener('click', async (e) => {
+                    const btn = e.currentTarget;
+                    btn.disabled = true;
+                    btn.innerHTML = `<span>⏳</span> 분석 및 조서 작성 중...`;
                     
                     // 로딩 처리
                     auditReportSection.style.display = 'none';
                     
                     try {
-                        const response = await fetch(`/master/audit-analyze/${fileId}`, {
+                        const response = await fetch(`/master/audit-analyze/${encodeURIComponent(clientCompanyName)}`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -530,29 +536,29 @@
                                 auditReportSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }, 100);
                             
-                            e.target.style.borderColor = '#4ade80';
-                            e.target.style.background = 'rgba(74, 222, 128, 0.2)';
-                            e.target.innerText = '분석 완료';
+                            btn.style.borderColor = '#4ade80';
+                            btn.style.background = 'rgba(74, 222, 128, 0.2)';
+                            btn.innerHTML = `<span>✅</span> 종합 분석 완료`;
                             setTimeout(() => {
-                                e.target.style.borderColor = '';
-                                e.target.style.background = '';
-                                e.target.disabled = false;
-                                e.target.innerText = 'AI 조서 생성';
+                                btn.style.borderColor = '';
+                                btn.style.background = '';
+                                btn.disabled = false;
+                                btn.innerHTML = `<span>⚡</span> 회사 종합 AI 감사 조서 생성`;
                             }, 2000);
                             
                         } else {
-                            alert('분석 실패: ' + result.error);
-                            e.target.disabled = false;
-                            e.target.innerText = 'AI 조서 생성';
+                            alert('종합 분석 실패: ' + result.error);
+                            btn.disabled = false;
+                            btn.innerHTML = `<span>⚡</span> 회사 종합 AI 감사 조서 생성`;
                         }
                     } catch (err) {
-                        alert('분석 요청 중 오류가 발생했습니다.');
-                        e.target.disabled = false;
-                        e.target.innerText = 'AI 조서 생성';
+                        alert('종합 분석 요청 중 오류가 발생했습니다.');
+                        btn.disabled = false;
+                        btn.innerHTML = `<span>⚡</span> 회사 종합 AI 감사 조서 생성`;
                         console.error(err);
                     }
                 });
-            });
+            }
             
             // 다운로드 버튼 핸들러
             const downloadWpBtn = document.getElementById('btn-download-wp');
@@ -570,13 +576,14 @@
                     // 파일명에 날짜와 회사명 적용
                     const dateStr = new Date().toISOString().slice(0,10);
                     link.setAttribute("href", url);
-                    link.setAttribute("download", `감사조서_${clientCompanyName}_${dateStr}.md`);
+                    link.setAttribute("download", `종합감사조서_${clientCompanyName}_${dateStr}.md`);
                     link.style.visibility = 'hidden';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
                 });
             }
+            {% endif %}
             {% endif %}
         });
     </script>

@@ -459,8 +459,8 @@ def submit_request():
 
     return redirect(url_for('company_page', company_name=session['company'], success='true'))
 
-@app.route('/master/audit-analyze/<int:file_id>', methods=['POST'])
-def audit_analyze(file_id):
+@app.route('/master/audit-analyze/<string:company_name>', methods=['POST'])
+def audit_analyze(company_name):
     if 'email' not in session or session['email'] != MASTER_EMAIL:
         return jsonify({'error': 'Unauthorized'}), 401
         
@@ -468,30 +468,43 @@ def audit_analyze(file_id):
         return jsonify({'error': 'Supabase not configured'}), 500
         
     try:
-        # 1. 파일 메타데이터 조회
-        file_res = supabase.table('company_files').select('*').eq('id', file_id).execute()
+        # 1. 해당 회사가 올린 모든 파일 메타데이터 조회
+        file_res = supabase.table('company_files').select('*').eq('company_name', company_name).order('created_at', desc=True).execute()
         if not file_res.data:
-            return jsonify({'error': '해당 파일을 찾을 수 없습니다.'}), 404
+            return jsonify({'error': '해당 회사가 업로드한 파일이 없습니다.'}), 404
             
-        file_info = file_res.data[0]
-        company_name = file_info.get('company_name', '알수없음')
-        file_url = file_info.get('file_url')
-        file_name = file_info.get('file_name', 'simulated.csv')
+        files_list = file_res.data
+        df_list = []
+        parsed_filenames = []
         
-        file_bytes = None
-        # 2. Supabase Storage에서 실제 파일 다운로드 시도
-        if file_url:
-            try:
-                file_bytes = supabase.storage.from_('company-uploads').download(file_url)
-            except Exception as download_err:
-                print(f"Storage download failed for {file_url}: {download_err}. Proceeding with fallback simulated data.")
-                
-        # 3. 데이터 파싱
-        df_tb = parse_tb_file(file_bytes, file_name)
+        # 2. 모든 파일 바이너리를 다운로드 및 순차 파싱
+        for f_info in files_list:
+            file_url = f_info.get('file_url')
+            file_name = f_info.get('file_name', 'simulated.csv')
+            
+            file_bytes = None
+            if file_url:
+                try:
+                    file_bytes = supabase.storage.from_('company-uploads').download(file_url)
+                    # 성공적으로 다운로드 한 경우에만 파싱
+                    df_tb = parse_tb_file(file_bytes, file_name)
+                    df_list.append(df_tb)
+                    parsed_filenames.append(file_name)
+                except Exception as download_err:
+                    print(f"Storage download failed for {file_url}: {download_err}. Skipping this file.")
+                    
+        # 만약 실제 다운로드되어 파싱된 파일이 없을 경우 Fallback으로 모의 데이터 세팅
+        if not df_list:
+            df_tb = parse_tb_file(None, "fallback_simulated.csv")
+            df_list.append(df_tb)
+            parsed_filenames.append("Fallback Simulated T/B")
+            
+        # 3. 다중 T/B 데이터프레임 병합 및 취합
+        from audit_engine import merge_multiple_tb_dfs
+        df_integrated = merge_multiple_tb_dfs(df_list)
         
         # 4. 중요성 기준 및 변동성 분석 수행
-        # 기본 중요성은 자산총계에 따라 동적으로 설정(여기선 50,000,000원 기본값)
-        analysis_res = run_variance_analysis(df_tb, performance_materiality=50000000.0)
+        analysis_res = run_variance_analysis(df_integrated, performance_materiality=50000000.0)
         
         # 5. K-GAAP RAG 기준서 매칭 (리스크 신호 검색)
         combined_standards = []
@@ -507,17 +520,16 @@ def audit_analyze(file_id):
                     combined_standards.append(m)
                     
         if not combined_standards:
-            # 기본 매칭 제공
             combined_standards = retrieve_k_gaap("기본 기준", limit=2, supabase_client=supabase)
             
-        # 6. 감사조서(Working Paper) 마크다운 생성
+        # 6. 종합 감사조서(Working Paper) 마크다운 생성
         working_paper_md = generate_working_paper(company_name, analysis_res, combined_standards)
         
         # 7. 분석 결과를 구조화된 JSON으로 반환
         return jsonify({
             'success': True,
             'company_name': company_name,
-            'file_name': file_name,
+            'analyzed_files': parsed_filenames,
             'performance_materiality': analysis_res['PerformanceMateriality'],
             'total_assets': analysis_res['TotalAssets'],
             'total_sales': analysis_res['TotalSales'],
@@ -529,7 +541,7 @@ def audit_analyze(file_id):
         
     except Exception as e:
         print(f"Audit analysis api error: {e}")
-        return jsonify({'error': f'분석 수행 중 에러 발생: {str(e)}'}), 500
+        return jsonify({'error': f'종합 분석 수행 중 에러 발생: {str(e)}'}), 500
 
 @app.route('/logout')
 def logout():

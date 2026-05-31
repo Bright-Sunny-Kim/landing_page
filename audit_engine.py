@@ -62,7 +62,39 @@ K_GAAP_CORPUS = [
 ]
 
 # ==========================================
-# 2. 데이터 파싱 및 정규화 모듈
+# 2. 데이터 통합 및 다중 T/B 병합 모듈
+# ==========================================
+def merge_multiple_tb_dfs(df_list):
+    """
+    동일 회사에서 업로드한 여러 시산표(T/B) 데이터프레임을 하나로 통합합니다.
+    계정과목(Account)을 기준으로 그룹화하며, 중복 계정의 경우 0이 아닌 최근(마지막) 값을 선택합니다.
+    """
+    if not df_list:
+        return pd.DataFrame(columns=["Account", "Current", "Prior"])
+    
+    # 단일 데이터프레임인 경우 복사하여 즉시 반환
+    if len(df_list) == 1:
+        return df_list[0].copy()
+        
+    combined = pd.concat(df_list, ignore_index=True)
+    
+    # 0이 아닌 가장 마지막 값 선택하는 헬퍼 함수
+    def get_last_nonzero(series):
+        nonzero = series[series != 0]
+        if not nonzero.empty:
+            return nonzero.iloc[-1]
+        return 0.0
+
+    # Account 컬럼을 기준으로 집계 수행
+    merged = combined.groupby("Account", as_index=False).agg({
+        "Current": get_last_nonzero,
+        "Prior": get_last_nonzero
+    })
+    
+    return merged
+
+# ==========================================
+# 3. 데이터 파싱 및 정규화 모듈
 # ==========================================
 def parse_tb_file(file_content, filename):
     """
