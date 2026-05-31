@@ -357,34 +357,67 @@ def run_variance_analysis(df_tb, performance_materiality=50000000.0):
     }
 
 # ==========================================
-# 4. K-GAAP RAG 검색 모듈 (로컬 및 DB 대응)
+# 4. K-GAAP RAG 검색 모듈 (로컬 및 DB pgvector 대응)
 # ==========================================
+EMBEDDING_MODEL = None
+
+def get_embedding_model():
+    """임베딩 모델을 최초 1회만 메모리에 적재하여 캐싱 (지연 로딩)"""
+    global EMBEDDING_MODEL
+    if EMBEDDING_MODEL is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            # 로컬 경량 384차원 모델 로드
+            EMBEDDING_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+        except ImportError:
+            print("경고: sentence-transformers 패키지가 설치되지 않았거나 로드 중 실패했습니다. 임베딩 생성이 불가합니다.")
+            return None
+    return EMBEDDING_MODEL
+
+def get_text_embedding(text):
+    """지정 텍스트에 대해 384차원 Float 리스트 형태의 벡터 임베딩 생성"""
+    model = get_embedding_model()
+    if model is None:
+        return None
+    try:
+        return model.encode(text).tolist()
+    except Exception as e:
+        print(f"Error generating text embedding: {e}")
+        return None
+
 def retrieve_k_gaap(query, limit=2, supabase_client=None):
     """
     질의 문장을 바탕으로 관련 K-GAAP 기준서 문단을 매칭하여 반환.
-    - Supabase DB가 제공되고 테이블이 존재할 경우 pgvector 검색 시도.
+    - Supabase DB가 제공되고 테이블이 존재할 경우 pgvector RPC(match_k_gaap_standards)를 통해 코사인 유사도 검색 시도.
     - 실패하거나 없을 경우 로컬에 내장된 TF-IDF 코사인 유사도 연산으로 Fallback 작동.
     """
     matched_results = []
     
-    # 1. Supabase pgvector 활용 검색 시도
+    # 1. Supabase pgvector RPC 활용 검색 시도
     if supabase_client:
         try:
-            # RPC 호출 또는 direct SQL query 호출 (여기서는 pgvector가 존재할 때 rpc로 'match_k_gaap_standards'가 등록되어 있다고 가정)
-            # 또는 Supabase DB에서 텍스트 쿼리로 기본 검색 시도
-            response = supabase_client.table('k_gaap_standards').select('*').textSearch('content', query).limit(limit).execute()
-            if response.data:
-                for item in response.data:
-                    matched_results.append({
-                        "standard_no": item.get("standard_no"),
-                        "paragraph_no": item.get("paragraph_no"),
-                        "title": item.get("title"),
-                        "content": item.get("content"),
-                        "score": 0.90 # 모의 스코어
-                    })
-                return matched_results
+            # 쿼리에 대한 384차원 벡터 생성
+            query_vector = get_text_embedding(query)
+            if query_vector:
+                # Supabase match_k_gaap_standards RPC 호출 (코사인 유사도 검색)
+                response = supabase_client.rpc('match_k_gaap_standards', {
+                    'query_embedding': query_vector,
+                    'match_threshold': 0.05,  # 느슨하게 매칭 임계치 설정
+                    'match_count': limit
+                }).execute()
+                
+                if response.data:
+                    for item in response.data:
+                        matched_results.append({
+                            "standard_no": item.get("standard_no"),
+                            "paragraph_no": item.get("paragraph_no"),
+                            "title": item.get("title"),
+                            "content": item.get("content"),
+                            "score": float(item.get("similarity", 0.90))
+                        })
+                    return matched_results
         except Exception as db_err:
-            print(f"Supabase RAG query failed, fallback to local search: {db_err}")
+            print(f"Supabase pgvector RAG RPC query failed, fallback to local search: {db_err}")
 
     # 2. 로컬 Fallback RAG 작동
     if SKLEARN_AVAILABLE:
