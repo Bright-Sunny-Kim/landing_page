@@ -195,6 +195,130 @@
                         </table>
                     </div>
                 </section>
+
+                <!-- AI 회계감사 자동화 파이프라인 소개 섹션 -->
+                <section class="audit-landing-section">
+                    <div class="divider-glow"></div>
+                    
+                    <div class="welcome-badge">Audit Pipeline</div>
+                    <h2 class="audit-section-title">AI 회계감사 자동화 6단계 세부 실행 절차</h2>
+                    <p class="audit-section-subtitle">
+                        프론트엔드, 자동화 엔진(n8n), AI 에이전트(Dify), 데이터베이스(Supabase)를 유기적으로 연결하여 감사업무 전반을 자동화하는 내부 실행 파이프라인 프로세스입니다.
+                    </p>
+
+                    <!-- 6단계 그리드 -->
+                    <div class="step-grid">
+                        <!-- 1단계 -->
+                        <div class="step-card">
+                            <div class="step-num">01</div>
+                            <h3 class="step-title">고객 제시 데이터로부터 재무제표 작성</h3>
+                            <ul class="step-list">
+                                <li><strong>자료 업로드:</strong> 파트너가 hyean-dskim.com 포털을 통해 결산 자료(T/B 원장, 명세서 등)를 업로드하면 Supabase Storage에 원본 저장</li>
+                                <li><strong>데이터 가공:</strong> 업로드 완료 시 n8n Webhook이 트리거되어 Python 노드로 데이터 정제 및 표준 계정과목 코드 재배열</li>
+                                <li><strong>재무제표 작성:</strong> BS 및 IS 산식을 자동 적용하여 표준 재무제표 자동 작성</li>
+                                <li><strong>차이 내역 검토:</strong> 작성된 표준 재무제표와 고객 제시 재무제표 간 차이 분석 후 Dify API로 원인 분석 보고서 생성 및 수정 조치</li>
+                            </ul>
+                        </div>
+
+                        <!-- 2단계 -->
+                        <div class="step-card">
+                            <div class="step-num">02</div>
+                            <h3 class="step-title">회계기준(K-GAAP) 및 감사기준(K-GAAS) RAG 구축</h3>
+                            <ul class="step-list">
+                                <li><strong>문서 아카이빙:</strong> K-GAAP 및 K-GAAS 원문 PDF/Text 파일을 Nextcloud 개인 드라이브에 안전하게 보관</li>
+                                <li><strong>지식 베이스 구축:</strong> Dify 지식(Knowledge) 모듈을 통해 해당 기준서를 임베딩 및 Vectorization하여 AI가 기준서를 직접 참조할 수 있는 기반 마련</li>
+                            </ul>
+                        </div>
+
+                        <!-- 3단계 -->
+                        <div class="step-card">
+                            <div class="step-num">03</div>
+                            <h3 class="step-title">DART 감사보고서 DB 구축 (RAG)</h3>
+                            <ul class="step-list">
+                                <li><strong>데이터 수집:</strong> n8n의 스케줄러(Cron) 노드를 통해 dart.fss.or.kr (OpenDART API)를 주기적으로 호출하여 동종 업계 감사보고서 다운로드</li>
+                                <li><strong>벡터 저장:</strong> 본문을 청크화한 뒤 Supabase pgvector 확장을 사용하여 임베딩 벡터값과 함께 DB에 저장, 보고서 초안 모범 문구의 검색 기틀 마련</li>
+                            </ul>
+                        </div>
+
+                        <!-- 4단계 -->
+                        <div class="step-card">
+                            <div class="step-num">04</div>
+                            <h3 class="step-title">항목별 감사조서 및 감사절차 작성</h3>
+                            <ul class="step-list">
+                                <li><strong>분석 트리거:</strong> 마스터 계정에서 Flask /master/audit-analyze/&lt;company_name&gt; 호출로 분석 가동</li>
+                                <li><strong>절차 매핑:</strong> Outlier 혹은 변동성이 높은 주요 계정에 대해 Dify 내 K-GAAP/GAAS RAG를 질의하여 필수 감사 절차 자동 추출</li>
+                                <li><strong>조서 합성:</strong> AI 에이전트가 '감사 목표 - 수행 절차 - 감사 결과 및 결론'의 3단계 마크다운 감사조서 반환</li>
+                            </ul>
+                        </div>
+
+                        <!-- 5단계 -->
+                        <div class="step-card">
+                            <div class="step-num">05</div>
+                            <h3 class="step-title">감사보고서 초안 작성</h3>
+                            <ul class="step-list">
+                                <li><strong>초안 생성:</strong> 작성된 항목별 감사조서 결과와 Supabase 벡터 검색을 통한 DART 유사 보고서 문구를 AI 프롬프트 컨텍스트로 결합</li>
+                                <li><strong>보고서 도출:</strong> Dify 메인 에이전트가 회계 기준 및 과거 사례를 참고하여 최종 감사보고서 초안 자동 작성</li>
+                            </ul>
+                        </div>
+
+                        <!-- 6단계 -->
+                        <div class="step-card">
+                            <div class="step-num">06</div>
+                            <h3 class="step-title">감사보고서 교차 검증 (Verification)</h3>
+                            <ul class="step-list">
+                                <li><strong>규정 준수 확인:</strong> 완성된 감사보고서 초안을 K-GAAS 규정에 대조하여 필수 기재 사항 누락 및 오류를 Dify 내 Reviewer 에이전트가 교차 검증</li>
+                                <li><strong>최종 피드백:</strong> 검증 성공 시 마스터 대시보드 상태를 '완료'로 자동 업데이트하며, 수정 사항 발생 시 피드백 리스트 반환</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="divider-glow"></div>
+                    
+                    <div class="welcome-badge">Tech Infrastructure</div>
+                    <h2 class="audit-section-title">기술 스택 및 인프라 매핑 요약</h2>
+                    <p class="audit-section-subtitle">
+                        자동화 파이프라인 워크플로우를 효율적으로 구현하고 제어하기 위해 유기적으로 매핑된 시스템 기술 구성입니다.
+                    </p>
+
+                    <!-- 기술 스택 그리드 -->
+                    <div class="tech-grid">
+                        <!-- 프론트엔드 -->
+                        <div class="tech-card">
+                            <div class="tech-icon-wrapper">
+                                <span class="tech-icon-badge frontend">Frontend</span>
+                            </div>
+                            <h4 class="tech-tools">Python Flask</h4>
+                            <p class="tech-role">고객 데이터 수신 및 업로드 API 제어, 파트너 및 마스터 대시보드 제공, AI 종합 분석 실행 트리거 관문 (Render 배포)</p>
+                        </div>
+
+                        <!-- 데이터 처리 -->
+                        <div class="tech-card">
+                            <div class="tech-icon-wrapper">
+                                <span class="tech-icon-badge data">Workflow</span>
+                            </div>
+                            <h4 class="tech-tools">n8n & PostgreSQL 16</h4>
+                            <p class="tech-role">OpenDART API 연동 및 주기적 수집(Cron Scheduler), T/B 원장 데이터 파싱, 데이터 가공 및 정제 Webhook 파이프라인 관리</p>
+                        </div>
+
+                        <!-- AI 에이전트 -->
+                        <div class="tech-card">
+                            <div class="tech-icon-wrapper">
+                                <span class="tech-icon-badge ai">AI Inference</span>
+                            </div>
+                            <h4 class="tech-tools">Dify (Docker)</h4>
+                            <p class="tech-role">K-GAAP/K-GAAS 기준서 RAG 구축, 감사조서 합성 에이전트 및 보고서 초안 생성/교차 검증 LLM 추론 오케스트레이션</p>
+                        </div>
+
+                        <!-- 저장소 -->
+                        <div class="tech-card">
+                            <div class="tech-icon-wrapper">
+                                <span class="tech-icon-badge storage">Storage</span>
+                            </div>
+                            <h4 class="tech-tools">Supabase & Nextcloud</h4>
+                            <p class="tech-role">고객 업로드 원본 파일 보관(Storage), 정제 데이터 테이블 및 pgvector 기반 고차원 텍스트 벡터 임베딩 저장소</p>
+                        </div>
+                    </div>
+                </section>
                 
                 <footer class="dashboard-footer" style="display: none;">
                     <!-- 사이드바에 로그아웃이 있으므로 본문 하단은 모바일 대비용으로 백업 유지 (CSS로 숨김 처리) -->
@@ -202,6 +326,214 @@
                         <span>안전하게 로그아웃</span>
                     </a>
                 </footer>
+            </div>
+
+            <!-- 시스템 통계 및 AI 파이프라인 대시보드 뷰 -->
+            <div class="glass-card dashboard-card master-card" id="analytics-dashboard-view" style="display: none; margin-top: 0;">
+                <header class="dashboard-header" style="margin-bottom: 24px;">
+                    <div class="status-badge master-badge">
+                        <span class="pulse-dot"></span>
+                        <span>시스템 분석 및 자동화 제어</span>
+                    </div>
+                    <h1 id="analytics-heading" style="margin-bottom: 8px;">시스템 통계 & <span class="company-highlight">AI 파이프라인</span></h1>
+                    <p class="welcome-message">포털 서버 통계와 백그라운드 AI 회계감사 파이프라인 동작을 관리합니다.</p>
+                </header>
+
+                <!-- 서브 탭 메뉴 바 -->
+                <div class="sub-tabs-container">
+                    <button class="sub-tab-btn active" data-subtab="metrics">📈 시스템 경영 통계</button>
+                    <button class="sub-tab-btn" data-subtab="pipeline">⚙️ AI 자동화 파이프라인 관리</button>
+                </div>
+
+                <!-- 서브 탭 1: 시스템 경영 통계 -->
+                <div class="sub-tab-content active" id="subtab-metrics-view">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-title">월간 API 호출 수</div>
+                            <div class="stat-value">14,205 건</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">누적 데이터 트래픽</div>
+                            <div class="stat-value">1.2 TB</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-title">AI 평균 응답 시간</div>
+                            <div class="stat-value" style="color: #10b981;">1.8 초</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mock-placeholder-card" style="padding: 40px 20px;">
+                        <span class="mock-placeholder-icon">📊</span>
+                        <h3 class="mock-placeholder-title">통합 경영 통계 시각화 및 리포팅 모듈</h3>
+                        <p class="mock-placeholder-desc">연도별/월별 신규 파트너사 유치 통계 및 리포팅 대시보드가 IT 지원팀에 의해 개발 예정인 영역입니다.</p>
+                    </div>
+                </div>
+
+                <!-- 서브 탭 2: AI 자동화 파이프라인 관리 -->
+                <div class="sub-tab-content" id="subtab-pipeline-view" style="display: none;">
+                    <p class="subtab-description">
+                        마스터 1인 관리 전용 AI 파이프라인 제어 콘솔입니다. 각 노드를 클릭하여 설정 및 Webhook 상태를 업데이트하고 연동 테스트를 진행할 수 있습니다.
+                    </p>
+
+                    <!-- 파이프라인 플로우 수직/그리드 타임라인 -->
+                    <div class="pipeline-console-container">
+                        
+                        <!-- 1단계 노드 -->
+                        <div class="pipeline-node-card active-node" id="node-step1">
+                            <div class="node-header" onclick="toggleNodeDetails('step1')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">Step 01</span>
+                                    <h3 class="node-step-title">고객 데이터 기반 재무제표 작성</h3>
+                                </div>
+                                <div class="node-status-badge status-active">연동 완료</div>
+                            </div>
+                            <div class="node-details" id="details-step1" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">고객이 자료 업로드 시 n8n Webhook을 통해 파이썬 연산 노드로 T/B 데이터를 정제 및 파싱하여 표준 재무제표(BS/IS)를 빌드합니다.</p>
+                                    <div class="node-form-group">
+                                        <label>n8n Webhook Endpoint URL</label>
+                                        <input type="text" value="https://n8n.hyean-dskim.com/webhook/submit-tb" placeholder="Webhook URL을 입력하세요">
+                                    </div>
+                                    <div class="node-actions-row">
+                                        <button class="btn-node-test" onclick="runPingTest('step1')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-step1"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-arrow">↓</div>
+
+                        <!-- 2단계 노드 -->
+                        <div class="pipeline-node-card testing-node" id="node-step2">
+                            <div class="node-header" onclick="toggleNodeDetails('step2')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">Step 02</span>
+                                    <h3 class="node-step-title">K-GAAP 및 K-GAAS RAG 구축</h3>
+                                </div>
+                                <div class="node-status-badge status-testing">테스트 중</div>
+                            </div>
+                            <div class="node-details" id="details-step2" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">K-GAAP/GAAS 기준서 PDF/Text 원문을 Nextcloud 보관소에 적재하고 Dify의 지식(Knowledge) 모듈을 이용해 벡터 임베딩을 구성합니다.</p>
+                                    <div class="node-form-group">
+                                        <label>Dify Knowledge Base API Key</label>
+                                        <input type="password" value="dify-kb-key-sample-12345" placeholder="Dify API Key 입력">
+                                    </div>
+                                    <div class="node-actions-row">
+                                        <button class="btn-node-test" onclick="runPingTest('step2')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-step2"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-arrow">↓</div>
+
+                        <!-- 3단계 노드 -->
+                        <div class="pipeline-node-card backlog-node" id="node-step3">
+                            <div class="node-header" onclick="toggleNodeDetails('step3')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">Step 03</span>
+                                    <h3 class="node-step-title">DART 감사보고서 DB 구축 (RAG)</h3>
+                                </div>
+                                <div class="node-status-badge status-backlog">준비 중</div>
+                            </div>
+                            <div class="node-details" id="details-step3" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">n8n 스케줄러(Cron)를 통해 dart.fss.or.kr API를 주기적으로 호출하여 수집한 감사보고서 본문 청크를 Supabase pgvector에 동기화합니다.</p>
+                                    <div class="node-form-group">
+                                        <label>OpenDART API 인증키 (User Key)</label>
+                                        <input type="password" value="" placeholder="DART API Key 입력">
+                                    </div>
+                                    <div class="node-actions-row">
+                                        <button class="btn-node-test" onclick="runPingTest('step3')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-step3"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-arrow">↓</div>
+
+                        <!-- 4단계 노드 -->
+                        <div class="pipeline-node-card backlog-node" id="node-step4">
+                            <div class="node-header" onclick="toggleNodeDetails('step4')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">Step 04</span>
+                                    <h3 class="node-step-title">항목별 감사조서 및 감사절차 작성</h3>
+                                </div>
+                                <div class="node-status-badge status-backlog">준비 중</div>
+                            </div>
+                            <div class="node-details" id="details-step4" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">시산표 상 Outlier 항목에 대하여 Dify 내 K-GAAP/GAAS 지식 베이스를 질의하고 3단계 구조의 감사조서 마크다운 문서를 합성합니다.</p>
+                                    <div class="node-form-group">
+                                        <label>Dify Agent Endpoint (Working Paper App)</label>
+                                        <input type="text" value="" placeholder="Dify Agent API URL 입력">
+                                    </div>
+                                    <div class="node-actions-row">
+                                        <button class="btn-node-test" onclick="runPingTest('step4')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-step4"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-arrow">↓</div>
+
+                        <!-- 5단계 노드 -->
+                        <div class="pipeline-node-card backlog-node" id="node-step5">
+                            <div class="node-header" onclick="toggleNodeDetails('step5')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">Step 05</span>
+                                    <h3 class="node-step-title">감사보고서 초안 작성</h3>
+                                </div>
+                                <div class="node-status-badge status-backlog">준비 중</div>
+                            </div>
+                            <div class="node-details" id="details-step5" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">합성 완료된 감사조서와 유사 DART 공시 정보 데이터를 결합하여 Dify 메인 에이전트가 주석을 포함한 전문적인 감사보고서 초안을 도출합니다.</p>
+                                    <div class="node-form-group">
+                                        <label>Dify 메인 Generator API Key</label>
+                                        <input type="password" value="" placeholder="API Key 입력">
+                                    </div>
+                                    <div class="node-actions-row">
+                                        <button class="btn-node-test" onclick="runPingTest('step5')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-step5"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-arrow">↓</div>
+
+                        <!-- 6단계 노드 -->
+                        <div class="pipeline-node-card backlog-node" id="node-step6">
+                            <div class="node-header" onclick="toggleNodeDetails('step6')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">Step 06</span>
+                                    <h3 class="node-step-title">작성된 감사보고서 교차 검증 (Verification)</h3>
+                                </div>
+                                <div class="node-status-badge status-backlog">준비 중</div>
+                            </div>
+                            <div class="node-details" id="details-step6" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">완성된 초안을 K-GAAS 규정에 대조하여 Dify 내의 Reviewer 에이전트가 교차 검증을 수행하고 최종 결산 피드백을 전달합니다.</p>
+                                    <div class="node-form-group">
+                                        <label>Dify Reviewer Agent API Key</label>
+                                        <input type="password" value="" placeholder="API Key 입력">
+                                    </div>
+                                    <div class="node-actions-row">
+                                        <button class="btn-node-test" onclick="runPingTest('step6')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-step6"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
             </div>
         </main>
     </div>

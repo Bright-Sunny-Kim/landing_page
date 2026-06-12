@@ -459,13 +459,39 @@ document.addEventListener('DOMContentLoaded', () => {
                         const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
                         activeMocks.forEach(m => m.remove());
                         
+                        // 타 대시보드 숨기기
+                        const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
+                        if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
+                        
                         // 홈 보이기
                         homeDashboardView.style.display = 'block';
                     }
                     return;
                 }
                 
-                // 2. Mock 8개 메뉴 탭 클릭 시 (e.preventDefault로 가상 렌더링)
+                // 2. 시스템 통계 및 리포트 (analytics) 분기 처리
+                if (menu === 'analytics') {
+                    e.preventDefault();
+                    
+                    sidebarMenuItems.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    if (homeDashboardView) homeDashboardView.style.display = 'none';
+                    if (detailDashboardView) detailDashboardView.style.display = 'none';
+                    
+                    // 기존 Mock 뷰들 다 제거
+                    const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+                    activeMocks.forEach(m => m.remove());
+                    
+                    // analytics 뷰 보이기
+                    const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
+                    if (analyticsDashboardView) {
+                        analyticsDashboardView.style.display = 'block';
+                    }
+                    return;
+                }
+                
+                // 3. Mock 나머지 7개 메뉴 탭 클릭 시 (e.preventDefault로 가상 렌더링)
                 e.preventDefault();
                 
                 // 사이드바 active 클래스 토글
@@ -475,6 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 기존 대시보드 뷰 숨기기
                 if (homeDashboardView) homeDashboardView.style.display = 'none';
                 if (detailDashboardView) detailDashboardView.style.display = 'none';
+                const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
+                if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
                 
                 // 기존에 열려있던 다른 Mock 뷰 제거
                 const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
@@ -482,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 새 Mock HTML 생성 및 인젝션
                 const data = menuMockData[menu];
-                if (data) {
+                if (data && menu !== 'analytics') {
                     const mockHtml = `
                         <div class="mock-dashboard">
                             <header class="mock-header">
@@ -519,3 +547,69 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+
+// ==========================================
+// Master Portal Sub-tabs & Pipeline Interactions
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const subTabBtns = document.querySelectorAll('.sub-tab-btn');
+    const metricsView = document.getElementById('subtab-metrics-view');
+    const pipelineView = document.getElementById('subtab-pipeline-view');
+
+    if (subTabBtns.length > 0 && metricsView && pipelineView) {
+        subTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                subTabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const subtab = btn.getAttribute('data-subtab');
+                if (subtab === 'metrics') {
+                    metricsView.style.display = 'block';
+                    pipelineView.style.display = 'none';
+                } else {
+                    metricsView.style.display = 'none';
+                    pipelineView.style.display = 'block';
+                }
+            });
+        });
+    }
+});
+
+// Accordion Toggle for Pipeline Cards
+window.toggleNodeDetails = (stepId) => {
+    const details = document.getElementById(`details-${stepId}`);
+    const card = document.getElementById(`node-${stepId}`);
+    if (details && card) {
+        if (details.style.display === 'none') {
+            details.style.display = 'block';
+            card.classList.add('expanded');
+        } else {
+            details.style.display = 'none';
+            card.classList.remove('expanded');
+        }
+    }
+};
+
+// Mock Ping Connection Test
+window.runPingTest = (stepId) => {
+    const indicator = document.getElementById(`ping-res-${stepId}`);
+    if (indicator) {
+        indicator.textContent = '🔌 연결 테스트 중...';
+        indicator.style.color = '#a78bfa';
+        indicator.className = 'test-result-indicator pinging';
+        
+        setTimeout(() => {
+            indicator.className = 'test-result-indicator';
+            if (stepId === 'step1') {
+                indicator.textContent = '✓ 연결 성공 (n8n Webhook OK - HTTP 200)';
+                indicator.style.color = '#10b981';
+            } else if (stepId === 'step2') {
+                indicator.textContent = '✓ 인증 성공 (Dify API Key Active)';
+                indicator.style.color = '#10b981';
+            } else {
+                indicator.textContent = '⚠ 연결 실패 (인증 정보가 비어 있거나 유효하지 않습니다)';
+                indicator.style.color = '#ef4444';
+            }
+        }, 1200);
+    }
+};
