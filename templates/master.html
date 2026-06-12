@@ -166,29 +166,47 @@
                 </div>
                 
                 <section class="partners-section">
-                    <div class="section-header-flex">
-                        <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
-                        <span class="partner-count">총 <strong>{{ partners|length }}</strong>개 기업</span>
+                    <div class="section-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2 class="section-title" style="margin-bottom: 0;">가입된 파트너사 목록 (실시간 DB 조회)</h2>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <select id="task-filter" class="task-filter-select" style="padding: 6px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); color: var(--text-primary); border: 1px solid var(--card-border); outline: none;">
+                                <option value="all">모든 요청 업무</option>
+                                <option value="회계감사">회계감사</option>
+                                <option value="세무자문">세무자문</option>
+                                <option value="기장대리">기장대리</option>
+                                <option value="기타">기타</option>
+                            </select>
+                            <span class="partner-count">총 <strong id="visible-partner-count">{{ partners|length }}</strong>개 기업</span>
+                        </div>
                     </div>
                     <div class="table-container">
-                        <table class="partners-table">
+                        <table class="partners-table" id="partners-table">
                             <thead>
                                 <tr>
                                     <th>기업명</th>
                                     <th>담당자</th>
                                     <th>요청 업무</th>
                                     <th>등록일시</th>
+                                    <th>파일업로드율</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for partner in partners %}
-                                <tr>
+                                <tr class="partner-row" data-task="{{ partner.task_type }}">
                                     <td class="col-company">
                                         <a href="{{ url_for('master_detail', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
                                     </td>
                                     <td>{{ partner.username }}</td>
                                     <td class="col-task">{{ partner.task_type }}</td>
                                     <td class="col-date">{{ partner.created_at }}</td>
+                                    <td class="col-rate" style="text-align: center; min-width: 100px;">
+                                        <a href="{{ url_for('master_detail', company_name=partner.company) }}" style="text-decoration: none; display: block;">
+                                            <div style="width: 100%; background: rgba(255,255,255,0.1); border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 4px;">
+                                                <div style="width: {{ partner.upload_rate }}%; background: var(--success-color); height: 100%; border-radius: 4px;"></div>
+                                            </div>
+                                            <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">{{ partner.upload_rate }}%</span>
+                                        </a>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

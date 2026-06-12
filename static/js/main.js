@@ -672,3 +672,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ==========================================
+// Master Portal Task Filter Interaction
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const taskFilter = document.getElementById('task-filter');
+    const partnerRows = document.querySelectorAll('.partner-row');
+    const visibleCountEl = document.getElementById('visible-partner-count');
+
+    if (taskFilter && partnerRows.length > 0) {
+        taskFilter.addEventListener('change', (e) => {
+            const selectedTask = e.target.value;
+            let visibleCount = 0;
+            
+            partnerRows.forEach(row => {
+                const rowTask = row.getAttribute('data-task');
+                if (selectedTask === 'all' || rowTask === selectedTask || (selectedTask === '기타' && !['회계감사', '세무자문', '기장대리'].includes(rowTask))) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            if (visibleCountEl) {
+                visibleCountEl.textContent = visibleCount;
+            }
+        });
+    }
+});
