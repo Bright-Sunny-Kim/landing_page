@@ -337,41 +337,61 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 3. 파일 첨부명 실시간 미리보기 및 업무 요청 폼 조건부 유효성 체크
+    // 3. 감사 제출 파일 실시간 미리보기 및 폼 유효성 체크
     const requestForm = document.getElementById('request-form');
-    const fileInput = document.getElementById('file');
-    const fileNamePreview = document.getElementById('file-name-preview');
+    const miniFileInputs = document.querySelectorAll('.mini-file-input');
     const requestSubmitBtn = document.getElementById('btn-request-submit');
 
-    if (fileInput && fileNamePreview) {
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files.length > 0) {
-                const name = e.target.files[0].name;
-                fileNamePreview.textContent = name;
-                fileNamePreview.style.color = '#a78bfa';
-                fileNamePreview.style.fontWeight = '500';
-            } else {
-                fileNamePreview.textContent = '선택된 파일 없음';
-                fileNamePreview.style.color = 'var(--text-secondary)';
-                fileNamePreview.style.fontWeight = 'normal';
-            }
+    if (miniFileInputs.length > 0) {
+        miniFileInputs.forEach(input => {
+            input.addEventListener('change', (e) => {
+                const label = document.getElementById(`label-${input.id}`);
+                if (label) {
+                    if (e.target.files && e.target.files.length > 0) {
+                        const name = e.target.files[0].name;
+                        const textSpan = label.querySelector('.file-text');
+                        if (textSpan) textSpan.textContent = name;
+                        label.classList.add('has-file');
+                        
+                        // 아이콘을 체크표시로 교체
+                        const iconSpan = label.querySelector('.upload-icon');
+                        if (iconSpan) iconSpan.textContent = '✓';
+                    } else {
+                        const textSpan = label.querySelector('.file-text');
+                        if (textSpan) textSpan.textContent = '파일 선택';
+                        label.classList.remove('has-file');
+                        
+                        const iconSpan = label.querySelector('.upload-icon');
+                        if (iconSpan) iconSpan.textContent = '↑';
+                    }
+                }
+            });
         });
     }
 
     if (requestForm && requestSubmitBtn) {
         requestForm.addEventListener('submit', (e) => {
             const helpText = document.getElementById('help_text').value.trim();
-            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+            
+            // 16개 파일 인풋 중 하나라도 파일이 올라갔는지 확인
+            let hasAnyFile = false;
+            miniFileInputs.forEach(input => {
+                if (input.files && input.files.length > 0) {
+                    hasAnyFile = true;
+                }
+            });
 
-            if (!helpText && !hasFile) {
+            if (!helpText && !hasAnyFile) {
                 e.preventDefault();
-                alert('문의 사항을 작성하거나 파일을 첨부해 주세요.');
+                alert('추가 요청사항을 작성하거나 1개 이상의 감사 서류 파일을 첨부해 주세요.');
                 return;
             }
-
+            
+            // 로딩 상태 표시
             requestSubmitBtn.disabled = true;
             requestSubmitBtn.style.opacity = '0.8';
-            requestSubmitBtn.querySelector('span').textContent = 'Submitting...';
+            const btnSpan = requestSubmitBtn.querySelector('span');
+            if (btnSpan) btnSpan.textContent = '업로드 중...';
         });
     }
 

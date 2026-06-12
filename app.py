@@ -401,62 +401,117 @@ def update_status():
 @app.route('/submit-request', methods=['POST'])
 def submit_request():
     if 'email' not in session:
-        return jsonify({'error': '세션이 만료되었습니다. 다시 로그인해 주세요.'}), 401
+        return jsonify({'error': '세션이 만료되었습니다. 다시 로그인해 주세요'}), 401
         
     email = session.get('email')
     company = session.get('company')
     help_text = request.form.get('help_text', '').strip()
-    file = request.files.get('file')
     
-    is_file_empty = not file or file.filename == ''
-    if not help_text and is_file_empty:
-        return jsonify({'error': '문의 사항을 작성하거나 파일을 첨부해 주세요.'}), 400
-        
-    file_url = None
-    filename_saved = None
-    if not is_file_empty:
-        # 파일명 생성 및 업로드 준비
-        original_filename = secure_filename(file.filename)
-        if not original_filename:
-            original_filename = "unnamed_file"
-        
-        timestamp = int(time.time())
-        # 폴더명에 한글이 들어가면 Supabase API(InvalidKey) 에러가 발생할 수 있으므로,
-        # 항상 영문/숫자인 email을 안전하게 변환하여 폴더명으로 사용합니다.
-        safe_email_folder = re.sub(r'[^a-zA-Z0-9]', '_', email)
-        file_path = f"{safe_email_folder}/{timestamp}_{original_filename}"
-        
-        # 파일 내용을 바이트로 읽기
-        file_bytes = file.read()
-        
-        if supabase:
-            try:
-                # 1. Supabase Storage에 파일 원본 업로드
-                supabase.storage.from_('company-uploads').upload(
-                    file_path, 
-                    file_bytes,
-                    file_options={"content-type": file.content_type}
-                )
-                file_url = file_path
-                filename_saved = original_filename
-            except Exception as e:
-                print(f"Storage upload error: {e}")
-        else:
-            print("Supabase client is not configured. Storage upload skipped.")
-            
-    # 2. DB 테이블 (company_files)에 메타데이터 기록
-    if supabase:
-        try:
-            supabase.table('company_files').insert({
-                'company_name': company,
-                'uploaded_by': email,
-                'file_name': filename_saved,
-                'file_url': file_url,
-                'help_text': help_text
-            }).execute()
-        except Exception as e:
-            print(f"DB insert error: {e}")
+    document_labels = {
+        'tb_current': '시산표(당연도)',
+        'tb_prior': '시산표(전년도)',
+        'gl_current': '계정별원장(당연도)',
+        'gl_prior': '계정별원장(전년도)',
+        'fa_current': '유형자산명세서(당연도)',
+        'fa_prior': '유형자산명세서(전년도)',
+        'vat_current': '부가가치세신고서(당연도)',
+        'vat_prior': '부가가치세신고서(전년도)',
+        'payroll_current': '급여대장(당연도)',
+        'payroll_prior': '급여대장(전년도)',
+        'withholding_current': '원천징수이행상황신고서(당연도)',
+        'withholding_prior': '원천징수이행상황신고서(전년도)',
+        'severance_current': '퇴직금추계액명세서(당연도)',
+        'severance_prior': '퇴직금추계액명세서(전년도)',
+        'other_current': '기타 증빙(당연도)',
+        'other_prior': '기타 증빙(전년도)'
+    }
+    
+    import datetime
+    current_year = datetime.datetime.now().year
+    prior_year = current_year - 1
 
+    uploaded_files_data = []
+    
+    for field_name, label in document_labels.items():
+        status = request.form.get(f'{field_name}_status', '미제출')
+        file = request.files.get(field_name)
+        
+        # Determine the year folder
+        if 'current' in field_name:
+            year_folder = str(current_year)
+        else:
+            year_folder = str(prior_year)
+            
+        if status == '제출' and file and file.filename != '':
+            uploaded_files_data.append((field_name, label, file, status, year_folder))
+        elif status in ['미제출', '해당사항없음']:
+            # DB entry only
+            uploaded_files_data.append((field_name, label, None, status, year_folder))
+            
+    if not help_text and not uploaded_files_data:
+        return jsonify({'error': '문의 사항을 작성하거나 1개 이상의 감사 증빙을 처리해주세요.'}), 400
+        
+    for field_name, label, file, status, year_folder in uploaded_files_data:
+        if status == '제출' and file:
+            from werkzeug.utils import secure_filename
+            import time
+            original_filename = secure_filename(file.filename)
+            if not original_filename:
+                original_filename = "unnamed_file"
+                
+            db_filename = f"[{label}] {original_filename}"
+            timestamp = int(time.time())
+            
+            # 회사명/연도/파일명 구조로 변경
+            file_path = f"{company}/{year_folder}/{timestamp}_{field_name}_{original_filename}"
+            
+            file_bytes = file.read()
+            file_url = None
+            
+            if supabase:
+                try:
+                    supabase.storage.from_('company-uploads').upload(
+                        file_path, 
+                        file_bytes,
+                        file_options={"content-type": file.content_type}
+                    )
+                    file_url = file_path
+                except Exception as e:
+                    print(f"Storage upload error for {field_name}: {e}")
+            
+            if supabase:
+                try:
+                    formatted_help = f"[{label}] 상태: 제출"
+                    if help_text:
+                        formatted_help += f"\n추가 메시지: {help_text}"
+                        
+                    supabase.table('company_files').insert({
+                        'company_name': company,
+                        'uploaded_by': email,
+                        'file_name': db_filename,
+                        'file_url': file_url,
+                        'help_text': formatted_help
+                    }).execute()
+                except Exception as e:
+                    print(f"DB insert error for {field_name}: {e}")
+        else:
+            # 미제출 / 해당사항없음
+            if supabase:
+                try:
+                    formatted_help = f"[{label}] 상태: {status}"
+                    if help_text:
+                        formatted_help += f"\n추가 메시지: {help_text}"
+                        
+                    supabase.table('company_files').insert({
+                        'company_name': company,
+                        'uploaded_by': email,
+                        'file_name': f"[{status}] {label}",
+                        'file_url': None,
+                        'help_text': formatted_help
+                    }).execute()
+                except Exception as e:
+                    print(f"DB insert error for text-only request: {e}")
+ 
     return redirect(url_for('company_page', company_name=session['company'], success='true'))
 
 @app.route('/master/audit-analyze/<string:company_name>', methods=['POST'])
