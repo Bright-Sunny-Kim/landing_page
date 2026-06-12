@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hyean-pwa-v1';
+const CACHE_NAME = 'hyean-pwa-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/style.css',
@@ -31,13 +31,28 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // 간단한 캐시 우선(Network fallback) 전략
+  // POST 등 GET 이외의 요청 및 Chrome Extension 등 chrome-extension:// scheme 요청 무시
+  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+
+  // Network-First 전략: 온라인 상태에서는 항상 네트워크에서 최신 정보 fetch, 실패 시 캐시 fallback
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        return response || fetch(event.request).catch(() => {
-          // 오프라인이면서 HTML 요청일 경우 캐시된 첫 페이지 제공(옵션)
-        });
+        // 정상 응답이고 HTTP 200인 경우 캐시를 갱신
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        // 네트워크 연결 실패(오프라인) 시 캐시 검색
+        return caches.match(event.request);
       })
   );
 });
+
