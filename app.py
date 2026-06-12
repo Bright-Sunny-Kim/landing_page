@@ -61,26 +61,283 @@ def check_email():
         
     # 마스터 이메일인 경우 무조건 가입된 것으로 판단하여 패스시킴
     if email == MASTER_EMAIL:
-            if supabase:
+        if supabase:
+            try:
+                response = supabase.table('users').select('*').eq('email', MASTER_EMAIL).execute()
+                user = response.data[0] if response.data else None
+                if user:
+                    has_password = bool(user.get('password'))
+                    return jsonify({'exists': True, 'has_password': has_password})
+            except Exception as e:
+                print(f"Master check-email database error: {e}")
+        return jsonify({'exists': True, 'has_password': False})
+        
+    if not supabase:
+        return jsonify({'exists': False, 'error': 'Supabase not configured'})
+
+    try:
+        response = supabase.table('users').select('*').eq('email', email).execute()
+        if response.data and len(response.data) > 0:
+            user = response.data[0]
+            has_password = bool(user.get('password'))
+            return jsonify({'exists': True, 'has_password': has_password})
+    except Exception as e:
+        print(f"Check email error: {e}")
+        return jsonify({'exists': False, 'error': str(e)})
+        
+    return jsonify({'exists': False})
+
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form.get('email', '').strip()
+    password = request.form.get('password', '').strip()
+    company = request.form.get('company', '').strip()
+    username = request.form.get('username', '').strip()
+    task_type = request.form.get('task_type', '')
+    remember = request.form.get('remember') == 'on'
+    
+    if not email or not supabase:
+        return redirect(url_for('index', error='missing_fields'))
+        
+    try:
+        # 로그인 유지 여부 쿠키 기한 조정
+        if remember:
+            session.permanent = True
+        else:
+            session.permanent = False
+            
+        # 마스터 계정 처리
+        if email == MASTER_EMAIL:
+            response = supabase.table('users').select('*').eq('email', email).execute()
+            user = response.data[0] if response.data else None
+            
+            if user:
+                user_password = user.get('password')
+                if user_password:
+                    # 비밀번호 해시 형태 확인
+                    is_hashed = any(user_password.startswith(p) for p in ['pbkdf2:', 'scrypt:', 'argon2:', 'sha256:'])
+                    if is_hashed:
+                        if not check_password_hash(user_password, password):
+                            return redirect(url_for('index', error='invalid_password'))
+                    else:
+                        # 평문 비밀번호 검증 (예: '0000')
+                        if user_password != password:
+                            return redirect(url_for('index', error='invalid_password'))
+                        # 로그인 성공 시 보안을 위해 해시로 자동 마이그레이션
+                        try:
+                            hashed = generate_password_hash(password)
+                            supabase.table('users').update({'password': hashed}).eq('email', email).execute()
+                        except Exception as migration_err:
+                            print(f"Failed to migrate master password to hash: {migration_err}")
+                else:
+                    # 마스터 비밀번호 등록이 없는 경우 첫 로그인 시 자동 생성
+                    if not password:
+                        return redirect(url_for('index', error='missing_password'))
+                    hashed = generate_password_hash(password)
+                    supabase.table('users').update({'password': hashed}).eq('email', email).execute()
+                
+                session['email'] = user['email']
+                session['company'] = user.get('company', '회계법인 혜안')
+                session['username'] = user.get('username', '마스터관리자')
+                session['task_type'] = user.get('task_type', '기타')
+            else:
+                # 최초 가동 등으로 DB에 마스터 계정이 없을 시 자동 등록
+                if not password:
+                    return redirect(url_for('index', error='missing_password'))
+                hashed = generate_password_hash(password)
+                supabase.table('users').insert({
+                    'email': MASTER_EMAIL, 
+                    'company': '회계법인 혜안', 
+                    'username': '마스터관리자', 
+                    'task_type': '기타',
+                    'password': hashed
+                }).execute()
+                
+                session['email'] = MASTER_EMAIL
+                session['company'] = '회계법인 혜안'
+                session['username'] = '마스터관리자'
+                session['task_type'] = '기타'
+                
+            return redirect(url_for('master_page'))
+            
+        # 일반 계정 처리
+        response = supabase.table('users').select('*').eq('email', email).execute()
+        user = response.data[0] if response.data else None
+        
+        if user:
+            # 1) 기존 회원
+            user_password = user.get('password')
+            if user_password:
+                # 소셜 가입 회원인 경우 소셜로만 로그인 제한
+                if user_password.startswith('OAUTH:'):
+                    provider = user_password.split(':')[1].capitalize()
+                    return redirect(url_for('index', error=f'social_only_{provider}'))
+                    
+                # 비밀번호 해시 형태 확인
+                is_hashed = any(user_password.startswith(p) for p in ['pbkdf2:', 'scrypt:', 'argon2:', 'sha256:'])
+                if is_hashed:
+                    if not check_password_hash(user_password, password):
+                        return redirect(url_for('index', error='invalid_password'))
+                else:
+                    # 평문 비밀번호 검증 (예: 사용자가 DB에 직접 텍스트로 넣은 경우)
+                    if user_password != password:
+                        return redirect(url_for('index', error='invalid_password'))
+                    # 성공 시 해시 자동 마이그레이션
+                    try:
+                        hashed = generate_password_hash(password)
+                        supabase.table('users').update({'password': hashed}).eq('email', email).execute()
+                    except Exception as migration_err:
+                        print(f"Failed to migrate user password to hash: {migration_err}")
+            else:
+                # 기존 회원 중 비밀번호가 아직 없는 유저: 이번에 입력한 비밀번호로 최초 등록(마이그레이션)
+                if not password:
+                    return redirect(url_for('index', error='missing_password'))
+                hashed = generate_password_hash(password)
+                supabase.table('users').update({'password': hashed}).eq('email', email).execute()
+                
+            session['email'] = user['email']
+            session['company'] = user['company']
+            session['username'] = user['username']
+            session['task_type'] = user['task_type']
+        else:
+            # 2) 신규 회원 등록 및 로그인
+            if not (company and username and task_type and password):
+                return redirect(url_for('index', error='missing_fields'))
+                
+            hashed = generate_password_hash(password)
+            supabase.table('users').insert({
+                'email': email,
+                'company': company,
+                'username': username,
+                'task_type': task_type,
+                'password': hashed
+            }).execute()
+            
+            session['email'] = email
+            session['company'] = company
+            session['username'] = username
+            session['task_type'] = task_type
+            
+    except Exception as e:
+        print(f"Database error during login: {e}")
+        return redirect(url_for('index', error='db_error'))
+        
+    return redirect(url_for('company_page', company_name=session['company']))
+
+@app.route('/login/social', methods=['POST'])
+def login_social():
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+        
+    data = request.get_json() or {}
+    email = data.get('email', '').strip()
+    provider = data.get('provider', '').strip() # 'google' or 'naver'
+    company = data.get('company', '').strip()
+    username = data.get('username', '').strip()
+    task_type = data.get('task_type', '').strip()
+    remember = data.get('remember') == True
+    
+    if not email or not provider:
+        return jsonify({'error': '이메일과 소셜 제공자 정보가 누락되었습니다.'}), 400
+        
+    try:
+        if remember:
+            session.permanent = True
+        else:
+            session.permanent = False
+            
+        # 해당 이메일로 이미 가입되었는지 확인
+        response = supabase.table('users').select('*').eq('email', email).execute()
+        user = response.data[0] if response.data else None
+        
+        if user:
+            session['email'] = user['email']
+            session['company'] = user['company']
+            session['username'] = user['username']
+            session['task_type'] = user['task_type']
+            
+            if email == MASTER_EMAIL:
+                return jsonify({'success': True, 'redirect': url_for('master_page')})
+                
+            return jsonify({'success': True, 'redirect': url_for('company_page', company_name=session['company'])})
+        else:
+            # 신규 소셜 가입 정보가 다 넘어온 경우 바로 가입 승인
+            if company and username and task_type:
+                oauth_pwd = f"OAUTH:{provider}"
+                supabase.table('users').insert({
+                    'email': email,
+                    'company': company,
+                    'username': username,
+                    'task_type': task_type,
+                    'password': oauth_pwd
+                }).execute()
+                
+                session['email'] = email
+                session['company'] = company
+                session['username'] = username
+                session['task_type'] = task_type
+                
+                return jsonify({'success': True, 'redirect': url_for('company_page', company_name=session['company'])})
+            else:
+                # 가입 정보가 없을 경우, 추가 입력을 요구하는 응답 전달
+                return jsonify({'need_registration': True, 'email': email})
+                
+    except Exception as e:
+        print(f"Social login database error: {e}")
+        return jsonify({'error': f'소셜 로그인 처리 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@app.route('/company/<company_name>')
+def company_page(company_name):
+    if 'email' not in session:
+        return redirect(url_for('index'))
+        
+    # 마스터 계정은 튕겨나가지 않고 모든 파트너사의 포털을 다 볼 수 있도록 허용
+    if session['email'] == MASTER_EMAIL:
+        success = request.args.get('success', 'false') == 'true'
+        return render_template('company.html', 
+                               company_name=company_name,
+                               success=success)
+        
+    # 일반 파트너는 자기 회사 페이지가 아니면 첫 화면으로 튕김
+    if session['company'] != company_name:
+        return redirect(url_for('index'))
+        
+    success = request.args.get('success', 'false') == 'true'
+    
+    return render_template('company.html', 
+                           company_name=company_name,
+                           success=success)
+
+@app.route('/master')
+def master_page():
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return redirect(url_for('index'))
+    
+    partners = []
+    stats = {
+        'total_partners': 0,
+        'total_files': 0,
+        'pending_tasks': 0
+    }
+    
+    if supabase:
         try:
             response = supabase.table('users').select('*').neq('email', MASTER_EMAIL).order('created_at', desc=True).execute()
             partners = response.data
             stats['total_partners'] = len(partners)
             
+            # 전체 파일 및 상태 통계 집계
             # 전체 파일 가져오기
             files_response = supabase.table('company_files').select('company_name, file_url, file_name, status').execute()
             all_files = files_response.data
             stats['total_files'] = len(all_files)
             stats['pending_tasks'] = sum(1 for f in all_files if f.get('status') == '대기중' or not f.get('status'))
-            
+
             # 파트너별 업로드율 계산
             for p in partners:
                 p_company = p.get('company')
-                # 해당 회사의 파일 중 제출(url 있음) 또는 해당사항없음인 경우 카운트
                 p_files = [f for f in all_files if f.get('company_name') == p_company]
-                
-                # 중복 제출을 고려하여, 최근 제출 기준으로 세려면 복잡하므로 
-                # 단순히 완료/해당없음 건수를 16으로 나누어 비율 산정 (최대 100%)
                 valid_count = sum(1 for f in p_files if f.get('file_url') or (f.get('file_name') and '해당사항없음' in f.get('file_name')))
                 rate = int((valid_count / 16.0) * 100)
                 if rate > 100: rate = 100
