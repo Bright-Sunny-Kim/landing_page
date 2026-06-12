@@ -22,8 +22,67 @@
         <div class="circle circle-2"></div>
     </div>
     
-    <main class="dashboard-container">
-        <div class="glass-card dashboard-card">
+    <div class="master-container company-container">
+        <!-- 사이드바 -->
+        <aside class="master-sidebar">
+            <div class="master-sidebar-header">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="회계법인 혜안" class="logo-img">
+                    <span class="logo-text-portal">Partner</span>
+                </div>
+                <div class="master-profile-box" style="display: flex;">
+                    <div class="master-profile-avatar" style="background: var(--accent-color);">P</div>
+                    <div class="master-profile-info">
+                        <span class="master-profile-name">{{ company_name }}</span>
+                        <span class="master-profile-role">Partner Portal</span>
+                    </div>
+                </div>
+            </div>
+            
+            <ul class="master-menu-list">
+                <li class="master-menu-item active" data-menu="partner-home">
+                    <a href="#partner-home">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                        <span>홈 (자료 제출)</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="partner-history">
+                    <a href="#partner-history">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+                        <span>제출 내역 조회</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="partner-inquiry">
+                    <a href="#partner-inquiry">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+                        <span>담당 회계사 문의</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="partner-billing">
+                    <a href="#partner-billing">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                        <span>수수료 청구/결제</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="partner-settings">
+                    <a href="#partner-settings">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49-.12-.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3-1.07-3-3s1.07-3 3-3 3 1.07 3 3-1.07 3-3 3z"/></svg>
+                        <span>내 정보 설정</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="master-sidebar-footer">
+                <a href="{{ url_for('logout') }}" id="btn-sidebar-logout-partner" class="btn-logout">
+                    <span>안전하게 로그아웃</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <main class="master-main-content" id="partner-main-content">
+            <!-- 1. 자료 제출 홈 뷰 -->
+            <div class="glass-card dashboard-card master-card" id="partner-home-view">
             <header class="dashboard-header">
                 <div class="logo-container-company">
                     <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="회계법인 혜안" class="logo-img">
@@ -391,16 +450,46 @@
                 </button>
             </form>
             
-            <footer class="dashboard-footer">
+            <footer class="dashboard-footer" style="display: none;">
                 <a href="{{ url_for('logout') }}" id="btn-logout" class="btn-logout">
                     <span>안전하게 로그아웃</span>
-                    <svg class="btn-exit-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17 16L21 12M21 12L17 8M21 12H9M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
                 </a>
             </footer>
-        </div>
-    </main>
+            </div>
+            <!-- 기타 뷰 플레이스홀더 -->
+            <div class="glass-card dashboard-card master-card" id="partner-history-view" style="display: none;">
+                <div class="mock-placeholder-card" style="padding: 60px 20px;">
+                    <span class="mock-placeholder-icon">📂</span>
+                    <h3 class="mock-placeholder-title">제출 내역 조회 기능 준비 중</h3>
+                    <p class="mock-placeholder-desc">과거에 제출하셨던 모든 자료와 피드백 내역을 확인할 수 있는 기능이 곧 업데이트 될 예정입니다.</p>
+                </div>
+            </div>
+            
+            <div class="glass-card dashboard-card master-card" id="partner-inquiry-view" style="display: none;">
+                <div class="mock-placeholder-card" style="padding: 60px 20px;">
+                    <span class="mock-placeholder-icon">💬</span>
+                    <h3 class="mock-placeholder-title">담당 회계사 문의 기능 준비 중</h3>
+                    <p class="mock-placeholder-desc">담당 회계사님과 1:1로 실시간 소통할 수 있는 채팅 및 문의 게시판 채널이 추가될 예정입니다.</p>
+                </div>
+            </div>
+
+            <div class="glass-card dashboard-card master-card" id="partner-billing-view" style="display: none;">
+                <div class="mock-placeholder-card" style="padding: 60px 20px;">
+                    <span class="mock-placeholder-icon">💳</span>
+                    <h3 class="mock-placeholder-title">수수료 청구/결제 기능 준비 중</h3>
+                    <p class="mock-placeholder-desc">수수료 청구서 조회 및 카드 결제를 온라인으로 진행하실 수 있는 시스템을 구축 중입니다.</p>
+                </div>
+            </div>
+
+            <div class="glass-card dashboard-card master-card" id="partner-settings-view" style="display: none;">
+                <div class="mock-placeholder-card" style="padding: 60px 20px;">
+                    <span class="mock-placeholder-icon">⚙️</span>
+                    <h3 class="mock-placeholder-title">내 정보 설정 기능 준비 중</h3>
+                    <p class="mock-placeholder-desc">비밀번호 변경 및 보안 관리를 할 수 있는 계정 설정 페이지가 준비 중입니다.</p>
+                </div>
+            </div>
+        </main>
+    </div>
     
     <!-- Script JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>

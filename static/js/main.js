@@ -633,3 +633,42 @@ window.runPingTest = (stepId) => {
         }, 1200);
     }
 };
+
+// ==========================================
+// Partner Portal Sidebar Interactions
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const partnerMenuItems = document.querySelectorAll('.master-menu-item[data-menu^="partner-"]');
+    const partnerViews = [
+        'partner-home-view',
+        'partner-history-view',
+        'partner-inquiry-view',
+        'partner-billing-view',
+        'partner-settings-view'
+    ];
+
+    if (partnerMenuItems.length > 0) {
+        partnerMenuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const menu = item.getAttribute('data-menu');
+                
+                // 사이드바 active 클래스 토글
+                partnerMenuItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                // 모든 파트너 뷰 숨기기
+                partnerViews.forEach(viewId => {
+                    const viewEl = document.getElementById(viewId);
+                    if (viewEl) viewEl.style.display = 'none';
+                });
+                
+                // 선택한 뷰 보이기
+                const targetView = document.getElementById(menu + '-view');
+                if (targetView) {
+                    targetView.style.display = 'block';
+                }
+            });
+        });
+    }
+});
