@@ -2209,3 +2209,10 @@ textarea:focus {
     }
 }
 
+
+.mini-upload-box.dragover {
+    border-color: var(--accent-color) !important;
+    background: rgba(99, 102, 241, 0.1) !important;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.3) inset;
+    transform: scale(1.02);
+}

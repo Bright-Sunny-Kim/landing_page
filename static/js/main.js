@@ -702,3 +702,66 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ==========================================
+// Drag and Drop & Multiple File Upload Logic
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const uploadBoxes = document.querySelectorAll('.mini-upload-box');
+
+    uploadBoxes.forEach(box => {
+        const input = box.querySelector('input[type="file"]');
+        const labelText = box.querySelector('.file-text');
+
+        if (!input || !labelText) return;
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            box.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop area when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            box.addEventListener(eventName, () => {
+                box.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            box.addEventListener(eventName, () => {
+                box.classList.remove('dragover');
+            }, false);
+        });
+
+        // Handle dropped files
+        box.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files && files.length > 0) {
+                input.files = files;
+                updateLabelText(input.files, labelText);
+            }
+        });
+
+        // Handle selected files via click
+        input.addEventListener('change', (e) => {
+            updateLabelText(input.files, labelText);
+        });
+        
+        function updateLabelText(files, label) {
+            if (files.length > 1) {
+                label.textContent = `${files.length}개 파일 선택됨`;
+            } else if (files.length === 1) {
+                label.textContent = files[0].name;
+            } else {
+                label.textContent = '파일 선택';
+            }
+        }
+    });
+});

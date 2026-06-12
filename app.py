@@ -443,21 +443,22 @@ def submit_request():
     uploaded_files_data = []
     
     for field_name, label in document_labels.items():
-        status = request.form.get(f'{field_name}_status', '미제출')
-        file = request.files.get(field_name)
-        
+        status = request.form.get(f'{field_name}_status', '제출')
+        files = request.files.getlist(field_name)
+
         # Determine the year folder
         if 'current' in field_name:
             year_folder = str(current_year)
         else:
             year_folder = str(prior_year)
-            
-        if status == '제출' and file and file.filename != '':
-            uploaded_files_data.append((field_name, label, file, status, year_folder))
+
+        if status == '제출' and len(files) > 0 and files[0].filename != '':
+            for file in files:
+                if file.filename != '':
+                    uploaded_files_data.append((field_name, label, file, status, year_folder))
         elif status in ['미제출', '해당사항없음']:
             # DB entry only
             uploaded_files_data.append((field_name, label, None, status, year_folder))
-            
     if not help_text and not uploaded_files_data:
         return jsonify({'error': '문의 사항을 작성하거나 1개 이상의 감사 증빙을 처리해주세요.'}), 400
         
@@ -470,7 +471,7 @@ def submit_request():
                 original_filename = "unnamed_file"
                 
             db_filename = f"[{label}] {original_filename}"
-            timestamp = int(time.time())
+        timestamp = int(time.time() * 1000) # Use ms to prevent conflicts for multiple files
             
             # 회사명/연도/파일명 구조로 변경
             file_path = f"{company}/{year_folder}/{timestamp}_{field_name}_{original_filename}"
