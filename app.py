@@ -480,7 +480,7 @@ def submit_request():
                 original_filename = "unnamed_file"
                 
             db_filename = f"[{label}] {original_filename}"
-        timestamp = int(time.time() * 1000) # Use ms to prevent conflicts for multiple files
+            timestamp = int(time.time() * 1000) # Use ms to prevent conflicts for multiple files
             
             # 회사명/연도/파일명 구조로 변경
             file_path = f"{company}/{year_folder}/{timestamp}_{field_name}_{original_filename}"
@@ -623,11 +623,6 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-if __name__ == '__main__':
-    from openai import OpenAI
-    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
 # ==========================================
 # AI 회계기준 FAQ (RAG) 엔드포인트
 # ==========================================
@@ -719,3 +714,8 @@ def faq_ask():
     except Exception as e:
         print(f"FAQ Ask error: {e}")
         return jsonify({'error': '질의 처리 중 오류가 발생했습니다.'}), 500
+
+if __name__ == '__main__':
+    from openai import OpenAI
+    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    app.run(debug=True, host='0.0.0.0', port=5000)
