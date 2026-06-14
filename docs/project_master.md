@@ -73,7 +73,22 @@
 | `file_url` | text | Supabase Storage 내 파일 업로드 경로 |
 | `help_text` | text | 고객이 작성한 문의 내용 / 요청 사항 |
 | `created_at` | timestamp | 데이터 생성(업로드) 일시 |
+| `created_at` | timestamp | 데이터 생성(업로드) 일시 |
 | `status` | text | 업무 진행 상태 (기본값: '대기중' / '처리중' / '완료') |
+
+### 🧠 RAG 벡터 지식베이스 테이블 (`public.document_chunks`)
+회계/감사 기준서 원문 PDF를 텍스트로 분할하고 임베딩하여 저장하는 벡터 테이블입니다.
+| 컬럼명 | 타입 | 설명 |
+|---|---|---|
+| `id` | int8 (PK) | 고유 식별키 (BigSerial) |
+| `document_id` | text | 기준서 파일명 (예: K-GAAP_재고자산) |
+| `category` | text | **[Phase 2 추가]** 6대 기준 분류 (예: 일반기업회계기준, K-IFRS 등) |
+| `article_name` | text | 조항명 (예: 제10조) |
+| `chunk_text` | text | 파싱된 텍스트 원문 (1개 조항 단위) |
+| `embedding` | vector(1536) | OpenAI `text-embedding-3-large` 기반 1536차원 벡터 |
+| `created_at` | timestamp | 적재 일시 |
+
+> **HNSW 인덱스 및 필터링 적용**: 검색 속도 최적화를 위한 HNSW 인덱스가 걸려 있으며, `match_document_chunks` RPC 함수를 통해 `category`별 독립적 필터링 유사도 검색을 지원합니다.
 
 ---
 

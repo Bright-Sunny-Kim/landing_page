@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from openai import OpenAI
 from audit_engine import parse_tb_file, run_variance_analysis, retrieve_k_gaap, generate_working_paper
 
 def get_safe_path_name(name):
@@ -40,6 +41,14 @@ if url and key and url != "YOUR_SUPABASE_PROJECT_URL_HERE":
 else:
     print("WARNING: SUPABASE_URL or SUPABASE_KEY is missing in .env")
     supabase = None
+
+# OpenAI 초기화
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
+if openai_api_key:
+    openai_client = OpenAI(api_key=openai_api_key)
+else:
+    print("WARNING: OPENAI_API_KEY is missing in .env")
+    openai_client = None
 
 @app.route('/')
 def index():
@@ -615,4 +624,98 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    from openai import OpenAI
+    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    app.run(debug=True, host='0.0.0.0', port=5000)
+
+# ==========================================
+# AI 회계기준 FAQ (RAG) 엔드포인트
+# ==========================================
+@app.route('/api/faq/ask', methods=['POST'])
+def faq_ask():
+    if not openai_client or not supabase:
+        return jsonify({'error': '서버의 AI 설정이 올바르지 않습니다.'}), 500
+
+    data = request.get_json() or {}
+    question = data.get('question', '').strip()
+    category = data.get('category', '전체')
+
+    if not question:
+        return jsonify({'error': '질문을 입력해주세요.'}), 400
+
+    try:
+        # 1. 질문 임베딩 생성 (text-embedding-3-large, 1536 dims)
+        embed_response = openai_client.embeddings.create(
+            input=question,
+            model="text-embedding-3-large",
+            dimensions=1536
+        )
+        query_embedding = embed_response.data[0].embedding
+
+        # 2. Supabase에서 유사 조항 검색 (HNSW)
+        rpc_params = {
+            'query_embedding': query_embedding,
+            'match_threshold': 0.3,
+            'match_count': 5
+        }
+        
+        # '전체'가 아닌 특정 카테고리가 선택되었다면 필터 파라미터 추가
+        if category and category != '전체':
+            rpc_params['filter_category'] = category
+
+        search_res = supabase.rpc('match_document_chunks', rpc_params).execute()
+        chunks = search_res.data if search_res.data else []
+
+        # 3. 컨텍스트 구성
+        if not chunks:
+            context_text = "관련된 회계기준/감사기준을 찾을 수 없습니다."
+            sources = []
+        else:
+            context_pieces = []
+            sources = []
+            for idx, c in enumerate(chunks):
+                doc_id = c.get('document_id', '알수없음')
+                art_name = c.get('article_name', '')
+                chunk_txt = c.get('chunk_text', '')
+                cat = c.get('category', '')
+                
+                source_label = f"[{cat}] {doc_id} {art_name}"
+                if source_label not in sources:
+                    sources.append(source_label)
+                
+                context_pieces.append(f"[{idx+1}] {source_label}\n{chunk_txt}")
+            
+            context_text = "\n\n".join(context_pieces)
+
+        # 4. OpenAI ChatCompletion 호출
+        system_prompt = (
+            "당신은 최고 수준의 공인회계사(CPA)이자 회계감사 전문가 AI 어시스턴트입니다.\n"
+            "사용자의 질문에 대해 반드시 주어진 [참조 기준서 조항]만을 근거로 답변하세요.\n"
+            "답변은 논리적이고 명확하게 구성하며, 가급적 어떤 조항(예: 제X조, 문단 Y 등)에 근거했는지 명시해주세요.\n"
+            "만약 참조 기준서에 답변할 내용이 전혀 없다면, '제공된 기준서 내에서는 해당 내용을 찾을 수 없습니다.'라고 정중히 답변하세요."
+        )
+
+        user_prompt = (
+            f"[질문]\n{question}\n\n"
+            f"[참조 기준서 조항]\n{context_text}"
+        )
+
+        chat_resp = openai_client.chat.completions.create(
+            model="gpt-4o-mini", # 비용 효율적인 빠른 모델 사용
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.2
+        )
+
+        answer = chat_resp.choices[0].message.content
+
+        return jsonify({
+            'answer': answer,
+            'sources': sources
+        })
+
+    except Exception as e:
+        print(f"FAQ Ask error: {e}")
+        return jsonify({'error': '질의 처리 중 오류가 발생했습니다.'}), 500

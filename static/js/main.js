@@ -749,19 +749,112 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Handle selected files via click
-        input.addEventListener('change', (e) => {
-            updateLabelText(input.files, labelText);
-        });
+
+// ==========================================
+// AI FAQ Chat Logic
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const submitBtn = document.getElementById('btn-faq-submit');
+    const inputArea = document.getElementById('faq-question-input');
+    const categorySelect = document.getElementById('faq-category-select');
+    const messagesContainer = document.getElementById('faq-chat-messages');
+
+    if (submitBtn && inputArea && messagesContainer) {
         
-        function updateLabelText(files, label) {
-            if (files.length > 1) {
-                label.textContent = `${files.length}개 파일 선택됨`;
-            } else if (files.length === 1) {
-                label.textContent = files[0].name;
-            } else {
-                label.textContent = '파일 선택';
+        // Enter 키로도 전송 (Shift+Enter는 줄바꿈)
+        inputArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitBtn.click();
             }
+        });
+
+        submitBtn.addEventListener('click', async () => {
+            const question = inputArea.value.trim();
+            const category = categorySelect ? categorySelect.value : '전체';
+
+            if (!question) return;
+
+            // 1. 유저 메시지 화면에 추가
+            appendMessage('user', question);
+            inputArea.value = '';
+            
+            // 2. 로딩 애니메이션 추가
+            const loadingId = 'loading-' + Date.now();
+            appendLoading(loadingId);
+            
+            // 스크롤 맨 아래로
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            try {
+                // 3. 백엔드 API 호출
+                const response = await fetch('/api/faq/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question, category })
+                });
+
+                const data = await response.json();
+                
+                // 4. 로딩 애니메이션 제거
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.remove();
+
+                if (response.ok) {
+                    // 5. AI 답변 추가
+                    appendMessage('ai', data.answer, data.sources);
+                } else {
+                    appendMessage('ai', '오류가 발생했습니다: ' + (data.error || '서버 에러'));
+                }
+
+            } catch (error) {
+                const loadingEl = document.getElementById(loadingId);
+                if (loadingEl) loadingEl.remove();
+                appendMessage('ai', '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+            }
+
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        });
+
+        function appendMessage(role, text, sources = []) {
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${role}-bubble`;
+            
+            let avatar = role === 'ai' ? '🤖' : 'P';
+            let formattedText = text.replace(/\n/g, '<br>');
+            
+            let sourcesHtml = '';
+            if (sources && sources.length > 0) {
+                sourcesHtml = '<div class="faq-sources"><div class="faq-sources-title">참조 기준:</div>';
+                sources.forEach(src => {
+                    sourcesHtml += `<span class="faq-source-tag">${src}</span>`;
+                });
+                sourcesHtml += '</div>';
+            }
+
+            bubble.innerHTML = `
+                <div class="bubble-avatar">${avatar}</div>
+                <div class="bubble-content">
+                    <p>${formattedText}</p>
+                    ${sourcesHtml}
+                </div>
+            `;
+            messagesContainer.appendChild(bubble);
         }
-    });
+
+        function appendLoading(id) {
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ai-bubble`;
+            bubble.id = id;
+            bubble.innerHTML = `
+                <div class="bubble-avatar">🤖</div>
+                <div class="bubble-content">
+                    <div class="typing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            `;
+            messagesContainer.appendChild(bubble);
+        }
+    }
 });
