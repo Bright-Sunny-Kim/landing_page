@@ -749,6 +749,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Handle selected files via click
+        input.addEventListener('change', (e) => {
+            updateLabelText(input.files, labelText);
+        });
+        
+        function updateLabelText(files, label) {
+            if (files.length > 1) {
+                label.textContent = `${files.length}개 파일 선택됨`;
+            } else if (files.length === 1) {
+                label.textContent = files[0].name;
+            } else {
+                label.textContent = '파일 선택';
+            }
+        }
+    });
+});
 
 // ==========================================
 // AI FAQ Chat Logic
