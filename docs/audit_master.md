@@ -11,9 +11,10 @@
 ### 📊 회계감사 자동화 6단계 세부 실행 절차
 1. **단계 1: 고객 제시 데이터로부터 재무제표 작성 (주석 포함)**
    * 결산 자료(T/B, 원장) 업로드 ➔ n8n Webhook 트리거 ➔ 파이썬 노드로 데이터 정제 및 표준 계정 코드 매핑 ➔ 표준 재무제표 빌드 ➔ Dify API로 차이 내역(Delta) 분석 및 수정 보고서 생성.
-2. **단계 2: 회계기준(K-GAAP/K-IFRS) 및 감사기준(K-GAAS) RAG 구축 (완료/진행중)**
+2. **단계 2: 회계기준(K-GAAP/K-IFRS) 및 감사기준(K-GAAS) RAG 구축 (완료)**
    * **[실무 최적화]** 크롤러 대신 관리자가 원문 PDF를 한 번 다운받아 로컬 6대 카테고리 폴더(한국채택국제회계기준, 일반기업회계기준, 특수분야회계기준 등)에 넣으면 자동으로 일괄 파싱 및 적재하는 구조(`process_local_pdfs.py`) 채택.
-   * Dify 지식(Knowledge) 연동을 위해 PDF 텍스트를 청킹(조항 분리)하고 OpenAI 모델(`text-embedding-3-large`, 1536차원)로 벡터 임베딩 후 Supabase `document_chunks` 테이블과 Storage에 자동 적재. 카테고리(category) 메타데이터를 활용하여 Dify에서 정밀한 필터링 기반 검색 수행.
+   * Supabase `document_chunks` 테이블과 Storage에 벡터 데이터 적재 완료.
+   * **[AI FAQ 프론트엔드 연동]** 파트너 전용 대시보드(`company.html`) 내에 Glassmorphism 챗봇 UI를 구축하고, Flask 백엔드 `/api/faq/ask` 라우트를 통해 OpenAI 임베딩 및 ChatCompletion과 Supabase HNSW 인덱싱 검색을 결합하여 실시간 AI 질의응답 서비스 상용화 완료.
 3. **단계 3: DART 감사보고서 DB 구축 (RAG)**
    * n8n 스케줄러(Cron)로 OpenDART API 호출 ➔ 동종 업계 기존 감사보고서 다운로드 및 청크화 ➔ Supabase pgvector에 임베딩 벡터값과 함께 저장 (초안 모범 문구 검색 기반).
 4. **단계 4: 항목별 감사조서 및 감사절차 작성**
