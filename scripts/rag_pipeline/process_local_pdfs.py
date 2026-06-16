@@ -63,7 +63,7 @@ def process_local_directory(base_dir: str):
             print(f"[에러] {filename} 파일에서 텍스트를 추출할 수 없어 건너뜁니다.")
             continue
             
-        chunks = chunker.chunk_text(text, document_id)
+        chunks = chunker.chunk_text(text, document_id, category)
         if not chunks:
             print(f"[경고] {filename} 파일이 분할되지 않았습니다. 패턴이 있는지 확인하세요.")
             continue

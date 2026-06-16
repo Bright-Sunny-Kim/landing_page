@@ -3,10 +3,12 @@ import fitz  # PyMuPDF
 
 class SemanticChunker:
     def __init__(self):
-        # 기준서 패턴: 제1조, 제1장, 1.1, 1.2 등
-        # 기존 ^((?:제\s*\d+\s*조|\d+\.\d+).*?)$ 에서 날짜, 소수점 오인식 방지를 위해 조건 강화
-        # 1~39장 번호, 1~999 문단 번호 (00 등 제외), 후속 문자가 공백이나 줄바꿈일 때만 매칭
-        self.article_pattern = re.compile(r"^((?:제\s*\d+\s*조|(?:[1-9]|[1-3]\d)\.(?:[1-9]\d{0,2}|0[1-9]\d?)[A-Za-z]?(?=\s|$)).*?)$", re.MULTILINE)
+        # K-GAAP (일반기업회계기준) 패턴
+        self.gaap_pattern = re.compile(r"^((?:제\s*\d+\s*조|(?:[1-9]|[1-3]\d)\.(?:[1-9]\d{0,2}|0[1-9]\d?)[A-Za-z]?(?=\s|$)).*?)$", re.MULTILINE)
+        
+        # K-IFRS (한국채택국제회계기준) 패턴
+        # 매칭 예시: 1, 102A, 한1, 한2, B1, C2, IE1, IE2 등 (선택적으로 마침표 . 포함)
+        self.ifrs_pattern = re.compile(r"^((?:(?:한|IE|[A-Z])?\d{1,3}[A-Za-z]?\.?(?=\s|$)).*?)$", re.MULTILINE)
         
     def extract_text_from_pdf(self, pdf_path: str) -> str:
         """PyMuPDF를 사용하여 PDF에서 텍스트를 추출합니다."""
@@ -20,16 +22,18 @@ class SemanticChunker:
             print(f"[Chunker] PDF 파싱 오류 ({pdf_path}): {e}")
             return ""
 
-    def chunk_text(self, text: str, document_id: str) -> list:
+    def chunk_text(self, text: str, document_id: str, category: str = "") -> list:
         """
         '조' 단위 등 시맨틱한 기준으로 텍스트를 나눕니다.
-        간단한 예시로 정규식을 활용해 '제 N 조' 단위로 자릅니다.
+        카테고리에 따라 K-GAAP과 K-IFRS의 문단 번호 체계에 맞는 정규식을 동적으로 선택합니다.
         """
         chunks = []
         
-        # '제X조' 기준으로 텍스트 분할
-        # re.split에서 캡처 그룹을 쓰면 분할 기준 문자열도 리스트에 포함됨
-        parts = self.article_pattern.split(text)
+        # 문서 종류에 따른 정규식 선택
+        pattern = self.ifrs_pattern if "IFRS" in category.upper() else self.gaap_pattern
+        
+        # 선택된 패턴을 기준으로 텍스트 분할
+        parts = pattern.split(text)
         
         current_chunk = ""
         current_metadata = {"document_id": document_id, "article": "서문/총칙"}
@@ -59,7 +63,7 @@ class SemanticChunker:
             if not part:
                 continue
                 
-            if self.article_pattern.match(part):
+            if pattern.match(part):
                 # 이전 청크 저장
                 add_chunk(current_chunk, current_metadata)
                 
