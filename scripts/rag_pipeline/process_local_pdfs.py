@@ -81,8 +81,26 @@ def process_local_directory(base_dir: str):
             "category": category,
             "type": "K-GAAP" if "gaap" in filename.lower() else "Standards"
         }
-        # Storage 내부 경로를 "카테고리/파일명" 구조로 지정
-        storage_path = f"{category}/{filename}"
+        # Storage 내부 경로를 "카테고리/파일명" 구조로 지정하되, 파이썬 Supabase 클라이언트의 한글 인코딩 에러를 방지하기 위해 완전한 영문(ASCII)으로 변환
+        CATEGORY_MAP = {
+            "한국채택국제회계기준(K-IFRS)(시행중)": "K-IFRS",
+            "한국채택국제회계기준(K-IFRS)(조기적용가능)": "K-IFRS-Early",
+            "일반기업회계기준": "K-GAAP",
+            "특수분야회계기준": "Special-GAAP",
+            "중소기업회계기준": "SME-GAAP",
+            "비영리조직회계기준": "NPO-GAAP"
+        }
+        import hashlib
+        eng_category = CATEGORY_MAP.get(category, "Other")
+        
+        # 한글 등 Non-ASCII 문자를 제거
+        ascii_filename = filename.encode('ascii', 'ignore').decode('ascii').strip("_ ")
+        if not ascii_filename.replace('.pdf', '').strip():
+            ascii_filename = "document.pdf"
+            
+        # 영문 변환 시 파일명 충돌을 막기 위해 원본 파일명의 해시 6자리 추가
+        file_hash = hashlib.md5(filename.encode()).hexdigest()[:6]
+        storage_path = f"{eng_category}/{file_hash}_{ascii_filename}"
         
         # uploader의 upload_file은 내부적으로 filename 기반으로 동작하므로 약간 수정 필요하지만
         # upload_file에 storage_path를 명시적으로 넘기는 기능이 없으면,

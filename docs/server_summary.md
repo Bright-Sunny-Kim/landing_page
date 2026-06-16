@@ -65,3 +65,10 @@ Nginx Proxy Manager(대표 웹 관문)와 Cloudflare Tunnel 설정을 연동하�
 
 ---
 *본 요약서는 2026년 6월 10일에 최종 업데이트 및 완료 처리되었습니다.*
+
+
+## [2026-06-16] AI 회계기준 어시스턴트(RAG) 고도화 및 버그 수정
+- **앱 백엔드 (pp.py)**: /api/faq/ask 라우트에서 OpenAI 및 Supabase 클라이언트 지연 초기화 적용. 프롬프트를 결론-설명-출처 구조로 개선.
+- **문서 파싱 (chunker_standards.py)**: 회계기준서 청킹 정규식을 정교화하여 날짜/수식 오인식 방지. 8192 토큰 제한 초과 방지를 위해 3000자 초과 청크 자동 분할.
+- **문서 업로드 (process_local_pdfs.py)**: 한글(Non-ASCII) 문자열로 인한 Supabase InvalidKey 에러 해결을 위해 카테고리 영문화 및 영문+해시 파일명 변환 적용.
+- **UI 변경 (company.html)**: 담당 회계사 문의 탭 이름을 AI 회계사 문의로 변경.

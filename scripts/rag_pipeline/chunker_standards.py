@@ -3,8 +3,10 @@ import fitz  # PyMuPDF
 
 class SemanticChunker:
     def __init__(self):
-        # 기준서 패턴: 제1조, 제1장, 1., 가. 등
-        self.article_pattern = re.compile(r"^(제\s*\d+\s*조.*?)$", re.MULTILINE)
+        # 기준서 패턴: 제1조, 제1장, 1.1, 1.2 등
+        # 기존 ^((?:제\s*\d+\s*조|\d+\.\d+).*?)$ 에서 날짜, 소수점 오인식 방지를 위해 조건 강화
+        # 1~39장 번호, 1~999 문단 번호 (00 등 제외), 후속 문자가 공백이나 줄바꿈일 때만 매칭
+        self.article_pattern = re.compile(r"^((?:제\s*\d+\s*조|(?:[1-9]|[1-3]\d)\.(?:[1-9]\d{0,2}|0[1-9]\d?)[A-Za-z]?(?=\s|$)).*?)$", re.MULTILINE)
         
     def extract_text_from_pdf(self, pdf_path: str) -> str:
         """PyMuPDF를 사용하여 PDF에서 텍스트를 추출합니다."""
@@ -32,18 +34,34 @@ class SemanticChunker:
         current_chunk = ""
         current_metadata = {"document_id": document_id, "article": "서문/총칙"}
         
+        def add_chunk(text, meta):
+            text = text.strip()
+            if not text:
+                return
+            # OpenAI 임베딩 제한(8192 토큰)을 방지하기 위해 3000자 단위로 강제 분할
+            max_len = 3000
+            if len(text) > max_len:
+                for i in range(0, len(text), max_len):
+                    sub_meta = meta.copy()
+                    sub_meta["article"] = f"{meta['article']}_파트{i//max_len + 1}"
+                    chunks.append({
+                        "text": text[i:i+max_len],
+                        "metadata": sub_meta
+                    })
+            else:
+                chunks.append({
+                    "text": text,
+                    "metadata": meta.copy()
+                })
+
         for part in parts:
             part = part.strip()
             if not part:
                 continue
                 
             if self.article_pattern.match(part):
-                # 이전 청크 저장 (내용이 있을 경우)
-                if current_chunk.strip():
-                    chunks.append({
-                        "text": current_chunk.strip(),
-                        "metadata": current_metadata.copy()
-                    })
+                # 이전 청크 저장
+                add_chunk(current_chunk, current_metadata)
                 
                 # 새로운 조 시작
                 current_chunk = part + "\n"
@@ -52,14 +70,8 @@ class SemanticChunker:
                 # 조 제목이 아닌 내용은 현재 청크에 병합
                 current_chunk += part + "\n"
                 
-                # 청크가 너무 길어지면 임의 분할하는 로직 추가 가능(ex. Langchain RecursiveCharacterTextSplitter)
-                
         # 마지막 청크 저장
-        if current_chunk.strip():
-            chunks.append({
-                "text": current_chunk.strip(),
-                "metadata": current_metadata.copy()
-            })
+        add_chunk(current_chunk, current_metadata)
             
         print(f"[Chunker] '{document_id}' 문서를 {len(chunks)}개의 청크로 분할 완료.")
         return chunks

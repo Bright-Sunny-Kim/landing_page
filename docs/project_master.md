@@ -114,3 +114,10 @@
 
 > **[배포 및 변경 사항 관리 참고 사항]** 
 > 본 프로젝트는 GitHub 저장소의 `main` 브랜치와 Render.com 웹 서비스 빌드 파이프라인이 자동 연동되어 있습니다. 코드 수정 시 `git commit` 및 `git push origin main`을 실행하면 수 분 내에 실서버(`hyean-dskim.com`)로 자동 업데이트 배포됩니다.
+
+
+## [2026-06-16] AI 회계기준 어시스턴트(RAG) 고도화 및 버그 수정
+- **앱 백엔드 (pp.py)**: /api/faq/ask 라우트에서 OpenAI 및 Supabase 클라이언트 지연 초기화 적용. 프롬프트를 결론-설명-출처 구조로 개선.
+- **문서 파싱 (chunker_standards.py)**: 회계기준서 청킹 정규식을 정교화하여 날짜/수식 오인식 방지. 8192 토큰 제한 초과 방지를 위해 3000자 초과 청크 자동 분할.
+- **문서 업로드 (process_local_pdfs.py)**: 한글(Non-ASCII) 문자열로 인한 Supabase InvalidKey 에러 해결을 위해 카테고리 영문화 및 영문+해시 파일명 변환 적용.
+- **UI 변경 (company.html)**: 담당 회계사 문의 탭 이름을 AI 회계사 문의로 변경.
