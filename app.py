@@ -628,6 +628,22 @@ def logout():
 # ==========================================
 @app.route('/api/faq/ask', methods=['POST'])
 def faq_ask():
+    global openai_client, supabase
+    
+    # AI 설정 지연 로딩 방어 (환경변수 재확인)
+    if not openai_client:
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        if api_key:
+            from openai import OpenAI
+            openai_client = OpenAI(api_key=api_key)
+            
+    if not supabase:
+        url = os.getenv("SUPABASE_URL", "")
+        key = os.getenv("SUPABASE_KEY", "")
+        if url and key and url != "YOUR_SUPABASE_PROJECT_URL_HERE":
+            from supabase import create_client
+            supabase = create_client(url, key)
+
     if not openai_client or not supabase:
         return jsonify({'error': '서버의 AI 설정이 올바르지 않습니다.'}), 500
 
@@ -684,15 +700,16 @@ def faq_ask():
 
         # 4. OpenAI ChatCompletion 호출
         system_prompt = (
-            "당신은 최고 수준의 공인회계사(CPA)이자 회계감사 전문가 AI 어시스턴트입니다.\n"
-            "사용자의 질문에 대해 반드시 주어진 [참조 기준서 조항]만을 근거로 답변하세요.\n"
-            "답변은 논리적이고 명확하게 구성하며, 가급적 어떤 조항(예: 제X조, 문단 Y 등)에 근거했는지 명시해주세요.\n"
-            "만약 참조 기준서에 답변할 내용이 전혀 없다면, '제공된 기준서 내에서는 해당 내용을 찾을 수 없습니다.'라고 정중히 답변하세요."
+            "당신은 '회계법인 혜안'의 최고 수준 공인회계사(CPA)이자 친절한 AI 회계감사 어시스턴트입니다.\n"
+            "사용자의 질문에 대해 주어진 [참조 기준서 조항]을 바탕으로 전문가적이고 이해하기 쉽게 설명해 주세요.\n"
+            "단순히 조문을 복사하는 것에 그치지 않고, 그 조항의 의미와 실무적 적용 방법을 풀어서 해석해 주어야 합니다.\n"
+            "답변은 '결론 - 상세 설명 - 관련 근거(조항)' 순으로 논리적이고 자연스러운 한국어로 구성하세요.\n"
+            "만약 참조 기준서에 관련된 내용이 전혀 없다면, '제공된 기준서 내에서는 정확한 규정을 찾을 수 없습니다.'라고 솔직히 안내하세요."
         )
 
         user_prompt = (
-            f"[질문]\n{question}\n\n"
-            f"[참조 기준서 조항]\n{context_text}"
+            f"[사용자 질문]\n{question}\n\n"
+            f"[참조 기준서 조항 (RAG Context)]\n{context_text}"
         )
 
         chat_resp = openai_client.chat.completions.create(
@@ -701,7 +718,7 @@ def faq_ask():
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.2
+            temperature=0.4
         )
 
         answer = chat_resp.choices[0].message.content
