@@ -117,7 +117,10 @@
 
 
 ## [2026-06-16] AI 회계기준 어시스턴트(RAG) 고도화 및 버그 수정
-- **앱 백엔드 (pp.py)**: /api/faq/ask 라우트에서 OpenAI 및 Supabase 클라이언트 지연 초기화 적용. 프롬프트를 결론-설명-출처 구조로 개선.
+
+
+## [2026-06-16] AI 회계기준 어시스턴트(RAG) 고도화 및 버그 수정
+- **앱 백엔드 ( pp.py)**: /api/faq/ask 라우트에서 OpenAI 및 Supabase 클라이언트 지연 초기화 적용. 프롬프트를 결론-설명-출처 구조로 개선.
 - **문서 파싱 (chunker_standards.py)**: 회계기준서 청킹 정규식을 정교화하여 날짜/수식 오인식 방지. 8192 토큰 제한 초과 방지를 위해 3000자 초과 청크 자동 분할.
 - **문서 업로드 (process_local_pdfs.py)**: 한글(Non-ASCII) 문자열로 인한 Supabase InvalidKey 에러 해결을 위해 카테고리 영문화 및 영문+해시 파일명 변환 적용.
 - **UI 변경 (company.html)**: 담당 회계사 문의 탭 이름을 AI 회계사 문의로 변경.
@@ -131,3 +134,13 @@
 ## [2026-06-16] K-IFRS 폴더 및 카테고리 병합 적용
 - **폴더 구조 단순화**: 기존 한국채택국제회계기준(K-IFRS)(시행중) 및 (조기적용가능) 폴더를 한국채택국제회계기준(K-IFRS) 단일 폴더로 통합.
 - **카테고리 매핑 수정 (process_local_pdfs.py)**: 스크립트가 단일 통합 폴더를 정상 인식하고 K-IFRS 영문 스토리지 경로로 업로드하도록 CATEGORIES 및 CATEGORY_MAP 설정 업데이트.
+
+## [2026-06-16] Open DART 감사보고서 크롤링 파이프라인 구축 및 챗봇 고도화
+- **DB 스키마 구성**: Supabase에 감사보고서 메타데이터 저장을 위한 `dart_audit_reports` 테이블과 본문 파싱 청크를 담는 `dart_report_chunks` 테이블 및 HNSW 벡터 인덱스를 설계(`database` 디렉토리 내 `.sql` 파일).
+- **크롤러 및 파서 스크립트 구축**: 
+  - `scripts/dart_crawler.py`: `requests`를 사용해 Open DART의 "회계감사인의 명칭 및 감사의견" API를 호출, `adtor` 등 변경된 메타데이터를 정합성 있게 매핑하여 DB에 Upsert.
+  - `scripts/dart_document_parser.py`: DART `document.xml` 공시 원본(ZIP)을 내려받아 `BeautifulSoup4` 및 `lxml`로 텍스트 파싱, Overlap 기반 Chunking 및 OpenAI `text-embedding-3-large` 임베딩 후 `dart_report_chunks`에 적재.
+- **챗봇 프롬프트 및 에러 픽스 (`app.py`)**: 
+  - `PGRST203` Overload 오류 해결을 위해 '전체' 카테고리 검색 시 명시적으로 `filter_category: None` 전달 로직 추가.
+  - AI 챗봇이 시각적으로 명확한 `[결론]`, `[상세 설명]`, `[관련 근거(조항)]` 마크다운 템플릿으로 답변하도록 시스템 프롬프트 업데이트 완료.
+- **UI 개선 (`templates/company.html`)**: K-IFRS '시행중', '조기적용가능' 셀렉트 옵션을 `한국채택국제회계기준(K-IFRS)` 단일 항목으로 통합.
