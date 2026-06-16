@@ -5,8 +5,7 @@ from embedder_standards import VectorEmbedder
 from supabase_uploader import SupabaseUploader
 
 CATEGORIES = [
-    "한국채택국제회계기준(K-IFRS)(시행중)",
-    "한국채택국제회계기준(K-IFRS)(조기적용가능)",
+    "한국채택국제회계기준(K-IFRS)",
     "일반기업회계기준",
     "특수분야회계기준",
     "중소기업회계기준",
@@ -83,8 +82,7 @@ def process_local_directory(base_dir: str):
         }
         # Storage 내부 경로를 "카테고리/파일명" 구조로 지정하되, 파이썬 Supabase 클라이언트의 한글 인코딩 에러를 방지하기 위해 완전한 영문(ASCII)으로 변환
         CATEGORY_MAP = {
-            "한국채택국제회계기준(K-IFRS)(시행중)": "K-IFRS",
-            "한국채택국제회계기준(K-IFRS)(조기적용가능)": "K-IFRS-Early",
+            "한국채택국제회계기준(K-IFRS)": "K-IFRS",
             "일반기업회계기준": "K-GAAP",
             "특수분야회계기준": "Special-GAAP",
             "중소기업회계기준": "SME-GAAP",
