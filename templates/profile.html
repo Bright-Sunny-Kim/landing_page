@@ -329,13 +329,17 @@
   </div>
 
   <header>
-    <a href="{{ url_for('index') }}" class="header-logo">
+    <a href="{{ url_for('intro') }}" class="header-logo">
       <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="혜안 로고" onerror="this.style.display='none'">
       회계법인 혜안
     </a>
     <div class="nav-links">
-      <a href="{{ url_for('index') }}" class="nav-link">홈</a>
+      <a href="{{ url_for('intro') }}" class="nav-link">홈</a>
+      {% if 'email' in session %}
+      <a href="{{ url_for('login_page') }}" class="login-btn-top">내 페이지로 이동</a>
+      {% else %}
       <a href="{{ url_for('login_page') }}" class="login-btn-top">포털 접속하기</a>
+      {% endif %}
     </div>
   </header>
 

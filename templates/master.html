@@ -103,7 +103,7 @@
             </ul>
             
             <div class="master-sidebar-footer" style="display: flex; flex-direction: column; gap: 10px;">
-                <a href="{{ url_for('index') }}" class="btn-logout" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); color: #818cf8;">
+                <a href="{{ url_for('intro') }}" class="btn-logout" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); color: #818cf8;">
                     <span>홈 화면으로 복귀</span>
                 </a>
                 <a href="{{ url_for('logout') }}" id="btn-sidebar-logout" class="btn-logout">
@@ -343,7 +343,7 @@
                 
                 <footer class="dashboard-footer" style="display: none; flex-direction: column; gap: 10px;">
                     <!-- 사이드바에 로그아웃이 있으므로 본문 하단은 모바일 대비용으로 백업 유지 (CSS로 숨김 처리) -->
-                    <a href="{{ url_for('index') }}" class="btn-logout" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); color: #818cf8;">
+                    <a href="{{ url_for('intro') }}" class="btn-logout" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); color: #818cf8;">
                         <span>홈 화면으로 복귀</span>
                     </a>
                     <a href="{{ url_for('logout') }}" id="btn-logout" class="btn-logout">

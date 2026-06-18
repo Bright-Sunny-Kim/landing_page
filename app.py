@@ -59,6 +59,10 @@ def index():
     
     return render_template('intro.html')
 
+@app.route('/intro')
+def intro():
+    return render_template('intro.html')
+
 @app.route('/login_page')
 def login_page():
     if 'email' in session:
