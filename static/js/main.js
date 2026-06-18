@@ -37,11 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 emailStatusMsg.textContent = '';
                 emailStatusMsg.className = 'email-status-msg';
                 additionalFields.classList.remove('show');
-                passwordGroup.classList.remove('show');
-                rememberGroup.classList.remove('show');
                 setFieldsRequired(false);
-                submitBtn.disabled = true;
-                submitBtn.querySelector('span').textContent = '이메일을 입력하세요';
+                submitBtn.querySelector('span').textContent = '로그인';
                 return;
             }
 
@@ -49,11 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 emailStatusMsg.textContent = '올바른 이메일 주소 형식을 입력해 주세요.';
                 emailStatusMsg.className = 'email-status-msg error';
                 additionalFields.classList.remove('show');
-                passwordGroup.classList.remove('show');
-                rememberGroup.classList.remove('show');
                 setFieldsRequired(false);
-                submitBtn.disabled = true;
-                submitBtn.querySelector('span').textContent = '이메일 형식 오류';
+                submitBtn.querySelector('span').textContent = '로그인';
                 return;
             }
 
@@ -88,16 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             passwordLabel.textContent = '신규 비밀번호 설정';
                         }
                         
-                        // 추가 정보 필드는 숨기고 비밀번호 및 로그인 유지 토글 노출
+                        // 추가 정보 필드는 숨기기
                         additionalFields.classList.remove('show');
-                        passwordGroup.classList.add('show');
-                        rememberGroup.classList.add('show');
                         
                         setFieldsRequired(false);
                         passwordInput.required = true;
                         
-                        submitBtn.disabled = false;
-                        submitBtn.style.opacity = '1';
                         submitBtn.querySelector('span').textContent = '로그인';
                     } else {
                         isExistingUser = false;
@@ -105,16 +95,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         emailStatusMsg.className = 'email-status-msg info';
                         passwordLabel.textContent = '비밀번호 설정';
                         
-                        // 추가 정보 필드 및 비밀번호, 로그인 유지 토글 모두 노출
+                        // 추가 정보 필드 노출
                         additionalFields.classList.add('show');
-                        passwordGroup.classList.add('show');
-                        rememberGroup.classList.add('show');
                         
                         setFieldsRequired(true);
                         passwordInput.required = true;
                         
-                        submitBtn.disabled = false;
-                        submitBtn.style.opacity = '1';
                         submitBtn.querySelector('span').textContent = '신규 등록 및 로그인';
                     }
                 }

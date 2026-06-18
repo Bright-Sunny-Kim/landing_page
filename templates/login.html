@@ -80,15 +80,15 @@
                     <!-- 실시간 이메일 상태 헬퍼 메시지 -->
                     <p class="email-status-msg" id="email-status-msg"></p>
                     
-                    <!-- 비밀번호 입력 필드 (상태에 따라 동적 슬라이드 노출) -->
-                    <div class="input-group hidden-input" id="password-group">
-                        <input type="password" id="password" name="password" autocomplete="off" placeholder=" ">
+                    <!-- 비밀번호 입력 필드 (기본 노출) -->
+                    <div class="input-group" id="password-group">
+                        <input type="password" id="password" name="password" required autocomplete="off" placeholder=" ">
                         <label for="password" id="password-label">비밀번호</label>
                         <span class="bar"></span>
                     </div>
                     
                     <!-- 로그인 상태 유지 토글 -->
-                    <div class="remember-group hidden-input" id="remember-group">
+                    <div class="remember-group" id="remember-group">
                         <label class="remember-container">
                             <input type="checkbox" id="remember" name="remember" class="remember-checkbox">
                             <div class="remember-custom"></div>
@@ -124,8 +124,8 @@
                         </div>
                     </div>
                     
-                    <button type="submit" id="btn-submit" class="btn-submit" disabled>
-                        <span>이메일을 입력하세요</span>
+                    <button type="submit" id="btn-submit" class="btn-submit">
+                        <span>로그인</span>
                         <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
