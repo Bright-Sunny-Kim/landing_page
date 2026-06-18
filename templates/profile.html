@@ -336,8 +336,10 @@
     <div class="nav-links">
       <a href="{{ url_for('intro') }}" class="nav-link">홈</a>
       {% if 'email' in session %}
+      <a href="{{ url_for('logout') }}" class="nav-link" style="color: #f87171;">로그아웃</a>
       <a href="{{ url_for('login_page') }}" class="login-btn-top">내 페이지로 이동</a>
       {% else %}
+      <a href="{{ url_for('login_page') }}" class="nav-link">로그인</a>
       <a href="{{ url_for('login_page') }}" class="login-btn-top">포털 접속하기</a>
       {% endif %}
     </div>

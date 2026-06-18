@@ -21,6 +21,15 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))
 # 세션 유지 시간 기본 설정 (30일)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
+@app.after_request
+def add_header(response):
+    # 뒤로가기 캐시 방지 (로그아웃 후 뒤로가기로 이전 페이지 접근 불가하도록 설정)
+    if 'Cache-Control' not in response.headers:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+    return response
+
 # UPLOAD_FOLDER = 'uploads'
 # os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
