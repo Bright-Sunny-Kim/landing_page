@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>김동선 대표 프로필 — 회계법인 혜안</title>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Style CSS from master guide -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body {
+      display: block;
+      padding: 0;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 5%;
+      z-index: 1000;
+      background: rgba(9, 9, 11, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      transition: all 0.3s ease;
+    }
+
+    .header-logo {
+      font-family: var(--font-header);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      text-decoration: none;
+      letter-spacing: -0.05em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-logo img {
+      height: 32px;
+      filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.2));
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .nav-link {
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 1rem;
+      transition: color 0.3s;
+    }
+    .nav-link:hover {
+      color: #a78bfa;
+    }
+
+    .login-btn-top {
+      background: var(--primary-gradient);
+      color: white;
+      padding: 0.6rem 1.5rem;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 600;
+      font-family: var(--font-header);
+      transition: transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+
+    .login-btn-top:hover {
+      transform: translateY(-2px);
+      background: var(--hover-gradient);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .profile-container {
+      position: relative;
+      z-index: 2;
+      max-width: 1200px;
+      margin: 100px auto 40px;
+      padding: 2rem 5%;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+
+    @media (min-width: 992px) {
+      .profile-container {
+        grid-template-columns: 350px 1fr;
+        align-items: start;
+      }
+    }
+
+    /* Left Sidebar: Profile Identity */
+    .profile-sidebar {
+      position: sticky;
+      top: 120px;
+    }
+
+    .profile-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border-radius: 24px;
+      padding: 2rem;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .profile-image-container {
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 1.5rem;
+      border-radius: 50%;
+      padding: 4px;
+      background: var(--primary-gradient);
+      box-shadow: 0 10px 25px rgba(167, 139, 250, 0.3);
+    }
+
+    .profile-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .profile-name {
+      font-size: 2rem;
+      font-weight: 800;
+      font-family: var(--font-header);
+      margin-bottom: 0.5rem;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .profile-titles {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+    }
+
+    .profile-quote {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      border-left: 4px solid #6366f1;
+      font-style: italic;
+      margin-top: 1.5rem;
+    }
+
+    .contact-info {
+      margin-top: 1.5rem;
+      text-align: left;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .contact-info p { margin-bottom: 0.5rem; }
+    .contact-info strong { color: var(--text-primary); }
+
+    /* Right Content: Resume Details */
+    .profile-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .content-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border-radius: 24px;
+      padding: 2.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .content-card h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: var(--font-header);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .content-card h2::before {
+      content: '';
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-color);
+    }
+
+    .competency-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .competency-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 1.5rem;
+      border-radius: 16px;
+    }
+
+    .competency-item h3 {
+      font-size: 1.1rem;
+      color: #a78bfa;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .competency-item ul {
+      list-style: none;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .competency-item ul li {
+      margin-bottom: 0.5rem;
+      position: relative;
+      padding-left: 1rem;
+      line-height: 1.6;
+    }
+
+    .competency-item ul li::before {
+      content: '•';
+      color: #6366f1;
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+
+    .competency-item p.desc {
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 1rem;
+      border-radius: 12px;
+    }
+
+    /* List items for other sections */
+    .timeline-list {
+      list-style: none;
+    }
+
+    .timeline-list li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .timeline-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: 6px;
+      height: 6px;
+      background: var(--accent-color);
+      border-radius: 50%;
+    }
+
+    .timeline-list li span.date {
+      color: #a78bfa;
+      font-weight: 600;
+      margin-left: 8px;
+      font-size: 0.9rem;
+    }
+
+    .timeline-list li p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin-top: 0.5rem;
+      line-height: 1.6;
+    }
+
+    /* Sub-grid for Education & Certificates */
+    .dual-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Decor from Style.css -->
+  <div class="background-decor">
+      <div class="circle circle-1"></div>
+      <div class="circle circle-2"></div>
+  </div>
+
+  <header>
+    <a href="{{ url_for('index') }}" class="header-logo">
+      <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="혜안 로고" onerror="this.style.display='none'">
+      회계법인 혜안
+    </a>
+    <div class="nav-links">
+      <a href="{{ url_for('index') }}" class="nav-link">홈</a>
+      <a href="{{ url_for('login_page') }}" class="login-btn-top">포털 접속하기</a>
+    </div>
+  </header>
+
+  <main class="profile-container">
+    
+    <!-- Left Sidebar -->
+    <aside class="profile-sidebar">
+      <div class="profile-card">
+        <div class="profile-image-container">
+          <img src="{{ url_for('static', filename='images/ceo_profile.jpg') }}" alt="김동선 대표" class="profile-image">
+        </div>
+        <h1 class="profile-name">김동선</h1>
+        <div class="profile-titles">
+          공인회계사 · 세무사<br>
+          회계법인 혜안 수원지점 대표<br>
+          수원대학교 경영공학과 겸임교수
+        </div>
+        
+        <div class="profile-quote">
+          "데이터와 전문성으로 정의로운 수사 심의를 실현하겠습니다."
+        </div>
+
+        <div class="contact-info">
+          <p><strong>생년월일:</strong> 1972년 12월 10일</p>
+          <p><strong>이메일:</strong> cpaeastsun@gmail.com</p>
+          <p><strong>전화:</strong> 010-9429-4182</p>
+          <p><strong>주소:</strong> 경기도 수원시 팔달구 우만동 우만선경APT 101-1502</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right Content -->
+    <section class="profile-content">
+      
+      <!-- Core Competencies -->
+      <div class="content-card">
+        <h2>전문 역량 (Core Competencies)</h2>
+        <div class="competency-grid">
+          
+          <div class="competency-item">
+            <h3>💼 회계·세무 전문성</h3>
+            <ul>
+              <li>공인회계사 · 세무사 자격 보유 (2005년)</li>
+              <li>20년 이상 실무 경험</li>
+              <li>국세청장 표창 수여 (2012년)</li>
+            </ul>
+            <p class="desc">미래회계법인 근무 및 개인 회계사무소 운영을 거쳐 현재 <strong>회계법인 혜안 수원지점 대표</strong>로서 금융 및 경제 분야에 대한 깊이 있는 전문성을 보유하고 있습니다.</p>
+          </div>
+
+          <div class="competency-item">
+            <h3>🎓 학술적 깊이</h3>
+            <ul>
+              <li>수원대학교 경영학과 겸임교수 (2018~2020년)</li>
+              <li>수원대학교 경영공학과 객원교수 (2025년~현재)</li>
+              <li>ESG 스튜어드십 코드 연구 논문 학술지 게재</li>
+            </ul>
+            <p class="desc">이론과 실무를 겸비한 학자로서 DiD(Difference-in-Differences) 방법론을 활용한 연구를 수행하며, 최신 경영 및 금융 이론에 대한 깊이 있는 이해를 보유하고 있습니다.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Experience & Audit -->
+      <div class="content-card">
+        <h2>회계법인 및 감사 경력</h2>
+        <ul class="timeline-list">
+          <li>회계법인 혜안 수원지점 대표 <span class="date">(2020년 12월 ~ 현재)</span></li>
+          <li>공인회계사 김동선 회계사무소 개업 <span class="date">(2008년 10월)</span></li>
+          <li>미래회계법인 근무 <span class="date">(2005년 9월)</span></li>
+          <li>수원시 상수도사업 특별회계 결산감사 수행 <span class="date">(2009년, 08·09년 귀속)</span></li>
+          <li>수원시 하수도사업 특별회계 결산감사 수행 <span class="date">(2009년, 08·09년 귀속)</span></li>
+        </ul>
+      </div>
+
+      <!-- Public Sector -->
+      <div class="content-card">
+        <h2>공공 영역 심의 경험</h2>
+        <ul class="timeline-list">
+          <li>평택세무서 국세심사위원 <span class="date">(2023년 6월 ~ 현재)</span>
+            <p>세무 관련 불복 사안에 대한 심의 및 의결을 통해 공정하고 투명한 세무 행정 실현에 기여하고 있습니다.</p>
+          </li>
+          <li>동수원세무서 국세심사위원 <span class="date">(2010년 10월)</span></li>
+          <li>수원세무서 납세자권익존중위원회 위원 <span class="date">(2011년 4월)</span></li>
+        </ul>
+      </div>
+
+      <!-- Awards & Research & Activities -->
+      <div class="content-card">
+        <div class="dual-grid">
+          <div>
+            <h2>🏆 표창 및 수상</h2>
+            <ul class="timeline-list">
+              <li>국세청장 표창 수여 <span class="date">(2012년 9월, 제53974호)</span>
+                <p>성실하고 정직한 세무 업무 수행과 납세자 권익 보호에 기여한 공로를 인정받았습니다.</p>
+              </li>
+            </ul>
+
+            <h2 style="margin-top: 2rem;">🔬 연구 및 인사이트</h2>
+            <ul class="timeline-list">
+              <li>ESG 스튜어드십 코드 연구 <span class="date">(2025년 12월)</span>
+                <p>한국공인회계사 학술지 게재. DiD 방법론을 활용하여 기업의 ESG 경영이 재무 성과에 미치는 영향을 실증 분석하고 있습니다.</p>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h2>🤝 기타 활동</h2>
+            <ul class="timeline-list">
+              <li>(재)바이오센터 입주자선정위원 <span class="date">(2009년 5월)</span></li>
+              <li>(재)한국지역복지봉사회 감사 <span class="date">(2009년 11월)</span></li>
+              <li>동수원세무서 영세납세자지원단 위촉 <span class="date">(2009년 5월, 2년)</span></li>
+              <li>수원지역공인회계사협의회 총무이사 <span class="date">(2009년 5월)</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Education & Certification -->
+      <div class="content-card">
+        <div class="dual-grid">
+          <div>
+            <h2>🎓 학력</h2>
+            <ul class="timeline-list">
+              <li>경영학 박사 <span class="date">(2019년 2월)</span></li>
+              <li>서울대학교 농업교육과 졸업 <span class="date">(1999년 2월)</span></li>
+              <li>공주한일고등학교 졸업 <span class="date">(1991년 2월)</span></li>
+            </ul>
+          </div>
+          <div>
+            <h2>📜 자격증</h2>
+            <ul class="timeline-list">
+              <li>제40회 공인회계사 시험 최종합격 <span class="date">(2005년 9월)</span></li>
+              <li>제42회 세무사 시험 최종합격 <span class="date">(2005년 9월)</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+</body>
+</html>

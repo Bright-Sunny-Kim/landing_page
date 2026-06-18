@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회계법인 혜안 — AI 기반 회계감사 플랫폼</title>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Style CSS from master guide -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* Override body for scrolling landing page */
+    body {
+      display: block;
+      padding: 0;
+      justify-content: flex-start;
+      align-items: stretch;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 5%;
+      z-index: 1000;
+      background: rgba(9, 9, 11, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      transition: all 0.3s ease;
+    }
+
+    .header-logo {
+      font-family: var(--font-header);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      text-decoration: none;
+      letter-spacing: -0.05em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-logo img {
+      height: 32px;
+      filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.2));
+    }
+
+    .login-btn-top {
+      background: var(--primary-gradient);
+      color: white;
+      padding: 0.6rem 1.5rem;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 600;
+      font-family: var(--font-header);
+      transition: transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 15px var(--accent-glow);
+    }
+
+    .login-btn-top:hover {
+      transform: translateY(-2px);
+      background: var(--hover-gradient);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Hero Section */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 0 5%;
+      z-index: 1;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 800px;
+      margin-top: 5rem;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 0.4rem 1.2rem;
+      background: rgba(167, 139, 250, 0.1);
+      border: 1px solid rgba(167, 139, 250, 0.2);
+      border-radius: 50px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #a78bfa;
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(5px);
+    }
+
+    .hero h1 {
+      font-size: clamp(3rem, 6vw, 4.5rem);
+      line-height: 1.15;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+      text-align: left;
+    }
+
+    .hero h1 span {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      margin-bottom: 3rem;
+      max-width: 600px;
+      line-height: 1.7;
+    }
+
+    /* Stats Section */
+    .stats {
+      padding: 2rem 5% 6rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 2.5rem 2rem;
+      /* Using Glass Card from design system */
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 
+                  0 0 20px var(--accent-glow),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-number {
+      font-size: 3.5rem;
+      font-weight: 800;
+      font-family: var(--font-header);
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Features Section */
+    .features {
+      padding: 6rem 5%;
+      position: relative;
+      z-index: 2;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 4rem;
+      font-family: var(--font-header);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      padding: 3rem 2.5rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border-radius: 24px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 
+                  0 0 20px var(--accent-glow),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      border-color: rgba(167, 139, 250, 0.3);
+    }
+
+    .feature-icon {
+      width: 64px;
+      height: 64px;
+      background: rgba(167, 139, 250, 0.1);
+      border: 1px solid rgba(167, 139, 250, 0.2);
+      color: #a78bfa;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 2rem;
+      font-family: var(--font-header);
+    }
+
+    .feature-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+      font-family: var(--font-header);
+    }
+
+    .feature-card p {
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* CTA Section */
+    .cta {
+      padding: 8rem 5%;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .cta h2 {
+      font-size: 3rem;
+      margin-bottom: 1.5rem;
+      font-family: var(--font-header);
+    }
+
+    .cta p {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      margin-bottom: 3rem;
+    }
+    
+    .cta .btn-submit {
+      display: inline-flex;
+      width: auto;
+      padding: 18px 40px;
+      font-size: 1.2rem;
+      margin: 0 auto;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Decor from Style.css -->
+  <div class="background-decor">
+      <div class="circle circle-1"></div>
+      <div class="circle circle-2"></div>
+  </div>
+
+  <header>
+    <a href="#" class="header-logo">
+      <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="혜안 로고" onerror="this.style.display='none'">
+      회계법인 혜안
+    </a>
+    <div style="display: flex; gap: 20px; align-items: center;">
+      <a href="{{ url_for('profile') }}" style="color: var(--text-primary); text-decoration: none; font-weight: 500; font-family: var(--font-header); transition: color 0.3s;" onmouseover="this.style.color='#a78bfa'" onmouseout="this.style.color='var(--text-primary)'">대표 소개</a>
+      <a href="{{ url_for('login_page') }}" class="login-btn-top">포털 접속하기</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">AI 기반 프리미엄 회계감사 솔루션</div>
+      <h1>
+        회계감사의<br>
+        <span>새로운 기준</span>을<br>
+        제시합니다
+      </h1>
+      <p>AI 시산표 분석 및 K-GAAP 조항 RAG 시스템으로 실시간 리스크 감지와 조서 생성을 자동화하여 투명성과 효율성을 극대화합니다.</p>
+      
+      <a href="{{ url_for('login_page') }}" class="btn-submit" style="display: inline-flex; width: auto; padding: 16px 36px; text-decoration: none;">
+          <span>시작하기</span>
+          <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-left: 8px; width: 20px;">
+              <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+      </a>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number">100+</div>
+        <div class="stat-label">누적 파트너사</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">Real-Time</div>
+        <div class="stat-label">이상 징후 감지</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">Zero</div>
+        <div class="stat-label">수작업 오류율</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">AI</div>
+        <div class="stat-label">자동 조서 생성</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <h2 class="section-title">주요 솔루션</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">TB</div>
+        <h3>시산표 자동 분석</h3>
+        <p>전년도 및 당기 시산표를 비교 분석하여 중요성 기준을 초과하는 변동 항목을 자동으로 감지하고 시각화합니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">AI</div>
+        <h3>K-GAAP AI RAG</h3>
+        <p>변동 항목에 관련된 회계기준서 및 감사기준 조항을 AI가 자동으로 검색하고 실무적인 해석을 제공합니다.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">WP</div>
+        <h3>Working Paper 생성</h3>
+        <p>시산표 분석 결과와 AI가 매칭한 기준서 조항을 종합하여 규격화된 감사조서(Working Paper)를 실시간으로 생성합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2>지금 바로 혜안 포털을 경험해 보세요</h2>
+    <p>클릭 몇 번으로 시작하는 혁신적인 회계감사 플랫폼</p>
+    <a href="{{ url_for('login_page') }}" class="btn-submit" style="display: inline-flex; width: auto; padding: 20px 48px; font-size: 1.25rem; text-decoration: none;">
+        <span>로그인 / 포털 접속</span>
+        <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-left: 12px; width: 24px;">
+            <path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </a>
+  </section>
+
+</body>
+</html>

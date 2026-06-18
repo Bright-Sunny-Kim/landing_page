@@ -57,8 +57,21 @@ def index():
             return redirect(url_for('master_page'))
         return redirect(url_for('company_page', company_name=session['company']))
     
+    return render_template('intro.html')
+
+@app.route('/login_page')
+def login_page():
+    if 'email' in session:
+        if session['email'] == MASTER_EMAIL:
+            return redirect(url_for('master_page'))
+        return redirect(url_for('company_page', company_name=session['company']))
+    
     error = request.args.get('error', '')
     return render_template('login.html', error=error)
+
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
 
 # 비동기 이메일 체크 API
 @app.route('/check-email', methods=['POST'])
@@ -106,7 +119,7 @@ def login():
     remember = request.form.get('remember') == 'on'
     
     if not email or not supabase:
-        return redirect(url_for('index', error='missing_fields'))
+        return redirect(url_for('login_page', error='missing_fields'))
         
     try:
         # 로그인 유지 여부 쿠키 기한 조정
@@ -127,11 +140,11 @@ def login():
                     is_hashed = any(user_password.startswith(p) for p in ['pbkdf2:', 'scrypt:', 'argon2:', 'sha256:'])
                     if is_hashed:
                         if not check_password_hash(user_password, password):
-                            return redirect(url_for('index', error='invalid_password'))
+                            return redirect(url_for('login_page', error='invalid_password'))
                     else:
                         # 평문 비밀번호 검증 (예: '0000')
                         if user_password != password:
-                            return redirect(url_for('index', error='invalid_password'))
+                            return redirect(url_for('login_page', error='invalid_password'))
                         # 로그인 성공 시 보안을 위해 해시로 자동 마이그레이션
                         try:
                             hashed = generate_password_hash(password)
@@ -141,7 +154,7 @@ def login():
                 else:
                     # 마스터 비밀번호 등록이 없는 경우 첫 로그인 시 자동 생성
                     if not password:
-                        return redirect(url_for('index', error='missing_password'))
+                        return redirect(url_for('login_page', error='missing_password'))
                     hashed = generate_password_hash(password)
                     supabase.table('users').update({'password': hashed}).eq('email', email).execute()
                 
@@ -152,7 +165,7 @@ def login():
             else:
                 # 최초 가동 등으로 DB에 마스터 계정이 없을 시 자동 등록
                 if not password:
-                    return redirect(url_for('index', error='missing_password'))
+                    return redirect(url_for('login_page', error='missing_password'))
                 hashed = generate_password_hash(password)
                 supabase.table('users').insert({
                     'email': MASTER_EMAIL, 
@@ -180,17 +193,17 @@ def login():
                 # 소셜 가입 회원인 경우 소셜로만 로그인 제한
                 if user_password.startswith('OAUTH:'):
                     provider = user_password.split(':')[1].capitalize()
-                    return redirect(url_for('index', error=f'social_only_{provider}'))
+                    return redirect(url_for('login_page', error=f'social_only_{provider}'))
                     
                 # 비밀번호 해시 형태 확인
                 is_hashed = any(user_password.startswith(p) for p in ['pbkdf2:', 'scrypt:', 'argon2:', 'sha256:'])
                 if is_hashed:
                     if not check_password_hash(user_password, password):
-                        return redirect(url_for('index', error='invalid_password'))
+                        return redirect(url_for('login_page', error='invalid_password'))
                 else:
                     # 평문 비밀번호 검증 (예: 사용자가 DB에 직접 텍스트로 넣은 경우)
                     if user_password != password:
-                        return redirect(url_for('index', error='invalid_password'))
+                        return redirect(url_for('login_page', error='invalid_password'))
                     # 성공 시 해시 자동 마이그레이션
                     try:
                         hashed = generate_password_hash(password)
@@ -200,7 +213,7 @@ def login():
             else:
                 # 기존 회원 중 비밀번호가 아직 없는 유저: 이번에 입력한 비밀번호로 최초 등록(마이그레이션)
                 if not password:
-                    return redirect(url_for('index', error='missing_password'))
+                    return redirect(url_for('login_page', error='missing_password'))
                 hashed = generate_password_hash(password)
                 supabase.table('users').update({'password': hashed}).eq('email', email).execute()
                 
@@ -211,7 +224,7 @@ def login():
         else:
             # 2) 신규 회원 등록 및 로그인
             if not (company and username and task_type and password):
-                return redirect(url_for('index', error='missing_fields'))
+                return redirect(url_for('login_page', error='missing_fields'))
                 
             hashed = generate_password_hash(password)
             supabase.table('users').insert({
@@ -229,7 +242,7 @@ def login():
             
     except Exception as e:
         print(f"Database error during login: {e}")
-        return redirect(url_for('index', error='db_error'))
+        return redirect(url_for('login_page', error='db_error'))
         
     return redirect(url_for('company_page', company_name=session['company']))
 
@@ -299,7 +312,7 @@ def login_social():
 @app.route('/company/<company_name>')
 def company_page(company_name):
     if 'email' not in session:
-        return redirect(url_for('index'))
+        return redirect(url_for('login_page'))
         
     # 마스터 계정은 튕겨나가지 않고 모든 파트너사의 포털을 다 볼 수 있도록 허용
     if session['email'] == MASTER_EMAIL:
@@ -310,7 +323,7 @@ def company_page(company_name):
         
     # 일반 파트너는 자기 회사 페이지가 아니면 첫 화면으로 튕김
     if session['company'] != company_name:
-        return redirect(url_for('index'))
+        return redirect(url_for('login_page'))
         
     success = request.args.get('success', 'false') == 'true'
     
@@ -321,7 +334,7 @@ def company_page(company_name):
 @app.route('/master')
 def master_page():
     if 'email' not in session or session['email'] != MASTER_EMAIL:
-        return redirect(url_for('index'))
+        return redirect(url_for('login_page'))
     
     partners = []
     stats = {
@@ -360,7 +373,7 @@ def master_page():
 @app.route('/master/<company_name>')
 def master_detail(company_name):
     if 'email' not in session or session['email'] != MASTER_EMAIL:
-        return redirect(url_for('index'))
+        return redirect(url_for('login_page'))
         
     company_info = None
     files = []
@@ -621,7 +634,7 @@ def audit_analyze(company_name):
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('index'))
+    return redirect(url_for('login_page'))
 
 # ==========================================
 # AI 회계기준 FAQ (RAG) 엔드포인트
