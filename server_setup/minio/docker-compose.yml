@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio_storage
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=hyean_dskim
+      - MINIO_ROOT_PASSWORD=hyean_dskim_1234
+      # URL settings for console and API
+      - MINIO_SERVER_URL=https://s3.hyean-dskim.com
+      - MINIO_BROWSER_REDIRECT_URL=https://minio.hyean-dskim.com
+    volumes:
+      - /mnt/storage/minio_data:/data
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Console Port
+    restart: unless-stopped

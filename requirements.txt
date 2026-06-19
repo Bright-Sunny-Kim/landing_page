@@ -9,3 +9,5 @@ scikit-learn>=1.2.0
 sentence-transformers>=2.2.0
 openai>=1.0.0
 OpenDartReader>=0.2.1
+boto3>=1.28.0
+pyarrow>=14.0.0

@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 import OpenDartReader
 from supabase import create_client
 from openai import OpenAI
+import boto3
+import pandas as pd
+import io
 
 # Load env
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +33,14 @@ def get_openai_client():
     if not key:
         return None
     return OpenAI(api_key=key)
+
+def get_s3_client():
+    endpoint = os.getenv("MINIO_ENDPOINT", "https://s3.hyean-dskim.com")
+    access = os.getenv("MINIO_ACCESS_KEY", "")
+    secret = os.getenv("MINIO_SECRET_KEY", "")
+    if access and secret:
+        return boto3.client('s3', endpoint_url=endpoint, aws_access_key_id=access, aws_secret_access_key=secret, region_name='us-east-1')
+    return None
 
 def clean_html(xml_content):
     soup = BeautifulSoup(xml_content, "lxml")
@@ -50,6 +61,7 @@ def chunk_text(text, chunk_size=1200, overlap=200):
 def process_dart_documents(corp_name, bsns_year):
     supabase = get_supabase_client()
     openai_client = get_openai_client()
+    s3_client = get_s3_client()
     api_key = os.getenv("DART_API_KEY")
     
     if not supabase or not openai_client or not api_key:
@@ -122,6 +134,8 @@ def process_dart_documents(corp_name, bsns_year):
                         chunks = chunk_text(clean_txt)
                         print(f"Extracted {len(chunks)} chunks from {xml_name}")
                         
+                        chunk_records = []
+                        
                         for i, chunk in enumerate(chunks):
                             try:
                                 emb_res = openai_client.embeddings.create(
@@ -139,10 +153,37 @@ def process_dart_documents(corp_name, bsns_year):
                                     'embedding': embedding
                                 }).execute()
                                 
+                                chunk_records.append({
+                                    'corp_name': corp_name,
+                                    'bsns_year': bsns_year,
+                                    'rcept_no': rcept_no,
+                                    'chunk_index': i,
+                                    'chunk_text': chunk
+                                })
+                                
                             except Exception as em_err:
                                 print(f"Error embedding chunk {i}: {em_err}")
                             
                             time.sleep(0.1) # rate limit 방지
+                        
+                        # Save chunks to MinIO as Parquet
+                        if s3_client and chunk_records:
+                            try:
+                                df = pd.DataFrame(chunk_records)
+                                parquet_buffer = io.BytesIO()
+                                df.to_parquet(parquet_buffer, index=False)
+                                parquet_buffer.seek(0)
+                                
+                                s3_key = f"rag-data/dart/{corp_name}/{bsns_year}/{rcept_no}_{xml_name}.parquet"
+                                s3_client.put_object(
+                                    Bucket='rag-knowledge-base',
+                                    Key=s3_key,
+                                    Body=parquet_buffer.getvalue()
+                                )
+                                print(f"Saved chunks to MinIO: {s3_key}")
+                            except Exception as minio_err:
+                                print(f"MinIO Parquet upload error: {minio_err}")
+                                
         except zipfile.BadZipFile:
             print(f"Bad zip file for {rcept_no}")
 

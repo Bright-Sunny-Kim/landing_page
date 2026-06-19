@@ -59,6 +59,26 @@ else:
     print("WARNING: OPENAI_API_KEY is missing in .env")
     openai_client = None
 
+# Boto3 MinIO 초기화
+import boto3
+from botocore.exceptions import ClientError
+minio_endpoint = os.getenv("MINIO_ENDPOINT", "https://s3.hyean-dskim.com")
+minio_access_key = os.getenv("MINIO_ACCESS_KEY", "")
+minio_secret_key = os.getenv("MINIO_SECRET_KEY", "")
+
+if minio_access_key and minio_secret_key:
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=minio_endpoint,
+        aws_access_key_id=minio_access_key,
+        aws_secret_access_key=minio_secret_key,
+        region_name='us-east-1' # required for boto3 although unused in minio
+    )
+else:
+    print("WARNING: MINIO credentials missing in .env")
+    s3_client = None
+
+
 @app.route('/')
 def index():
     if 'email' in session:
@@ -404,9 +424,11 @@ def master_detail(company_name):
             for f in files_res.data:
                 file_url_path = f.get('file_url')
                 if file_url_path:
-                    # Public URL 생성 (문자열 반환)
-                    public_url = supabase.storage.from_('company-uploads').get_public_url(file_url_path)
-                    f['public_url'] = public_url
+                    if file_url_path.startswith('http'):
+                        f['public_url'] = file_url_path
+                    else:
+                        # Fallback for old Supabase files
+                        f['public_url'] = supabase.storage.from_('company-uploads').get_public_url(file_url_path)
                 else:
                     f['public_url'] = '#'
                 # 상태가 없으면 대기중으로 표시
@@ -514,16 +536,19 @@ def submit_request():
             file_bytes = file.read()
             file_url = None
             
-            if supabase:
+            if s3_client:
                 try:
-                    supabase.storage.from_('company-uploads').upload(
-                        file_path, 
-                        file_bytes,
-                        file_options={"content-type": file.content_type}
+                    bucket_name = 'company-uploads'
+                    # Ensure bucket exists (in production, bucket should be pre-created)
+                    s3_client.put_object(
+                        Bucket=bucket_name,
+                        Key=file_path,
+                        Body=file_bytes,
+                        ContentType=file.content_type
                     )
-                    file_url = file_path
+                    file_url = f"{minio_endpoint}/{bucket_name}/{file_path}"
                 except Exception as e:
-                    print(f"Storage upload error for {field_name}: {e}")
+                    print(f"MinIO upload error for {field_name}: {e}")
             
             if supabase:
                 try:
@@ -586,7 +611,17 @@ def audit_analyze(company_name):
             file_bytes = None
             if file_url:
                 try:
-                    file_bytes = supabase.storage.from_('company-uploads').download(file_url)
+                    if file_url.startswith('http'):
+                        # It's a MinIO URL, download via requests
+                        import requests
+                        res = requests.get(file_url)
+                        if res.status_code == 200:
+                            file_bytes = res.content
+                        else:
+                            raise Exception(f"Failed to fetch from MinIO, status: {res.status_code}")
+                    else:
+                        file_bytes = supabase.storage.from_('company-uploads').download(file_url)
+                    
                     # 성공적으로 다운로드 한 경우에만 파싱
                     df_tb = parse_tb_file(file_bytes, file_name)
                     df_list.append(df_tb)
