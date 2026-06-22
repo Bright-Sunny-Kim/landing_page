@@ -163,3 +163,10 @@
 - **���� ���丮�� ��ȯ**: ���� ��뷮 ����(PDF, �繫��ǥ) ����Ҹ� ���� Supabase Storage���� ����� Ȩ ���� 1TB �����ϵ�(MinIO)�� ���� �̰�.
 - **DB �и� ����**: ȸ�� ����(users), ���ε� ��Ÿ������(company_files) �� ������ �ؽ�Ʈ DB�� ���� Supabase ���� ����(���̺긮�� ��Ű��ó).
 - **���̽� ���� ����**: pp.py �� dart_document_parser.py �������� oto3 ���̺귯���� ���� MinIO�� company-uploads, parsed-data ��Ŷ���� ���� ���� �� Parquet �����͸� ���ε��ϵ��� ����.
+
+
+## [2026-06-22] Supabase DB RLS 보안 강화 및 법인등록번호 기반 소속 자동 그룹화
+- **Supabase RLS 설정**: users, company_files 등 주요 테이블에 대해 RLS(Row Level Security)를 활성화하여 외부 anon 접근을 원천 차단하고 Flask 백엔드(service_role)만을 통한 안전한 접근 구조 보장.
+- **법인등록번호 기반 매핑**: users 테이블에 corporate_number 추가. 신규 가입 시 000000-0000000 형식의 유효성 검증을 거쳐 법인번호를 필수 수집.
+- **오타 자동 교정 및 그룹화**: 동일 법인번호로 가입 시, 사용자가 회사명에 오타를 내더라도 DB에 기존 등록된 정확한 회사명으로 강제 교정하여 소속 파트너사 데이터를 완벽하게 그룹화.
+- **프론트엔드 UI 수정 (login.html, main.js, style.css)**: 신규 가입 폼 및 소셜 간편 로그인 모달에 법인등록번호 필드 추가 및 애니메이션 영역(max-height) 확장 조정.

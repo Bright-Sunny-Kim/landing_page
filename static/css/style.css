@@ -294,7 +294,7 @@ h1 {
 }
 
 .additional-fields.show {
-    max-height: 350px;
+    max-height: 500px;
     opacity: 1;
     gap: 28px;
     margin-top: 12px;
@@ -1100,7 +1100,7 @@ textarea:focus {
 }
 
 .oauth-additional-fields.show {
-    max-height: 280px;
+    max-height: 450px;
     opacity: 1;
     gap: 20px;
     padding-top: 12px;

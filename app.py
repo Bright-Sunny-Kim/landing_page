@@ -146,6 +146,7 @@ def check_email():
 def login():
     email = request.form.get('email', '').strip()
     password = request.form.get('password', '').strip()
+    corporate_number = request.form.get('corporate_number', '').strip()
     company = request.form.get('company', '').strip()
     username = request.form.get('username', '').strip()
     task_type = request.form.get('task_type', '')
@@ -256,12 +257,23 @@ def login():
             session['task_type'] = user['task_type']
         else:
             # 2) 신규 회원 등록 및 로그인
-            if not (company and username and task_type and password):
+            if not (corporate_number and company and username and task_type and password):
                 return redirect(url_for('login_page', error='missing_fields'))
+                
+            import re
+            if not re.match(r'^\d{6}-\d{7}$', corporate_number):
+                # 에러 처리는 편의상 login_page에서 missing_fields와 같이 표시 가능하도록 설정
+                return redirect(url_for('login_page', error='invalid_corp_num'))
+                
+            # 기존 동일 법인번호 존재 여부 체크 및 회사명 강제 동기화
+            existing_corp = supabase.table('users').select('company').eq('corporate_number', corporate_number).execute()
+            if existing_corp.data:
+                company = existing_corp.data[0]['company']
                 
             hashed = generate_password_hash(password)
             supabase.table('users').insert({
                 'email': email,
+                'corporate_number': corporate_number,
                 'company': company,
                 'username': username,
                 'task_type': task_type,
@@ -287,6 +299,7 @@ def login_social():
     data = request.get_json() or {}
     email = data.get('email', '').strip()
     provider = data.get('provider', '').strip() # 'google' or 'naver'
+    corporate_number = data.get('corporate_number', '').strip()
     company = data.get('company', '').strip()
     username = data.get('username', '').strip()
     task_type = data.get('task_type', '').strip()
@@ -317,10 +330,19 @@ def login_social():
             return jsonify({'success': True, 'redirect': url_for('company_page', company_name=session['company'])})
         else:
             # 신규 소셜 가입 정보가 다 넘어온 경우 바로 가입 승인
-            if company and username and task_type:
+            if corporate_number and company and username and task_type:
+                import re
+                if not re.match(r'^\d{6}-\d{7}$', corporate_number):
+                    return jsonify({'error': '법인등록번호는 000000-0000000 형식이어야 합니다.'}), 400
+                    
+                existing_corp = supabase.table('users').select('company').eq('corporate_number', corporate_number).execute()
+                if existing_corp.data:
+                    company = existing_corp.data[0]['company']
+                    
                 oauth_pwd = f"OAUTH:{provider}"
                 supabase.table('users').insert({
                     'email': email,
+                    'corporate_number': corporate_number,
                     'company': company,
                     'username': username,
                     'task_type': task_type,

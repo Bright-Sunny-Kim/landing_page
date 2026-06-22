@@ -58,6 +58,8 @@
                             비밀번호를 입력해 주세요.
                         {% elif error == 'missing_fields' %}
                             필수 정보가 누락되었습니다.
+                        {% elif error == 'invalid_corp_num' %}
+                            법인등록번호 형식이 올바르지 않습니다. (000000-0000000)
                         {% elif error == 'db_error' %}
                             서버 DB 오류가 발생했습니다. 다시 시도해 주세요.
                         {% elif error.startswith('social_only_') %}
@@ -98,6 +100,12 @@
                     
                     <!-- 신규 가입 시에만 열릴 동적 추가 필드 그룹 -->
                     <div class="additional-fields hidden" id="additional-fields">
+                        <div class="input-group">
+                            <input type="text" id="corporate_number" name="corporate_number" autocomplete="off" placeholder=" ">
+                            <label for="corporate_number">법인등록번호 (000000-0000000)</label>
+                            <span class="bar"></span>
+                        </div>
+                        
                         <div class="input-group">
                             <input type="text" id="company" name="company" autocomplete="off" placeholder=" ">
                             <label for="company">회사명</label>
@@ -179,6 +187,11 @@
                 <!-- 소셜 계정 신규 가입 시 추가 정보를 입력받을 필드 (동적 노출) -->
                 <div class="oauth-additional-fields hidden" id="oauth-additional-fields">
                     <p class="oauth-warn-text">✦ 최초 1회 파트너사 정보 등록이 필요합니다.</p>
+                    <div class="input-group">
+                        <input type="text" id="oauth-corporate_number" autocomplete="off" placeholder=" ">
+                        <label for="oauth-corporate_number">법인등록번호 (000000-0000000)</label>
+                        <span class="bar"></span>
+                    </div>
                     <div class="input-group">
                         <input type="text" id="oauth-company" autocomplete="off" placeholder=" ">
                         <label for="oauth-company">회사명</label>

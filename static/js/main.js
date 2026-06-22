@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitBtn = document.getElementById('btn-submit');
 
     // 추가 필드 요소들
+    const corporateNumberInput = document.getElementById('corporate_number');
     const companyInput = document.getElementById('company');
     const usernameInput = document.getElementById('username');
     const taskInput = document.getElementById('task_type');
@@ -25,6 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const validateEmail = (email) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
+    };
+
+    // 법인등록번호 유효성 체크 함수
+    const validateCorporateNumber = (num) => {
+        const regex = /^\d{6}-\d{7}$/;
+        return regex.test(num);
     };
 
     if (emailInput && emailStatusMsg && additionalFields && passwordGroup && submitBtn) {
@@ -113,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 추가 필드 필수 여부 동적 설정 함수
         const setFieldsRequired = (isRequired) => {
+            if (corporateNumberInput) corporateNumberInput.required = isRequired;
             if (companyInput) companyInput.required = isRequired;
             if (usernameInput) usernameInput.required = isRequired;
             if (taskInput) taskInput.required = isRequired;
@@ -157,9 +165,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 신규 사용자인데 추가 정보가 입력되지 않은 경우 방지
             if (!isExistingUser) {
-                if (!companyInput.value.trim() || !usernameInput.value.trim() || !taskInput.value) {
+                const corpNum = corporateNumberInput.value.trim();
+                if (!corpNum || !companyInput.value.trim() || !usernameInput.value.trim() || !taskInput.value) {
                     e.preventDefault();
                     alert('신규 파트너사 등록을 위해 모든 항목을 입력해 주세요.');
+                    return;
+                }
+                if (!validateCorporateNumber(corpNum)) {
+                    e.preventDefault();
+                    alert('법인등록번호는 000000-0000000 형식으로 입력해야 합니다.');
                     return;
                 }
             }
@@ -190,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnOauthSubmit = document.getElementById('btn-oauth-submit');
     
     // 소셜 입력 필드들
+    const oauthCorporateNumber = document.getElementById('oauth-corporate_number');
     const oauthCompany = document.getElementById('oauth-company');
     const oauthUsername = document.getElementById('oauth-username');
     const oauthTask = document.getElementById('oauth-task_type');
@@ -200,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!oauthModal) return;
         currentProvider = provider;
         oauthEmailInput.value = '';
+        if (oauthCorporateNumber) oauthCorporateNumber.value = '';
         oauthCompany.value = '';
         oauthUsername.value = '';
         oauthTask.value = '';
@@ -226,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const setOauthFieldsRequired = (isRequired) => {
+        if (oauthCorporateNumber) oauthCorporateNumber.required = isRequired;
         oauthCompany.required = isRequired;
         oauthUsername.required = isRequired;
         oauthTask.required = isRequired;
@@ -258,15 +275,22 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             if (isNeedRegister) {
+                const corpNum = oauthCorporateNumber ? oauthCorporateNumber.value.trim() : '';
                 const company = oauthCompany.value.trim();
                 const username = oauthUsername.value.trim();
                 const task = oauthTask.value;
                 
-                if (!company || !username || !task) {
+                if (!corpNum || !company || !username || !task) {
                     alert('신규 소셜 파트너사 등록을 위해 모든 항목을 입력해 주세요.');
                     return;
                 }
                 
+                if (!validateCorporateNumber(corpNum)) {
+                    alert('법인등록번호는 000000-0000000 형식으로 입력해야 합니다.');
+                    return;
+                }
+                
+                requestData.corporate_number = corpNum;
                 requestData.company = company;
                 requestData.username = username;
                 requestData.task_type = task;
