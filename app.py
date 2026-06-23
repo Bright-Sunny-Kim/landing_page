@@ -494,7 +494,25 @@ def submit_request():
         
     email = session.get('email')
     company = session.get('company')
-    help_text = request.form.get('help_text', '').strip()
+    
+    industry = request.form.get('industry_select', '')
+    acc_std = request.form.get('accounting_standard', '')
+    raw_help_text = request.form.get('help_text', '').strip()
+    
+    industry_map = {
+        'manufacturing': '제조업/도소매업',
+        'finance': '금융/보험업',
+        'it': 'IT/소프트웨어',
+        'construction': '건설업'
+    }
+    acc_std_map = {
+        'k-gaap': '일반기업회계기준 (K-GAAP)',
+        'k-ifrs': '한국채택국제회계기준 (K-IFRS)'
+    }
+    
+    help_text = f"[업종: {industry_map.get(industry, industry)}] [회계기준: {acc_std_map.get(acc_std, acc_std)}]\n"
+    if raw_help_text:
+        help_text += f"문의내용: {raw_help_text}"
     
     document_labels = {
         'tb_current': '시산표(당연도)',
@@ -511,6 +529,24 @@ def submit_request():
         'withholding_prior': '원천징수이행상황신고서(전년도)',
         'severance_current': '퇴직금추계액명세서(당연도)',
         'severance_prior': '퇴직금추계액명세서(전년도)',
+        'inv_current': '재고자산수불부(당연도)',
+        'inv_prior': '재고자산수불부(전년도)',
+        'pinv_current': '재물조사 결과표(당연도)',
+        'pinv_prior': '재물조사 결과표(전년도)',
+        'fina_current': '금융자산명세서(당연도)',
+        'fina_prior': '금융자산명세서(전년도)',
+        'borr_current': '차입금명세서(당연도)',
+        'borr_prior': '차입금명세서(전년도)',
+        'risk_current': '위험관리보고서(당연도)',
+        'risk_prior': '위험관리보고서(전년도)',
+        'inta_current': '무형자산명세서(당연도)',
+        'inta_prior': '무형자산명세서(전년도)',
+        'proj_current': '프로젝트 진행률 명세(당연도)',
+        'proj_prior': '프로젝트 진행률 명세(전년도)',
+        'conc_current': '공사원가명세서(당연도)',
+        'conc_prior': '공사원가명세서(전년도)',
+        'cont_current': '도급계약서 및 진행률 산정표(당연도)',
+        'cont_prior': '도급계약서 및 진행률 산정표(전년도)',
         'other_current': '기타 증빙(당연도)',
         'other_prior': '기타 증빙(전년도)'
     }
@@ -728,7 +764,10 @@ def faq_ask():
             supabase = create_client(url, key)
 
     if not openai_client or not supabase:
-        return jsonify({'error': '서버의 AI 설정이 올바르지 않습니다.'}), 500
+        missing = []
+        if not openai_client: missing.append("openai")
+        if not supabase: missing.append("supabase")
+        return jsonify({'error': f'서버의 AI 설정이 올바르지 않습니다. (Missing: {", ".join(missing)})'}), 500
 
     data = request.get_json() or {}
     question = data.get('question', '').strip()

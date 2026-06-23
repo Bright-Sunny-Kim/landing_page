@@ -113,6 +113,26 @@
                     <h2 class="checklist-title">📂 회계감사 제출 자료 목록</h2>
                     <p class="checklist-desc">성공적인 회계감사 수행을 위해 아래 자료목록의 <strong>당연도(당기)</strong> 및 <strong>전년도(전기)</strong> 파일을 업로드해 주세요.</p>
                     
+                    
+                    <div class="form-group-block" style="margin-bottom: 24px; display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <label for="industry_select" class="field-label" style="display: block; margin-bottom: 8px; font-weight: 600;">업종 선택</label>
+                            <select id="industry_select" name="industry_select" class="faq-select" style="width: 100%; margin-bottom: 15px;" onchange="updateDocumentList()">
+                                <option value="manufacturing">제조업/도소매업</option>
+                                <option value="finance">금융/보험업</option>
+                                <option value="it">IT/소프트웨어</option>
+                                <option value="construction">건설업</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 250px;">
+                            <label for="accounting_standard" class="field-label" style="display: block; margin-bottom: 8px; font-weight: 600;">적용 회계기준</label>
+                            <select id="accounting_standard" name="accounting_standard" class="faq-select" style="width: 100%; margin-bottom: 15px;">
+                                <option value="k-gaap">일반기업회계기준 (K-GAAP)</option>
+                                <option value="k-ifrs">한국채택국제회계기준 (K-IFRS)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div class="audit-table-wrapper">
                         <table class="audit-upload-table">
                             <thead>
@@ -124,7 +144,7 @@
                             </thead>
                             <tbody>
                                 <!-- 1. 시산표 -->
-                                <tr>
+                                <tr class="doc-row doc-common">
                                     <td class="doc-info">
                                         <span class="doc-icon">📈</span>
                                         <div class="doc-text-wrapper">
@@ -161,9 +181,8 @@
                                         </div>
                                     </td>
                                 </tr>
-
                                 <!-- 2. 계정별원장 -->
-                                <tr>
+                                <tr class="doc-row doc-common">
                                     <td class="doc-info">
                                         <span class="doc-icon">📖</span>
                                         <div class="doc-text-wrapper">
@@ -200,48 +219,8 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- 3. 유형자산명세서 -->
-                                <tr>
-                                    <td class="doc-info">
-                                        <span class="doc-icon">🏢</span>
-                                        <div class="doc-text-wrapper">
-                                            <span class="doc-name">유형자산명세서</span>
-                                            <span class="doc-hint">Fixed Asset Ledger</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
-                                            <label><input type="radio" name="fa_current_status" value="제출" checked onchange="toggleUploadBox('fa_current', this.value)"> 제출</label>
-                                            <label><input type="radio" name="fa_current_status" value="미제출" onchange="toggleUploadBox('fa_current', this.value)"> 미제출</label>
-                                            <label><input type="radio" name="fa_current_status" value="해당사항없음" onchange="toggleUploadBox('fa_current', this.value)"> 해당없음</label>
-                                        </div>
-                                        <div class="mini-upload-box" id="box_fa_current">
-                                            <input type="file" id="fa_current" name="fa_current" class="mini-file-input" multiple>
-                                            <label for="fa_current" class="mini-upload-label" id="label-fa_current">
-                                                <span class="upload-icon">↑</span>
-                                                <span class="file-text">파일 선택</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
-                                            <label><input type="radio" name="fa_prior_status" value="제출" checked onchange="toggleUploadBox('fa_prior', this.value)"> 제출</label>
-                                            <label><input type="radio" name="fa_prior_status" value="미제출" onchange="toggleUploadBox('fa_prior', this.value)"> 미제출</label>
-                                            <label><input type="radio" name="fa_prior_status" value="해당사항없음" onchange="toggleUploadBox('fa_prior', this.value)"> 해당없음</label>
-                                        </div>
-                                        <div class="mini-upload-box" id="box_fa_prior">
-                                            <input type="file" id="fa_prior" name="fa_prior" class="mini-file-input" multiple>
-                                            <label for="fa_prior" class="mini-upload-label" id="label-fa_prior">
-                                                <span class="upload-icon">↑</span>
-                                                <span class="file-text">파일 선택</span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <!-- 4. 부가가치세신고서 -->
-                                <tr>
+                                <!-- 3. 부가가치세신고서 -->
+                                <tr class="doc-row doc-common">
                                     <td class="doc-info">
                                         <span class="doc-icon">🧾</span>
                                         <div class="doc-text-wrapper">
@@ -278,9 +257,8 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- 5. 급여대장 -->
-                                <tr>
+                                <!-- 4. 급여대장 -->
+                                <tr class="doc-row doc-common">
                                     <td class="doc-info">
                                         <span class="doc-icon">💵</span>
                                         <div class="doc-text-wrapper">
@@ -317,9 +295,8 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- 6. 원천징수이행상황신고서 -->
-                                <tr>
+                                <!-- 5. 원천징수이행상황신고서 -->
+                                <tr class="doc-row doc-common">
                                     <td class="doc-info">
                                         <span class="doc-icon">💼</span>
                                         <div class="doc-text-wrapper">
@@ -356,9 +333,8 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- 7. 퇴직금추계액명세서 -->
-                                <tr>
+                                <!-- 6. 퇴직금추계액명세서 -->
+                                <tr class="doc-row doc-common">
                                     <td class="doc-info">
                                         <span class="doc-icon">👴</span>
                                         <div class="doc-text-wrapper">
@@ -395,9 +371,388 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- 8. 기타 감사 증빙 -->
-                                <tr>
+                                <!-- 7. 유형자산명세서 -->
+                                <tr class="doc-row manufacturing construction">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">🏢</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">유형자산명세서</span>
+                                            <span class="doc-hint">Fixed Asset Ledger</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="fa_current_status" value="제출" checked onchange="toggleUploadBox('fa_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="fa_current_status" value="미제출" onchange="toggleUploadBox('fa_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="fa_current_status" value="해당사항없음" onchange="toggleUploadBox('fa_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_fa_current">
+                                            <input type="file" id="fa_current" name="fa_current" class="mini-file-input" multiple>
+                                            <label for="fa_current" class="mini-upload-label" id="label-fa_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="fa_prior_status" value="제출" checked onchange="toggleUploadBox('fa_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="fa_prior_status" value="미제출" onchange="toggleUploadBox('fa_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="fa_prior_status" value="해당사항없음" onchange="toggleUploadBox('fa_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_fa_prior">
+                                            <input type="file" id="fa_prior" name="fa_prior" class="mini-file-input" multiple>
+                                            <label for="fa_prior" class="mini-upload-label" id="label-fa_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 8. 재고자산수불부 -->
+                                <tr class="doc-row manufacturing">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">📦</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">재고자산수불부</span>
+                                            <span class="doc-hint">Inventory Ledger</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="inv_current_status" value="제출" checked onchange="toggleUploadBox('inv_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="inv_current_status" value="미제출" onchange="toggleUploadBox('inv_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="inv_current_status" value="해당사항없음" onchange="toggleUploadBox('inv_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_inv_current">
+                                            <input type="file" id="inv_current" name="inv_current" class="mini-file-input" multiple>
+                                            <label for="inv_current" class="mini-upload-label" id="label-inv_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="inv_prior_status" value="제출" checked onchange="toggleUploadBox('inv_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="inv_prior_status" value="미제출" onchange="toggleUploadBox('inv_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="inv_prior_status" value="해당사항없음" onchange="toggleUploadBox('inv_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_inv_prior">
+                                            <input type="file" id="inv_prior" name="inv_prior" class="mini-file-input" multiple>
+                                            <label for="inv_prior" class="mini-upload-label" id="label-inv_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 9. 재물조사 결과표 -->
+                                <tr class="doc-row manufacturing">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">🔍</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">재물조사 결과표</span>
+                                            <span class="doc-hint">Physical Inventory Report</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="pinv_current_status" value="제출" checked onchange="toggleUploadBox('pinv_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="pinv_current_status" value="미제출" onchange="toggleUploadBox('pinv_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="pinv_current_status" value="해당사항없음" onchange="toggleUploadBox('pinv_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_pinv_current">
+                                            <input type="file" id="pinv_current" name="pinv_current" class="mini-file-input" multiple>
+                                            <label for="pinv_current" class="mini-upload-label" id="label-pinv_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="pinv_prior_status" value="제출" checked onchange="toggleUploadBox('pinv_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="pinv_prior_status" value="미제출" onchange="toggleUploadBox('pinv_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="pinv_prior_status" value="해당사항없음" onchange="toggleUploadBox('pinv_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_pinv_prior">
+                                            <input type="file" id="pinv_prior" name="pinv_prior" class="mini-file-input" multiple>
+                                            <label for="pinv_prior" class="mini-upload-label" id="label-pinv_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 10. 금융자산명세서 -->
+                                <tr class="doc-row finance">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">🏦</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">금융자산명세서</span>
+                                            <span class="doc-hint">Financial Asset Ledger</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="fina_current_status" value="제출" checked onchange="toggleUploadBox('fina_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="fina_current_status" value="미제출" onchange="toggleUploadBox('fina_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="fina_current_status" value="해당사항없음" onchange="toggleUploadBox('fina_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_fina_current">
+                                            <input type="file" id="fina_current" name="fina_current" class="mini-file-input" multiple>
+                                            <label for="fina_current" class="mini-upload-label" id="label-fina_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="fina_prior_status" value="제출" checked onchange="toggleUploadBox('fina_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="fina_prior_status" value="미제출" onchange="toggleUploadBox('fina_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="fina_prior_status" value="해당사항없음" onchange="toggleUploadBox('fina_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_fina_prior">
+                                            <input type="file" id="fina_prior" name="fina_prior" class="mini-file-input" multiple>
+                                            <label for="fina_prior" class="mini-upload-label" id="label-fina_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 11. 차입금명세서 -->
+                                <tr class="doc-row finance">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">📉</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">차입금명세서</span>
+                                            <span class="doc-hint">Borrowings Ledger</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="borr_current_status" value="제출" checked onchange="toggleUploadBox('borr_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="borr_current_status" value="미제출" onchange="toggleUploadBox('borr_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="borr_current_status" value="해당사항없음" onchange="toggleUploadBox('borr_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_borr_current">
+                                            <input type="file" id="borr_current" name="borr_current" class="mini-file-input" multiple>
+                                            <label for="borr_current" class="mini-upload-label" id="label-borr_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="borr_prior_status" value="제출" checked onchange="toggleUploadBox('borr_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="borr_prior_status" value="미제출" onchange="toggleUploadBox('borr_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="borr_prior_status" value="해당사항없음" onchange="toggleUploadBox('borr_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_borr_prior">
+                                            <input type="file" id="borr_prior" name="borr_prior" class="mini-file-input" multiple>
+                                            <label for="borr_prior" class="mini-upload-label" id="label-borr_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 12. 위험관리보고서 -->
+                                <tr class="doc-row finance">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">⚠️</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">위험관리보고서</span>
+                                            <span class="doc-hint">Risk Management Report</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="risk_current_status" value="제출" checked onchange="toggleUploadBox('risk_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="risk_current_status" value="미제출" onchange="toggleUploadBox('risk_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="risk_current_status" value="해당사항없음" onchange="toggleUploadBox('risk_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_risk_current">
+                                            <input type="file" id="risk_current" name="risk_current" class="mini-file-input" multiple>
+                                            <label for="risk_current" class="mini-upload-label" id="label-risk_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="risk_prior_status" value="제출" checked onchange="toggleUploadBox('risk_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="risk_prior_status" value="미제출" onchange="toggleUploadBox('risk_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="risk_prior_status" value="해당사항없음" onchange="toggleUploadBox('risk_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_risk_prior">
+                                            <input type="file" id="risk_prior" name="risk_prior" class="mini-file-input" multiple>
+                                            <label for="risk_prior" class="mini-upload-label" id="label-risk_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 13. 무형자산명세서 -->
+                                <tr class="doc-row it">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">💻</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">무형자산명세서</span>
+                                            <span class="doc-hint">Intangible Asset Ledger</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="inta_current_status" value="제출" checked onchange="toggleUploadBox('inta_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="inta_current_status" value="미제출" onchange="toggleUploadBox('inta_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="inta_current_status" value="해당사항없음" onchange="toggleUploadBox('inta_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_inta_current">
+                                            <input type="file" id="inta_current" name="inta_current" class="mini-file-input" multiple>
+                                            <label for="inta_current" class="mini-upload-label" id="label-inta_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="inta_prior_status" value="제출" checked onchange="toggleUploadBox('inta_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="inta_prior_status" value="미제출" onchange="toggleUploadBox('inta_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="inta_prior_status" value="해당사항없음" onchange="toggleUploadBox('inta_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_inta_prior">
+                                            <input type="file" id="inta_prior" name="inta_prior" class="mini-file-input" multiple>
+                                            <label for="inta_prior" class="mini-upload-label" id="label-inta_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 14. 프로젝트 진행률 명세 -->
+                                <tr class="doc-row it">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">📊</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">프로젝트 진행률 명세</span>
+                                            <span class="doc-hint">Project Progress Ledger</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="proj_current_status" value="제출" checked onchange="toggleUploadBox('proj_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="proj_current_status" value="미제출" onchange="toggleUploadBox('proj_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="proj_current_status" value="해당사항없음" onchange="toggleUploadBox('proj_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_proj_current">
+                                            <input type="file" id="proj_current" name="proj_current" class="mini-file-input" multiple>
+                                            <label for="proj_current" class="mini-upload-label" id="label-proj_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="proj_prior_status" value="제출" checked onchange="toggleUploadBox('proj_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="proj_prior_status" value="미제출" onchange="toggleUploadBox('proj_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="proj_prior_status" value="해당사항없음" onchange="toggleUploadBox('proj_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_proj_prior">
+                                            <input type="file" id="proj_prior" name="proj_prior" class="mini-file-input" multiple>
+                                            <label for="proj_prior" class="mini-upload-label" id="label-proj_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 15. 공사원가명세서 -->
+                                <tr class="doc-row construction">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">🏗️</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">공사원가명세서</span>
+                                            <span class="doc-hint">Construction Cost Ledger</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="conc_current_status" value="제출" checked onchange="toggleUploadBox('conc_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="conc_current_status" value="미제출" onchange="toggleUploadBox('conc_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="conc_current_status" value="해당사항없음" onchange="toggleUploadBox('conc_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_conc_current">
+                                            <input type="file" id="conc_current" name="conc_current" class="mini-file-input" multiple>
+                                            <label for="conc_current" class="mini-upload-label" id="label-conc_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="conc_prior_status" value="제출" checked onchange="toggleUploadBox('conc_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="conc_prior_status" value="미제출" onchange="toggleUploadBox('conc_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="conc_prior_status" value="해당사항없음" onchange="toggleUploadBox('conc_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_conc_prior">
+                                            <input type="file" id="conc_prior" name="conc_prior" class="mini-file-input" multiple>
+                                            <label for="conc_prior" class="mini-upload-label" id="label-conc_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 16. 도급계약서 및 진행률 산정표 -->
+                                <tr class="doc-row construction">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">📝</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">도급계약서 및 진행률 산정표</span>
+                                            <span class="doc-hint">Contract & Progress Report</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="cont_current_status" value="제출" checked onchange="toggleUploadBox('cont_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="cont_current_status" value="미제출" onchange="toggleUploadBox('cont_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="cont_current_status" value="해당사항없음" onchange="toggleUploadBox('cont_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_cont_current">
+                                            <input type="file" id="cont_current" name="cont_current" class="mini-file-input" multiple>
+                                            <label for="cont_current" class="mini-upload-label" id="label-cont_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="cont_prior_status" value="제출" checked onchange="toggleUploadBox('cont_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="cont_prior_status" value="미제출" onchange="toggleUploadBox('cont_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="cont_prior_status" value="해당사항없음" onchange="toggleUploadBox('cont_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_cont_prior">
+                                            <input type="file" id="cont_prior" name="cont_prior" class="mini-file-input" multiple>
+                                            <label for="cont_prior" class="mini-upload-label" id="label-cont_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 17. 기타 감사 증빙 -->
+                                <tr class="doc-row doc-common">
                                     <td class="doc-info">
                                         <span class="doc-icon">📎</span>
                                         <div class="doc-text-wrapper">
@@ -536,7 +891,27 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
     <script>
+        
+        function updateDocumentList() {
+            const industry = document.getElementById('industry_select').value;
+            const rows = document.querySelectorAll('.doc-row');
+            
+            rows.forEach(row => {
+                if (row.classList.contains('doc-common') || row.classList.contains(industry)) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // 초기 로드 시 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDocumentList();
+        });
+        
         function toggleUploadBox(fieldId, status) {
+
             const box = document.getElementById('box_' + fieldId);
             const input = document.getElementById(fieldId);
             if (status === '제출') {
