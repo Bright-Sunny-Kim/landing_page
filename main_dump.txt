@@ -1,0 +1,100 @@
+451:         },
+452:         analytics: {
+453:             title: '📈 시스템 통계 및 리포트',
+454:             desc: '연도별/월별 신규 파트너사 유치 통계, 누적 파일 전송 데이터 사용량, 기장 대리 수요 추이 분석 그래프 및 월별 업무 처리 효율성을 다각도로 시각화하여 경영 분석을 돕는 통합 리포트 화면입니다.',
+455:             icon: '📈',
+456:             placeholder: '통합 경영 통계 시각화 및 리포팅 모듈 준비 중'
+457:         },
+458:         settings: {
+459:             title: '⚙️ 포털 시스템 설정',
+460:             desc: '최고 관리자(Master) 계정 관리 및 추가 부회계사 권한 부여, 파트너사 포털 접근 차단/해제 IP 제어, 시스템 보안 감사 로그 모니터링 및 PWA 설치형 웹 사이트의 캐시 리프레시 설정을 관리하는 시스템 패널입니다.',
+461:             icon: '⚙️',
+462:             placeholder: '보안 접근 제어 및 서브 관리자 권한 설정 센터 준비 중'
+463:         }
+464:     };
+465: 
+466:     if (sidebarMenuItems.length > 0 && masterMainContent) {
+467:         sidebarMenuItems.forEach(item => {
+468:             item.addEventListener('click', (e) => {
+469:                 const menu = item.getAttribute('data-menu');
+470:                 
+471:                 // 만약 상세 페이지(master_detail.html)에서 홈이 아닌 다른 Mock 메뉴를 클릭했을 때는 목록 페이지(/master)로 넘어가서 탭이 열리도록 링크 이동 허용
+472:                 if (detailDashboardView && menu !== 'partners') {
+473:                     // detail view가 켜져 있으면, href 경로를 타서 목록 페이지로 이동하게 둠 (e.preventDefault 하지 않음)
+474:                     return;
+475:                 }
+476:                 
+477:                 // 1. 홈 대시보드 탭 활성화 처리
+478:                 if (menu === 'home' || menu === 'partners') {
+479:                     // 기본 상세 뷰 또는 홈 뷰 활성화
+480:                     if (homeDashboardView) {
+481:                         e.preventDefault();
+482:                         
+483:                         // 사이드바 active 갱신
+484:                         sidebarMenuItems.forEach(i => i.classList.remove('active'));
+485:                         const targetItem = document.querySelector(`.master-menu-item[data-menu="home"]`) || item;
+486:                         targetItem.classList.add('active');
+487:                         
+488:                         // 기존에 로드된 Mock 뷰들 다 제거
+489:                         const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+490:                         activeMocks.forEach(m => m.remove());
+491:                         
+492:                         // 타 대시보드 숨기기
+493:                         const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
+494:                         if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
+495:                         
+496:                         // 홈 보이기
+497:                         homeDashboardView.style.display = 'block';
+498:                     }
+499:                     return;
+500:                 }
+501:                 
+502:                 // 2. 시스템 통계 및 리포트 (analytics) 분기 처리
+503:                 if (menu === 'analytics') {
+504:                     e.preventDefault();
+505:                     
+506:                     sidebarMenuItems.forEach(i => i.classList.remove('active'));
+507:                     item.classList.add('active');
+508:                     
+509:                     if (homeDashboardView) homeDashboardView.style.display = 'none';
+510:                     if (detailDashboardView) detailDashboardView.style.display = 'none';
+511:                     
+512:                     // 기존 Mock 뷰들 다 제거
+513:                     const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+514:                     activeMocks.forEach(m => m.remove());
+515:                     
+516:                     // analytics 뷰 보이기
+517:                     const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
+518:                     if (analyticsDashboardView) {
+519:                         analyticsDashboardView.style.display = 'block';
+520:                     }
+521:                     return;
+522:                 }
+523:                 
+524:                 // 3. Mock 나머지 7개 메뉴 탭 클릭 시 (e.preventDefault로 가상 렌더링)
+525:                 e.preventDefault();
+526:                 
+527:                 // 사이드바 active 클래스 토글
+528:                 sidebarMenuItems.forEach(i => i.classList.remove('active'));
+529:                 item.classList.add('active');
+530:                 
+531:                 // 기존 대시보드 뷰 숨기기
+532:                 if (homeDashboardView) homeDashboardView.style.display = 'none';
+533:                 if (detailDashboardView) detailDashboardView.style.display = 'none';
+534:                 const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
+535:                 if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
+536:                 
+537:                 // 기존에 열려있던 다른 Mock 뷰 제거
+538:                 const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+539:                 activeMocks.forEach(m => m.remove());
+540:                 
+541:                 // 새 Mock HTML 생성 및 인젝션
+542:                 const data = menuMockData[menu];
+543:                 if (data && menu !== 'analytics') {
+544:                     const mockHtml = `
+545:                         <div class="mock-dashboard">
+546:                             <header class="mock-header">
+547:                                 <h1 class="mock-title">${data.title}</h1>
+548:                             </header>
+549:                             
+550:                             <div class="glass-card dashboard-card master-card mock-placeholder-card">

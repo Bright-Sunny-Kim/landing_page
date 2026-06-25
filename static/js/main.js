@@ -884,3 +884,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// ¼­ºê ÅÇ ÀüÈ¯ ·ÎÁ÷ (È¸°è°¨»ç ÅÇ ³»ºÎ)
+window.switchSubTab = function(tabId) {
+    // ÅÇ ¹öÆ° È°¼ºÈ­ º¯°æ
+    document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if(btn.dataset.subtab === tabId) btn.classList.add('active');
+    });
+    
+    // ÅÇ ÄÜÅÙÃ÷ °¡½Ã¼º º¯°æ
+    document.querySelectorAll('.sub-tab-pane').forEach(pane => {
+        pane.style.display = 'none';
+        if(pane.id === tabId) pane.style.display = 'block';
+    });
+};
+

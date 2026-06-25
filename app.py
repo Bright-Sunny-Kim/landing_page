@@ -369,22 +369,129 @@ def company_page(company_name):
     if 'email' not in session:
         return redirect(url_for('login_page'))
         
-    # 마스터 계정은 튕겨나가지 않고 모든 파트너사의 포털을 다 볼 수 있도록 허용
+    # 마스터 계정 처리
     if session['email'] == MASTER_EMAIL:
-        success = request.args.get('success', 'false') == 'true'
-        return render_template('company.html', 
-                               company_name=company_name,
-                               success=success)
-        
-    # 일반 파트너는 자기 회사 페이지가 아니면 첫 화면으로 튕김
-    if session['company'] != company_name:
+        pass # Allow access
+    elif session['company'] != company_name:
         return redirect(url_for('login_page'))
         
     success = request.args.get('success', 'false') == 'true'
     
+    document_labels = {
+        'tb_current': '시산표(당연도)',
+        'tb_prior': '시산표(전년도)',
+        'gl_current': '계정별원장(당연도)',
+        'gl_prior': '계정별원장(전년도)',
+        'fa_current': '유형자산명세서(당연도)',
+        'fa_prior': '유형자산명세서(전년도)',
+        'vat_current': '부가가치세신고서(당연도)',
+        'vat_prior': '부가가치세신고서(전년도)',
+        'payroll_current': '급여대장(당연도)',
+        'payroll_prior': '급여대장(전년도)',
+        'withholding_current': '원천징수이행상황신고서(당연도)',
+        'withholding_prior': '원천징수이행상황신고서(전년도)',
+        'severance_current': '퇴직금추계액명세서(당연도)',
+        'severance_prior': '퇴직금추계액명세서(전년도)',
+        'inv_current': '재고자산수불부(당연도)',
+        'inv_prior': '재고자산수불부(전년도)',
+        'pinv_current': '재물조사 결과표(당연도)',
+        'pinv_prior': '재물조사 결과표(전년도)',
+        'fina_current': '금융자산명세서(당연도)',
+        'fina_prior': '금융자산명세서(전년도)',
+        'borr_current': '차입금명세서(당연도)',
+        'borr_prior': '차입금명세서(전년도)',
+        'risk_current': '위험관리보고서(당연도)',
+        'risk_prior': '위험관리보고서(전년도)',
+        'inta_current': '무형자산명세서(당연도)',
+        'inta_prior': '무형자산명세서(전년도)',
+        'proj_current': '프로젝트 진행률 명세(당연도)',
+        'proj_prior': '프로젝트 진행률 명세(전년도)',
+        'conc_current': '공사원가명세서(당연도)',
+        'conc_prior': '공사원가명세서(전년도)',
+        'cont_current': '도급계약서 및 진행률 산정표(당연도)',
+        'cont_prior': '도급계약서 및 진행률 산정표(전년도)',
+        'other_current': '기타 증빙(당연도)',
+        'other_prior': '기타 증빙(전년도)',
+        'finance_inquiry': '외부조회(금융기관)',
+        'partner_inquiry': '외부조회(거래처)',
+        'pfile_01': '[PBC-P-01] 최신 정관',
+        'pfile_02': '[PBC-P-02] 법인 등기부등본',
+        'pfile_03': '[PBC-P-03] 주주명부 및 특수관계자 지분 구조도',
+        'pfile_04': '[PBC-P-04] 과거 3개년 주주총회 및 이사회 의사록 일체',
+        'pfile_05': '[PBC-P-05] 전사 조직도 및 직무 권한·업무분장표',
+        'pfile_06': '[PBC-P-06] 내부회계관리제도 설계 및 운영 기술서',
+        'pfile_07': '[PBC-P-07] 주요 사규 및 위임전결 규정집',
+        'pfile_08': '[PBC-P-08] ERP 및 회계 프로그램 시스템 사양서',
+        'pfile_09': '[PBC-P-09] 장기 차입금 및 사채 발행 계약서 총괄표',
+        'pfile_10': '[PBC-P-10] 주요 자산 리스 계약서 및 스케줄표',
+        'pfile_11': '[PBC-P-11] 부동산 등기부등본 및 관련 계약서',
+        'pfile_12': '[PBC-P-12] 국책과제 협약서 및 기술 이전 계약서',
+        'pfile_13': '[PBC-P-13] 주주간 계약서 및 금융기관 담보·보증 제공 내역서',
+        'pfile_14': '[PBC-P-14] 최근 3개년 법인세 신고서 및 세무조정계산서 일체',
+        'pfile_15': '[PBC-P-15] 이월결손금 및 세액공제 이력 관리대장',
+        'pfile_16': '[PBC-P-16] 과거 세무조사 결과통지서 및 조치 결과 보고서',
+        'pfile_17': '[PBC-P-17] 최근 3개년 외부감사보고서'
+    }
+    
+    history_files = []
+    missing_items = []
+    progress = {'total': len(document_labels), 'submitted': 0, 'percent': 0}
+    
+    if supabase:
+        try:
+            res = supabase.table('company_files').select('*').eq('company_name', company_name).order('created_at', desc=False).execute()
+            history_files = res.data
+            
+            # Extract latest status for each label (iterating ascending so latest overrides)
+            label_status = {}
+            for f in history_files:
+                help_text = f.get('help_text', '')
+                if not help_text: continue
+                import re as regex
+                m = regex.search(r'\[(.*?)\] 상태: (.*)', help_text)
+                if m:
+                    label = m.group(1).strip()
+                    status = m.group(2).split('\\n')[0].strip()
+                    label_status[label] = status
+            
+            for key, label in document_labels.items():
+                status = label_status.get(label, '미제출')
+                if status in ['제출', '해당사항없음']:
+                    progress['submitted'] += 1
+                else:
+                    cat = '기타'
+                    if key.startswith('pfile_'): cat = 'P-File'
+                    elif 'finance' in key or 'partner' in key: cat = '외부조회'
+                    elif 'current' in key: cat = '서면(당기)'
+                    elif 'prior' in key: cat = '서면(전기)'
+                    missing_items.append({'category': cat, 'label': label})
+                    
+            if progress['total'] > 0:
+                progress['percent'] = int((progress['submitted'] / progress['total']) * 100)
+                
+            # Re-order history files to descending for display
+            history_files.reverse()
+            for f in history_files:
+                file_url_path = f.get('file_url')
+                if file_url_path:
+                    if file_url_path.startswith('http'):
+                        f['public_url'] = file_url_path
+                    else:
+                        f['public_url'] = supabase.storage.from_('company-uploads').get_public_url(file_url_path)
+                else:
+                    f['public_url'] = '#'
+                if not f.get('status'):
+                    f['status'] = '대기중'
+                    
+        except Exception as e:
+            print(f"History error: {e}")
+    
     return render_template('company.html', 
                            company_name=company_name,
-                           success=success)
+                           success=success,
+                           history_files=history_files,
+                           missing_items=missing_items,
+                           progress=progress)
 
 @app.route('/master')
 def master_page():
@@ -514,6 +621,7 @@ def submit_request():
     if raw_help_text:
         help_text += f"문의내용: {raw_help_text}"
     
+
     document_labels = {
         'tb_current': '시산표(당연도)',
         'tb_prior': '시산표(전년도)',
@@ -548,7 +656,30 @@ def submit_request():
         'cont_current': '도급계약서 및 진행률 산정표(당연도)',
         'cont_prior': '도급계약서 및 진행률 산정표(전년도)',
         'other_current': '기타 증빙(당연도)',
-        'other_prior': '기타 증빙(전년도)'
+        'other_prior': '기타 증빙(전년도)',
+        
+        # 외부조회
+        'finance_inquiry': '외부조회(금융기관)',
+        'partner_inquiry': '외부조회(거래처)',
+        
+        # P-File (회사기본사항)
+        'pfile_01': '[PBC-P-01] 최신 정관',
+        'pfile_02': '[PBC-P-02] 법인 등기부등본',
+        'pfile_03': '[PBC-P-03] 주주명부 및 특수관계자 지분 구조도',
+        'pfile_04': '[PBC-P-04] 과거 3개년 주주총회 및 이사회 의사록 일체',
+        'pfile_05': '[PBC-P-05] 전사 조직도 및 직무 권한·업무분장표',
+        'pfile_06': '[PBC-P-06] 내부회계관리제도 설계 및 운영 기술서',
+        'pfile_07': '[PBC-P-07] 주요 사규 및 위임전결 규정집',
+        'pfile_08': '[PBC-P-08] ERP 및 회계 프로그램 시스템 사양서',
+        'pfile_09': '[PBC-P-09] 장기 차입금 및 사채 발행 계약서 총괄표',
+        'pfile_10': '[PBC-P-10] 주요 자산 리스 계약서 및 스케줄표',
+        'pfile_11': '[PBC-P-11] 부동산 등기부등본 및 관련 계약서',
+        'pfile_12': '[PBC-P-12] 국책과제 협약서 및 기술 이전 계약서',
+        'pfile_13': '[PBC-P-13] 주주간 계약서 및 금융기관 담보·보증 제공 내역서',
+        'pfile_14': '[PBC-P-14] 최근 3개년 법인세 신고서 및 세무조정계산서 일체',
+        'pfile_15': '[PBC-P-15] 이월결손금 및 세액공제 이력 관리대장',
+        'pfile_16': '[PBC-P-16] 과거 세무조사 결과통지서 및 조치 결과 보고서',
+        'pfile_17': '[PBC-P-17] 최근 3개년 외부감사보고서'
     }
     
     import datetime
@@ -556,27 +687,56 @@ def submit_request():
     prior_year = current_year - 1
 
     uploaded_files_data = []
-    
-    for field_name, label in document_labels.items():
-        status = request.form.get(f'{field_name}_status', '제출')
-        files = request.files.getlist(field_name)
 
-        # Determine the year folder
-        if 'current' in field_name:
-            year_folder = str(current_year)
-        else:
-            year_folder = str(prior_year)
-
-        if status == '제출' and len(files) > 0 and files[0].filename != '':
+    single_category = request.form.get('category')
+    if single_category:
+        field_name = None
+        if single_category == 'P-File': field_name = request.form.get('pfile_doc')
+        elif single_category == 'Temp': field_name = request.form.get('written_doc')
+        elif single_category == 'Ext_F': field_name = request.form.get('finance_doc')
+        elif single_category == 'Ext_C': field_name = request.form.get('partner_doc')
+        if field_name and field_name in document_labels:
+            label = document_labels[field_name]
+            files = request.files.getlist('file')
+            if field_name.startswith('pfile_'): year_folder = 'P-File'
+            elif 'finance' in field_name: year_folder = 'Ext_F'
+            elif 'partner' in field_name: year_folder = 'Ext_C'
+            elif 'current' in field_name: year_folder = 'Temp/Temp_P'
+            else: year_folder = 'Temp/Temp_L'
             for file in files:
                 if file.filename != '':
-                    uploaded_files_data.append((field_name, label, file, status, year_folder))
-        elif status in ['미제출', '해당사항없음']:
-            # DB entry only
-            uploaded_files_data.append((field_name, label, None, status, year_folder))
-    if not help_text and not uploaded_files_data:
-        return jsonify({'error': '문의 사항을 작성하거나 1개 이상의 감사 증빙을 처리해주세요.'}), 400
+                    uploaded_files_data.append((field_name, label, file, '완료', year_folder))
+    else:
         
+        for field_name, label in document_labels.items():
+            status = request.form.get(f'{field_name}_status', '제출')
+            files = request.files.getlist(field_name)
+    
+            # 폴더 저장 규칙 반영
+            if field_name.startswith('pfile_'):
+                year_folder = 'P-File'
+            elif field_name == 'finance_inquiry':
+                year_folder = 'Ext_F'
+            elif field_name == 'partner_inquiry':
+                year_folder = 'Ext_C'
+            elif 'current' in field_name:
+                year_folder = 'Temp/Temp_P'
+            else:
+                year_folder = 'Temp/Temp_L'
+    
+            if status == '제출' and len(files) > 0 and files[0].filename != '':
+                for file in files:
+                    if file.filename != '':
+                        uploaded_files_data.append((field_name, label, file, status, year_folder))
+            elif status in ['미제출', '해당사항없음']:
+                # DB entry only
+                uploaded_files_data.append((field_name, label, None, status, year_folder))
+        
+        # 폼 종류 확인 (pfile 인지 기본감사자료 인지)
+    form_type = request.form.get('form_type', '')
+    
+    if not help_text and not uploaded_files_data:
+        return jsonify({'error': '업로드할 파일을 선택하거나 문의 사항을 작성해 주세요.'}), 400
     for field_name, label, file, status, year_folder in uploaded_files_data:
         if status == '제출' and file:
             from werkzeug.utils import secure_filename
