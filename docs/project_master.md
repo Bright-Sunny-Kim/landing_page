@@ -211,3 +211,9 @@ un_parser.bat를 구성했습니다.
 - **백엔드 분류/적재 로직 연동 (`app.py`)**: 
   - '제출 내역 조회' 탭 내의 새로운 단일 업로드 폼 형식(Hidden 필드로 Category 전달)을 파싱할 수 있도록 `company_upload` 로직 확장.
   - 제출된 카테고리와 세부 항목명(예: `current_fs`, `finance_bank_balance`)에 따라 `P-File`, `Temp/Temp_P`, `Temp/Temp_L`, `Ext_F`, `Ext_C` 명칭의 연도별(year_folder) 폴더 구조를 자동 판별하여 MinIO 및 DB에 맞춤형 적재 처리 구현 완료.
+
+## [2026-06-26] 파트너사 포털 UI 구조 결함 완벽 복구 및 탭 전환 안정화
+- **서면제출자료 탭 목록 증발 및 UI 깨짐 2차 복구 (company.html)**: 
+  - '회사기본사항(P-file)' 서브 탭 및 '전체 제출 이력 타임라인' 영역(partner-history-view)의 HTML 닫힘 태그(</div>) 누락을 최종적으로 식별 및 추가.
+  - 부모-자식 태그 종속 관계로 인해 switchSubTab 자바스크립트 실행 시 '서면제출자료' 탭의 리스트(테이블)가 통째로 display: none 처리되던 이슈를 완벽하게 해결. 
+  - 중복 선언되어 있던 switchSubTab 함수를 정리하여 main.js의 공통 함수로 일원화 처리.
