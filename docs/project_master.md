@@ -1,5 +1,13 @@
 
 ## 최근 아키텍처 및 파이프라인 업데이트 (2026-06-25)
+
+## 추가 업데이트 (2026-06-26)
+1. **LlamaParse API 한도 예외 처리 강화**
+   - 무료 API 한도 초과 시 빈 데이터(0 청크)를 반환하는 LlamaParse의 동작을 캐치하여, 성공으로 잘못 기록되지 않고 '실패(API 한도 초과)'로 parse_tracker.json에 정확히 기록되도록 process_llama_parse.py의 에러 핸들링을 강화했습니다.
+2. **윈도우 자동 스케줄링 (Cron Job)**
+   - LlamaParse 일일 한도 초기화 시간(한국 시간 오후 5시)을 고려하여, 매일 오후 6시(18:00)에 백그라운드에서 자동으로 파싱 스크립트를 실행하는 
+un_parser.bat를 구성했습니다.
+   - 윈도우의 작업 스케줄러(Task Scheduler)에 LlamaParse_Daily_Job으로 등록 완료했으며, 실행 결과는 parser_cron.log에 자동 기록됩니다.
 1. **RAG 파이프라인 고도화 (LlamaParse 도입)**
    - 기존의 단순 텍스트 추출 한계를 극복하기 위해 llama-parse 및 langchain-text-splitters를 도입했습니다.
    - 복잡한 표(Table)와 마크다운 헤더 구조를 완벽하게 유지하며 의미 단위(Chunk)로 분할합니다.

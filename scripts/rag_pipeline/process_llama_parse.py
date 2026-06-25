@@ -25,7 +25,7 @@ CATEGORIES = [
 ]
 
 TRACKER_FILE = "parse_tracker.json"
-MAX_FILES_PER_RUN = 1 # 하루/1회 실행 시 파싱할 최대 파일 개수 (무료 티어 보호)
+MAX_FILES_PER_RUN = 3 # 하루/1회 실행 시 파싱할 최대 파일 개수 (무료 티어 보호)
 
 def load_tracker():
     if os.path.exists(TRACKER_FILE):
@@ -101,6 +101,10 @@ def process_llama_parse(base_dir: str):
         try:
             # 1. LlamaParse로 PDF 파싱 (API 호출)
             parsed_docs = parser.load_data(pdf_path)
+            
+            if not parsed_docs:
+                raise Exception("LlamaParse에서 반환된 데이터가 없습니다. (API 한도 초과 또는 파싱 오류)")
+                
             full_markdown = "\n\n".join([doc.text for doc in parsed_docs])
             
             # 2. Markdown 헤더 기준으로 청킹

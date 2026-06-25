@@ -1,11 +1,4 @@
 {
-    "K-IFRS_5c004b": {
-        "filename": "시행중_K-IFRS_재무보고를_위한_개념체계(2018_개정_2019_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
-        "category": "K-IFRS",
-        "status": "failed",
-        "error": "'VectorEmbedder' object has no attribute 'insert_chunks'",
-        "processed_date": "2026-06-25 12:22:05"
-    },
     "K-IFRS_a72b21": {
         "filename": "시행중_K-IFRS_제1101호_한국채택국제회계기준의_최초채택(2024_개정_2023_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영)(1).pdf",
         "category": "K-IFRS",
@@ -47,12 +40,5 @@
         "status": "failed",
         "error": "'VectorEmbedder' object has no attribute 'insert_chunks'",
         "processed_date": "2026-06-25 12:34:52"
-    },
-    "K-IFRS_21b203": {
-        "filename": "시행중_K-IFRS_제1108호_영업부문(2014_개정_2021_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
-        "category": "K-IFRS",
-        "status": "success",
-        "chunks_count": 0,
-        "processed_date": "2026-06-25 12:34:55"
     }
 }
