@@ -1,15 +1,17 @@
 import os
 import glob
+import hashlib
 from chunker_standards import SemanticChunker
 from embedder_standards import VectorEmbedder
 from supabase_uploader import SupabaseUploader
 
 CATEGORIES = [
-    "한국채택국제회계기준(K-IFRS)",
-    "일반기업회계기준",
-    "특수분야회계기준",
-    "중소기업회계기준",
-    "비영리조직회계기준"
+    "K-IFRS",
+    "K-GAAP",
+    "SPC-GAAP",
+    "SME-GAAP",
+    "NPO-GAAP",
+    "K-GAAS"
 ]
 
 def process_local_directory(base_dir: str):
@@ -56,6 +58,11 @@ def process_local_directory(base_dir: str):
         print(f"▶ 처리 중인 파일: [{category}] {filename}")
         print(f"==============================================")
         
+        # 중복 방지 체크 (DB에 이미 문서가 있는지 확인)
+        if embedder.is_document_processed(document_id):
+            print(f"[안내] 이미 처리된 문서입니다 (중복 방지). 건너뜁니다.")
+            continue
+        
         # 1. 텍스트 추출 및 청킹 (Chunking)
         text = chunker.extract_text_from_pdf(pdf_path)
         if not text:
@@ -81,15 +88,7 @@ def process_local_directory(base_dir: str):
             "type": "K-GAAP" if "gaap" in filename.lower() else "Standards"
         }
         # Storage 내부 경로를 "카테고리/파일명" 구조로 지정하되, 파이썬 Supabase 클라이언트의 한글 인코딩 에러를 방지하기 위해 완전한 영문(ASCII)으로 변환
-        CATEGORY_MAP = {
-            "한국채택국제회계기준(K-IFRS)": "K-IFRS",
-            "일반기업회계기준": "K-GAAP",
-            "특수분야회계기준": "Special-GAAP",
-            "중소기업회계기준": "SME-GAAP",
-            "비영리조직회계기준": "NPO-GAAP"
-        }
-        import hashlib
-        eng_category = CATEGORY_MAP.get(category, "Other")
+        eng_category = category
         
         # 한글 등 Non-ASCII 문자를 제거
         ascii_filename = filename.encode('ascii', 'ignore').decode('ascii').strip("_ ")

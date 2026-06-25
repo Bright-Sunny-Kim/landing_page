@@ -385,39 +385,67 @@ def get_text_embedding(text):
         print(f"Error generating text embedding: {e}")
         return None
 
+def get_openai_embedding(text):
+    import os
+    from openai import OpenAI
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key: return None
+    try:
+        client = OpenAI(api_key=api_key)
+        resp = client.embeddings.create(input=text, model="text-embedding-3-large", dimensions=1536)
+        return resp.data[0].embedding
+    except Exception as e:
+        print(f"OpenAI embedding error: {e}")
+        return None
+
 def retrieve_k_gaap(query, limit=2, supabase_client=None):
     """
     질의 문장을 바탕으로 관련 K-GAAP 기준서 문단을 매칭하여 반환.
-    - Supabase DB가 제공되고 테이블이 존재할 경우 pgvector RPC(match_k_gaap_standards)를 통해 코사인 유사도 검색 시도.
+    - Ubuntu 서버의 ChromaDB에서 OpenAI 1536차원 임베딩을 통해 먼저 검색
     - 실패하거나 없을 경우 로컬에 내장된 TF-IDF 코사인 유사도 연산으로 Fallback 작동.
     """
     matched_results = []
     
-    # 1. Supabase pgvector RPC 활용 검색 시도
-    if supabase_client:
-        try:
-            # 쿼리에 대한 384차원 벡터 생성
-            query_vector = get_text_embedding(query)
-            if query_vector:
-                # Supabase match_k_gaap_standards RPC 호출 (코사인 유사도 검색)
-                response = supabase_client.rpc('match_k_gaap_standards', {
-                    'query_embedding': query_vector,
-                    'match_threshold': 0.05,  # 느슨하게 매칭 임계치 설정
-                    'match_count': limit
-                }).execute()
-                
-                if response.data:
-                    for item in response.data:
-                        matched_results.append({
-                            "standard_no": item.get("standard_no"),
-                            "paragraph_no": item.get("paragraph_no"),
-                            "title": item.get("title"),
-                            "content": item.get("content"),
-                            "score": float(item.get("similarity", 0.90))
-                        })
+    # 1. Ubuntu 서버 ChromaDB 검색 시도
+    import os
+    import chromadb
+    
+    host = os.environ.get("CHROMA_SERVER_HOST", "localhost")
+    port = int(os.environ.get("CHROMA_SERVER_PORT", "8000"))
+    
+    try:
+        chroma_client = chromadb.HttpClient(host=host, port=port)
+        collection = chroma_client.get_collection(name="document_chunks")
+        
+        q_vec = get_openai_embedding(query)
+        if q_vec:
+            results = collection.query(
+                query_embeddings=[q_vec],
+                n_results=limit
+            )
+            
+            if results and results['ids'] and len(results['ids'][0]) > 0:
+                for i in range(len(results['ids'][0])):
+                    metadata = results['metadatas'][0][i]
+                    document = results['documents'][0][i]
+                    distance = results['distances'][0][i]
+                    
+                    # ChromaDB는 거리를 반환하므로 (코사인 거리 = 1 - 코사인 유사도)
+                    # 이를 score로 변환 (유사도 = 1 - 거리)
+                    sim = 1.0 - distance
+                    
+                    matched_results.append({
+                        "standard_no": metadata.get("document_id", "알수없음"),
+                        "paragraph_no": metadata.get("article_name", ""),
+                        "title": metadata.get("article_name", ""),
+                        "content": document,
+                        "score": sim
+                    })
+                    
+                if matched_results:
                     return matched_results
-        except Exception as db_err:
-            print(f"Supabase pgvector RAG RPC query failed, fallback to local search: {db_err}")
+    except Exception as db_err:
+        print(f"ChromaDB RAG query failed, fallback to TF-IDF local search: {db_err}")
 
     # 2. 로컬 Fallback RAG 작동
     if SKLEARN_AVAILABLE:

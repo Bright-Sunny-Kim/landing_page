@@ -785,20 +785,47 @@ def faq_ask():
         )
         query_embedding = embed_response.data[0].embedding
 
-        # 2. Supabase에서 유사 조항 검색 (HNSW)
-        rpc_params = {
-            'query_embedding': query_embedding,
-            'match_threshold': 0.3,
-            'match_count': 5,
-            'filter_category': None
-        }
+        # 2. Ubuntu 서버 ChromaDB에서 유사 조항 검색
+        import chromadb
+        host = os.environ.get("CHROMA_SERVER_HOST", "localhost")
+        port = int(os.environ.get("CHROMA_SERVER_PORT", "8000"))
         
-        # '전체'가 아닌 특정 카테고리가 선택되었다면 필터 파라미터 추가
-        if category and category != '전체':
-            rpc_params['filter_category'] = category
-
-        search_res = supabase.rpc('match_document_chunks', rpc_params).execute()
-        chunks = search_res.data if search_res.data else []
+        chunks = []
+        try:
+            chroma_client = chromadb.HttpClient(host=host, port=port)
+            collection = chroma_client.get_collection(name="document_chunks")
+            
+            where_clause = {}
+            if category and category != '전체':
+                where_clause["category"] = category
+                
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=5,
+                where=where_clause if where_clause else None
+            )
+            
+            if results and results['ids'] and len(results['ids'][0]) > 0:
+                matched_results = []
+                for i in range(len(results['ids'][0])):
+                    metadata = results['metadatas'][0][i]
+                    document = results['documents'][0][i]
+                    distance = results['distances'][0][i]
+                    sim = 1.0 - distance
+                    
+                    if sim >= 0.3: # match_threshold
+                        matched_results.append({
+                            "document_id": metadata.get("document_id", "알수없음"),
+                            "category": metadata.get("category", ""),
+                            "article_name": metadata.get("article_name", ""),
+                            "chunk_text": document,
+                            "score": sim
+                        })
+                
+                matched_results.sort(key=lambda x: x["score"], reverse=True)
+                chunks = matched_results
+        except Exception as e:
+            print(f"ChromaDB search error: {e}")
 
         # 3. 컨텍스트 구성
         if not chunks:

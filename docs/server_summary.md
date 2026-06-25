@@ -1,3 +1,11 @@
+
+### 2026-06-25 벡터 DB 마이그레이션 안내
+- 기존 Local SQLite (pgvector 호환용) 구조에서, **Ubuntu Home Server의 ChromaDB Docker 컨테이너** 환경으로 전면 마이그레이션되었습니다.
+- 연결 정보:
+  - Host: 192.168.0.224 (Ubuntu Server)
+  - Port: 8000
+- 텍스트 청킹(Chunking)은 LlamaParse 기반의 MarkdownHeaderTextSplitter를 사용하여 의미 단위로 정확하게 분할되어 ChromaDB의 document_chunks 컬렉션에 적재됩니다.
+
 # 🚀 홈 서버 구축 프로젝트 진척 상황 요약 보고서 (Home Server Specification & Setup Status)
 
 본 문서는 개인용 개발/자동화 서버 및 NAS(스토리지) 구축 프로젝트의 하드웨어 스펙, 네트워크 정보, OS, 도커 인프라 및 웹 서비스 배포 상황을 요약한 보고서입니다. 
@@ -83,7 +91,7 @@ Nginx Proxy Manager(대표 웹 관문)와 Cloudflare Tunnel 설정을 연동하�
 - **폴더 구조 단순화**: 기존 한국채택국제회계기준(K-IFRS)(시행중) 및 (조기적용가능) 폴더를 한국채택국제회계기준(K-IFRS) 단일 폴더로 통합.
 - **카테고리 매핑 수정 (process_local_pdfs.py)**: 스크립트가 단일 통합 폴더를 정상 인식하고 K-IFRS 영문 스토리지 경로로 업로드하도록 CATEGORIES 및 CATEGORY_MAP 설정 업데이트.
 
-## [2026-06-19] MinIO ������Ʈ ���丮�� ���� �� ���̱׷��̼�
-- **���丮�� �Ҵ�**: ����� ���� 1TB �����ϵ� ���(/mnt/storage/minio_data)�� �����̳� �������� ����Ʈ�Ͽ� ��뷮 ���丮�� ������ Ȯ��.
-- **��Ʈ��ũ ����**: Nginx Proxy Manager �� Cloudflare Tunnel�� Ȱ���Ͽ� MinIO API ��Ʈ(9000)�� s3.hyean-dskim.com����, Console ������ �� ��Ʈ(9001)�� minio.hyean-dskim.com���� ���굵���� HTTPS ���� �� ���� �Ϸ�.
-- **Docker Hairpin ��ȸ**: NPM ���� �� 172.17.0.1 ��Ŀ ����Ʈ���̸� ����Ͽ� ���� 502 Bad Gateway ���� �ذ� �Ϸ�.
+## [2026-06-19] MinIO Ʈ 丮   ̱׷̼
+- **丮 Ҵ**:   1TB ϵ (/mnt/storage/minio_data) ̳  ƮϿ 뷮 丮  Ȯ.
+- **Ʈũ **: Nginx Proxy Manager  Cloudflare Tunnel ȰϿ MinIO API Ʈ(9000) s3.hyean-dskim.com, Console   Ʈ(9001) minio.hyean-dskim.com 굵 HTTPS    Ϸ.
+- **Docker Hairpin ȸ**: NPM   172.17.0.1 Ŀ Ʈ̸ Ͽ  502 Bad Gateway  ذ Ϸ.

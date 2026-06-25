@@ -1,3 +1,16 @@
+
+## 최근 아키텍처 및 파이프라인 업데이트 (2026-06-25)
+1. **RAG 파이프라인 고도화 (LlamaParse 도입)**
+   - 기존의 단순 텍스트 추출 한계를 극복하기 위해 llama-parse 및 langchain-text-splitters를 도입했습니다.
+   - 복잡한 표(Table)와 마크다운 헤더 구조를 완벽하게 유지하며 의미 단위(Chunk)로 분할합니다.
+   - 무료 티어 API 한도를 고려하여 매일 한정된 파일만 처리하도록 parse_tracker.json을 통한 점진적 파싱(Incremental Parsing)을 구현했습니다 (scripts/rag_pipeline/process_llama_parse.py).
+2. **벡터 DB 이전 (ChromaDB)**
+   - 로컬 SQLite/pgvector 구조에서 Ubuntu Home Server에 배포된 ChromaDB로 마이그레이션했습니다.
+   - 분산 환경 및 대용량 청크를 안정적으로 처리할 수 있도록 embedder_standards.py를 리팩토링했습니다.
+3. **디렉토리/메타데이터 영어화**
+   - 기준서 폴더명 및 파일 분류 메타데이터의 한글 의존성(인코딩 에러)을 해결하기 위해 K-IFRS, K-GAAP, SME-GAAP, NPO-GAAP, SPC-GAAP, K-GAAS 등 영문 약자로 구조를 개편했습니다.
+   - 사용자 편의를 위해 UI(company.html) 드롭다운은 한글로 표기하되, 서버 전달 시 영문으로 매핑되도록 처리했습니다.
+
 # HyeAn_DSKim (회계법인 혜안 고객 포털) 프로젝트 마스터 문서
 
 본 문서는 `hyean-dskim.com` 웹사이트 프로젝트의 전체적인 아키텍처, 기능, 기술 스택, 데이터베이스 구조 및 최근 진행된 고도화 사항을 요약한 **프로젝트 인수인계/컨텍스트 마스터 파일**입니다. 새로운 AI 챗봇 창이나 다른 개발 환경에서 본 문서를 프롬프트로 제공하면, 이전까지의 작업 내역을 완벽하게 이해하고 매끄럽게 이어서 작업할 수 있습니다.
@@ -159,10 +172,10 @@
   - 템플릿 상단 내비게이션 바에 세션 접속 여부에 따른 '로그인', '로그아웃', '내 페이지로 이동' 동적 렌더링.
   - 브라우저 캐시에 기인한 보안 취약점 방지를 위해, 로그아웃 후 뒤로가기를 눌러도 접근 불가하도록 `@app.after_request`에 전역 `no-cache`, `no-store` HTTP 헤더 적용 완료.
 
-## [2026-06-19] ���� ����� ��Ű��ó MinIO ���̱׷��̼�
-- **���� ���丮�� ��ȯ**: ���� ��뷮 ����(PDF, �繫��ǥ) ����Ҹ� ���� Supabase Storage���� ����� Ȩ ���� 1TB �����ϵ�(MinIO)�� ���� �̰�.
-- **DB �и� ����**: ȸ�� ����(users), ���ε� ��Ÿ������(company_files) �� ������ �ؽ�Ʈ DB�� ���� Supabase ���� ����(���̺긮�� ��Ű��ó).
-- **���̽� ���� ����**: pp.py �� dart_document_parser.py �������� oto3 ���̺귯���� ���� MinIO�� company-uploads, parsed-data ��Ŷ���� ���� ���� �� Parquet �����͸� ���ε��ϵ��� ����.
+## [2026-06-19]   Űó MinIO ̱׷̼
+- ** 丮 ȯ**:  뷮 (PDF, 繫ǥ) Ҹ  Supabase Storage  Ȩ  1TB ϵ(MinIO)  ̰.
+- **DB и **: ȸ (users), ε Ÿ(company_files)   ؽƮ DB  Supabase  (̺긮 Űó).
+- **̽  **: pp.py  dart_document_parser.py  oto3 ̺귯  MinIO company-uploads, parsed-data Ŷ    Parquet ͸ εϵ .
 
 
 ## [2026-06-22] Supabase DB RLS 보안 강화 및 법인등록번호 기반 소속 자동 그룹화
