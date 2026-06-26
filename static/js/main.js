@@ -885,18 +885,433 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// ���� �� ��ȯ ���� (ȸ�谨�� �� ����)
+//   ȯ  (ȸ谨  )
 window.switchSubTab = function(tabId) {
-    // �� ��ư Ȱ��ȭ ����
+    //  ư Ȱȭ 
     document.querySelectorAll('.sub-tab-btn').forEach(btn => {
         btn.classList.remove('active');
         if(btn.dataset.subtab === tabId) btn.classList.add('active');
     });
     
-    // �� ������ ���ü� ����
+    //   ü 
     document.querySelectorAll('.sub-tab-pane').forEach(pane => {
         pane.style.display = 'none';
         if(pane.id === tabId) pane.style.display = 'block';
     });
 };
 
+// ==========================================
+//  ܺȸ (Financial Inquiry)  
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    //  Ȯ
+    const financeDashboard = document.getElementById('ext-finance-dashboard');
+    const financeWizard = document.getElementById('ext-finance-wizard');
+    if (!financeDashboard || !financeWizard) return; // ش  ƴ
+
+    let allBanks = [];
+
+    //   ҷ
+    async function loadFinancialInstitutions() {
+        try {
+            const res = await fetch('/api/financial_institutions');
+            if(res.ok) {
+                allBanks = await res.json();
+            }
+        } catch(e) {
+            console.error('Failed to load banks:', e);
+        }
+    }
+
+    // û Ȳ ҷ
+    window.loadInquiryStatus = async function() {
+        try {
+            const res = await fetch('/api/inquiry/status');
+            if(res.ok) {
+                const data = await res.json();
+                renderInquiryList(data);
+            }
+        } catch(e) {
+            console.error('Failed to load inquiry status:', e);
+        }
+    };
+
+    function renderInquiryList(data) {
+
+        if(document.getElementById("summary-total")) {
+            document.getElementById("summary-total").textContent = data.length;
+            document.getElementById("summary-progress").textContent = data.filter(d => ["draft", "submitted", "fee_pending", "fee_paid", "form_downloaded", "mail_sent"].includes(d.status)).length;
+            document.getElementById("summary-pending").textContent = data.filter(d => ["draft", "submitted", "fee_pending"].includes(d.status)).length;
+            document.getElementById("summary-completed").textContent = data.filter(d => d.status === "completed").length;
+        }
+
+        const tbody = document.getElementById('finance-inquiry-list');
+        tbody.innerHTML = '';
+        if(data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan=5 style=text-align: center; color: var(--text-secondary); padding: 20px;>û  ϴ.</td></tr>';
+            return;
+        }
+
+        const statusMap = {
+            'draft': 'ۼ',
+            'submitted': 'ûϷ',
+            'fee_pending': 'Աݴ',
+            'fee_paid': 'ԱݿϷ',
+            'form_downloaded': 'ĴٿεϷ',
+            'mail_sent': '߼ۿϷ',
+            'received': 'ȸſϷ',
+            'completed': 'Ϸ',
+            'cancelled': 'ҵ'
+        };
+
+        data.forEach(item => {
+            const dateStr = item.created_at ? item.created_at.split('T')[0] : '';
+            const bankName = item.financial_institutions ? item.financial_institutions.institution_name : '˼';
+            const statusStr = statusMap[item.status] || item.status;
+            const isPaper = (item.inquiry_type === 'paper');
+
+            let actionBtn = '';
+            if (isPaper && item.status === 'fee_paid') {
+                actionBtn = <button class=btn-submit style=padding: 4px 10px; font-size: 0.8rem; width: auto; onclick=downloadInquiryForm()> ٿε</button>;
+            } else if (isPaper && (item.status === 'form_downloaded' || item.status === 'mail_sent')) {
+                actionBtn = <button class=btn-logout style=padding: 4px 10px; font-size: 0.8rem; width: auto; onclick=downloadInquiryForm()>ٽ ٿε</button>;
+            } else {
+                actionBtn = '-';
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = 
+                <td></td>
+                <td style=color: #a78bfa;></td>
+                <td></td>
+                <td><span class=status-badge style=background: rgba(99,102,241,0.1); color: #818cf8; padding: 4px 8px;></span></td>
+                <td></td>
+            ;
+            tbody.appendChild(tr);
+        });
+    }
+
+    //  
+    window.showInquiryWizard = function() {
+        financeDashboard.style.display = 'none';
+        financeWizard.style.display = 'block';
+        goToWizardStep(1);
+    };
+
+    window.hideInquiryWizard = function() {
+        financeWizard.style.display = 'none';
+        financeDashboard.style.display = 'block';
+        loadInquiryStatus();
+    };
+
+    // Step ̵
+    window.goToWizardStep = function(stepNum) {
+        document.getElementById('wizard-step-1').style.display = 'none';
+        document.getElementById('wizard-step-2').style.display = 'none';
+        document.getElementById('wizard-step-3').style.display = 'none';
+        
+        document.getElementById(wizard-step-).style.display = 'block';
+    };
+
+    //  ˻
+    window.searchBanks = function() {
+        const query = document.getElementById('bank-search-input').value.trim();
+        const resultsDiv = document.getElementById('bank-search-results');
+        resultsDiv.innerHTML = '';
+
+        const filtered = allBanks.filter(b => b.institution_name.includes(query) || b.institution_code.includes(query));
+        
+        if(filtered.length === 0) {
+            resultsDiv.innerHTML = '<p style=color: var(--text-secondary);>˻  ϴ.</p>';
+            return;
+        }
+
+        filtered.forEach(b => {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s;';
+            div.innerHTML = 
+                <div style=font-weight: bold; margin-bottom: 5px;></div>
+                <div style=font-size: 0.8rem; color: #a78bfa;>[] </div>
+            ;
+            div.onmouseover = () => div.style.borderColor = '#818cf8';
+            div.onmouseout = () => div.style.borderColor = 'rgba(255,255,255,0.1)';
+            div.onclick = () => selectBank(b);
+            resultsDiv.appendChild(div);
+        });
+    };
+
+    //  
+    function selectBank(bank) {
+        document.getElementById('selected-bank-id').value = bank.id;
+        document.getElementById('selected-bank-type').value = bank.inquiry_type;
+        document.getElementById('selected-bank-name').textContent = ${bank.institution_name} ();
+        goToWizardStep(2);
+    }
+
+    // Step 2 ȿ ˻  Step 3 ̵
+    window.validateStep2 = function() {
+        const bankId = document.getElementById('selected-bank-id').value;
+        const fy = document.getElementById('inquiry-fiscal-year').value;
+        
+        if(!bankId || !fy) {
+            alert('  Էּ.');
+            return;
+        }
+        
+        const type = document.getElementById('selected-bank-type').value;
+        if(type === 'online') {
+            document.getElementById('online-guide-box').style.display = 'block';
+            document.getElementById('paper-guide-box').style.display = 'none';
+        } else {
+            document.getElementById('online-guide-box').style.display = 'none';
+            document.getElementById('paper-guide-box').style.display = 'block';
+        }
+        
+        goToWizardStep(3);
+    };
+
+    //  û
+    window.submitInquiryRequest = async function() {
+        const bankId = document.getElementById('selected-bank-id').value;
+        const fy = document.getElementById('inquiry-fiscal-year').value;
+        const type = document.getElementById('selected-bank-type').value;
+        const companyNameEl = document.querySelector('.company-highlight');
+        const companyName = companyNameEl ? companyNameEl.textContent : '˼ȸ';
+        
+        try {
+            const res = await fetch('/api/inquiry/new', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    company_name: companyName,
+                    fiscal_year: parseInt(fy),
+                    institution_id: parseInt(bankId),
+                    inquiry_type: type
+                })
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                alert(û ϷǾϴ.\nûȣ: );
+                hideInquiryWizard();
+            } else {
+                alert(û : );
+            }
+        } catch(e) {
+            console.error('Submit error:', e);
+            alert(' ߻߽ϴ.');
+        }
+    };
+    
+    //  ٿε
+    window.downloadInquiryForm = function(requestId) {
+        window.location.href = /api/inquiry/download_form/;
+        setTimeout(loadInquiryStatus, 2000);
+    };
+
+    // ʱ 
+    loadFinancialInstitutions();
+    
+    // ܺȸ  Ŭ   ε 
+    const extFinanceTabBtn = document.querySelector('button[data-subtab=sub-ext-finance]');
+    if(extFinanceTabBtn) {
+        extFinanceTabBtn.addEventListener('click', () => {
+            loadInquiryStatus();
+        });
+    }
+});
+
+// ==========================================
+// () -  ȸ  
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const adminFinanceMenu = document.querySelector('.master-menu-item[data-menu=finance-inquiry]');
+    const adminFinanceView = document.getElementById('finance-inquiry-view');
+    const homeDashboardView = document.getElementById('home-dashboard-view');
+    
+    if (adminFinanceMenu && adminFinanceView) {
+        // ޴ Ŭ  ȭ ȯ  ( ޴  浹 ʵ ̺Ʈ  ߰)
+        adminFinanceMenu.addEventListener('click', (e) => {
+            e.preventDefault();
+            //   
+            const allCards = document.querySelectorAll('.master-card');
+            allCards.forEach(c => c.style.display = 'none');
+            
+            //  ޴ active 
+            const allMenus = document.querySelectorAll('.master-menu-item');
+            allMenus.forEach(m => m.classList.remove('active'));
+            
+            //   ̱
+            adminFinanceView.style.display = 'block';
+            adminFinanceMenu.classList.add('active');
+            
+            window.loadAdminInquiryStatus();
+        });
+        
+        // Ȩ ޴ Ŭ  ġ (ٸ ޴ Ŭ   )
+        const homeMenu = document.querySelector('.master-menu-item[data-menu=home]');
+        if(homeMenu) {
+            homeMenu.addEventListener('click', () => {
+                if(adminFinanceView) adminFinanceView.style.display = 'none';
+                if(homeDashboardView) homeDashboardView.style.display = 'block';
+            });
+        }
+    }
+});
+
+//  Ʈ ε
+window.loadAdminInquiryStatus = async function() {
+    try {
+        const res = await fetch('/api/admin/inquiry/list');
+        if(res.ok) {
+            const data = await res.json();
+            renderAdminInquiryList(data);
+        } else {
+            console.error('Failed to fetch admin inquiry list');
+        }
+    } catch(e) {
+        console.error(e);
+    }
+};
+
+function renderAdminInquiryList(data) {
+    const tbody = document.getElementById('admin-inquiry-list');
+    if(!tbody) return;
+    
+    tbody.innerHTML = '';
+    if(data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan=8 style=text-align:center; padding:20px; color:var(--text-secondary);>ȸ û  ϴ.</td></tr>';
+        return;
+    }
+    
+    const statusMap = {
+        'draft': 'ۼ',
+        'submitted': 'ûϷ',
+        'fee_pending': 'Աݴ',
+        'fee_paid': 'ԱݿϷ(İ)',
+        'form_downloaded': 'ĴٿεϷ',
+        'mail_sent': '߼ۿϷ',
+        'received': 'ȸſϷ',
+        'completed': 'Ϸ',
+        'cancelled': 'ҵ'
+    };
+    
+    data.forEach(item => {
+        const tr = document.createElement('tr');
+        const dateStr = item.created_at ? item.created_at.split('T')[0] : '';
+        const bankName = item.financial_institutions ? item.financial_institutions.institution_name : '˼';
+        const typeStr = item.inquiry_type === 'online' ? '¶' : '';
+        const statusStr = statusMap[item.status] || item.status;
+        
+        tr.innerHTML = 
+            <td><input type=checkbox class=inquiry-checkbox value=" data-current-status=></td>
+ <td></td>
+ <td style=font-weight:bold; color:var(--text-primary);></td>
+ <td style=color:#a78bfa;></td>
+ <td></td>
+ <td><span class=status-badge style=background:rgba(255,255,255,0.05);></span></td>
+ <td><span class=status-badge style=background:rgba(99,102,241,0.1); color:#818cf8;></span></td>
+ <td>
+ <button class=btn-logout style=padding:4px 8px; width:auto; font-size:0.8rem; onclick=viewInquiryHistory()>̷</button>
+ </td>
+ ;
+ tbody.appendChild(tr);
+ });
+}
+
+// ü 
+window.toggleAllInquiries = function(checkbox) {
+ const checkboxes = document.querySelectorAll('.inquiry-checkbox');
+ checkboxes.forEach(cb => cb.checked = checkbox.checked);
+};
+
+// ϰ Ʈ
+window.updateBulkStatus = async function() {
+ const newStatus = document.getElementById('bulk-status-select').value;
+ if(!newStatus) {
+ alert(' ¸ ϼ.');
+ return;
+ }
+ 
+ const checkboxes = document.querySelectorAll('.inquiry-checkbox:checked');
+ if(checkboxes.length === 0) {
+ alert('Ʈ ׸ ϼ.');
+ return;
+ }
+ 
+ const updates = [];
+ checkboxes.forEach(cb => {
+ updates.push({
+ id: parseInt(cb.value),
+ status: newStatus
+ });
+ });
+ 
+ try {
+ const res = await fetch('/api/admin/inquiry/status', {
+ method: 'PUT',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({ updates })
+ });
+ 
+ const data = await res.json();
+ if(data.success) {
+ alert(  °  Ǿϴ.);
+ window.loadAdminInquiryStatus();
+ document.getElementById('check-all-inquiries').checked = false;
+ } else {
+ alert(: );
+ }
+ } catch(e) {
+ console.error(e);
+ alert(' û   ߻߽ϴ.');
+ }
+};
+
+window.viewInquiryHistory = async function(requestId) {
+ try {
+ const res = await fetch(/api/admin/inquiry/history/);
+ if(res.ok) {
+ const data = await res.json();
+ let msg = [û ID: ]   ̷\n\n;
+ data.forEach(h => {
+ msg += - : -> ()\n;
+ });
+ alert(msg);
+ }
+ } catch(e) {
+ console.error(e);
+ }
+};
+
+
+window.promptUpdateDetail = async function(id) {
+    const tracking = prompt("등기번호를 입력하세요 (빈칸이면 기존유지):");
+    const notes = prompt("담당자 메모를 입력하세요 (빈칸이면 기존유지):");
+    
+    if(tracking === null && notes === null) return;
+    
+    let updates = {};
+    if(tracking) updates.mail_tracking_no = tracking;
+    if(notes) updates.notes = notes;
+    
+    if(Object.keys(updates).length > 0) {
+        try {
+            const res = await fetch(`/api/admin/inquiry/detail/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(updates)
+            });
+            if(res.ok) {
+                alert("업데이트 완료");
+                loadAdminInquiryStatus();
+            } else {
+                alert("업데이트 실패");
+            }
+        } catch(e) { console.error(e); }
+    }
+};
+
+window.exportAdminInquiry = function() {
+    window.location.href = '/api/admin/inquiry/export';
+};

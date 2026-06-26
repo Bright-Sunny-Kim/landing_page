@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import re
 import time
@@ -38,7 +39,8 @@ def add_header(response):
 MASTER_EMAIL = 'cpaeastsun@gmail.com'
 
 # 환경 변수 로드 (.env)
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Supabase 초기화
 url: str = os.getenv("SUPABASE_URL", "")
@@ -1045,7 +1047,328 @@ def faq_ask():
         print(f"FAQ Ask error: {e}")
         return jsonify({'error': '질의 처리 중 오류가 발생했습니다.'}), 500
 
+# ==========================================
+# 금융기관 조회업무 신청 시스템 (External Inquiry API)
+# ==========================================
+import datetime
+
+@app.route('/api/financial_institutions', methods=['GET'])
+def get_financial_institutions():
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+    try:
+        res = supabase.table('financial_institutions').select('*').eq('is_active', True).execute()
+        return jsonify(res.data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/inquiry/new', methods=['POST'])
+def new_inquiry_request():
+    if 'email' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+        
+    client_id = session.get('email')
+    company_name = data.get('company_name')
+    fiscal_year = data.get('fiscal_year')
+    institution_id = data.get('institution_id')
+    inquiry_type = data.get('inquiry_type') # 'online' or 'paper'
+    
+    if not all([company_name, fiscal_year, institution_id, inquiry_type]):
+        return jsonify({'error': 'Missing required fields'}), 400
+        
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+        
+    try:
+        # 1. 기관 정보 재조회 및 규칙 검증
+        inst_res = supabase.table('financial_institutions').select('*').eq('id', institution_id).execute()
+        if not inst_res.data:
+            return jsonify({'error': 'Invalid institution_id'}), 400
+        
+        inst_data = inst_res.data[0]
+        # 규칙 1: 온라인/서면 구분 강제화
+        if inst_data['inquiry_type'] == 'online' and inquiry_type == 'paper':
+            return jsonify({'error': 'This institution only supports online inquiry.'}), 400
+            
+        # 규칙 3: 신청번호 자동 생성 (INQ-YYYYMM-XXXX)
+        now = datetime.datetime.now()
+        prefix = f"INQ-{now.strftime('%Y%m')}-"
+        # 가장 최근 번호 조회
+        latest_res = supabase.table('inquiry_requests').select('request_no').ilike('request_no', f"{prefix}%").order('request_no', desc=True).limit(1).execute()
+        
+        new_seq = 1
+        if latest_res.data:
+            latest_no = latest_res.data[0]['request_no']
+            new_seq = int(latest_no.split('-')[2]) + 1
+            
+        request_no = f"{prefix}{new_seq:04d}"
+        
+        # Insert request
+        insert_data = {
+            'request_no': request_no,
+            'client_id': client_id,
+            'company_name': company_name,
+            'fiscal_year': int(fiscal_year),
+            'institution_id': institution_id,
+            'inquiry_type': inquiry_type,
+            'status': 'submitted'
+        }
+        
+        insert_res = supabase.table('inquiry_requests').insert(insert_data).execute()
+        
+        if not insert_res.data:
+            return jsonify({'error': 'Failed to insert request'}), 500
+            
+        new_request_id = insert_res.data[0]['id']
+        
+        # Add to logs
+        supabase.table('inquiry_status_logs').insert({
+            'request_id': new_request_id,
+            'status_from': 'draft',
+            'status_to': 'submitted',
+            'changed_by': client_id,
+            'memo': '신청서 작성 완료'
+        }).execute()
+        
+        # TODO: 규칙 5: 이메일 알림 자동 발송 (모의)
+        print(f"[EMAIL MOCK] 신청 완료 메일 발송 -> 고객: {client_id}, 담당자: {MASTER_EMAIL}")
+        
+        return jsonify({'success': True, 'request_no': request_no})
+        
+    except Exception as e:
+        print(f"New inquiry error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/inquiry/status', methods=['GET'])
+def get_inquiry_status():
+    if 'email' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+        
+    try:
+        # 본인 회사(또는 email) 신청건 조회
+        # 요구사항에는 client_id(FK)로 저장되지만 화면상 회사가 보임
+        email = session.get('email')
+        res = supabase.table('inquiry_requests').select('*, financial_institutions(institution_name, form_type)').eq('client_id', email).order('created_at', desc=True).execute()
+        return jsonify(res.data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/inquiry/download_form/<int:request_id>', methods=['GET'])
+def download_inquiry_form(request_id):
+    if 'email' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+        
+    try:
+        # 요청 정보 조회
+        req_res = supabase.table('inquiry_requests').select('*, financial_institutions(form_type)').eq('id', request_id).execute()
+        if not req_res.data:
+            return jsonify({'error': 'Request not found'}), 404
+            
+        req_data = req_res.data[0]
+        
+        # 권한 확인 (본인 혹은 마스터)
+        if session.get('email') != req_data['client_id'] and session.get('email') != MASTER_EMAIL:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        form_type = req_data['financial_institutions']['form_type']
+        
+        # 상태 업데이트 및 로그 남기기 (form_downloaded_at)
+        now_str = datetime.datetime.now().isoformat()
+        supabase.table('inquiry_requests').update({
+            'form_downloaded_at': now_str
+        }).eq('id', request_id).execute()
+        
+        # 로컬 파일 전달 (app/static/forms 경로 내)
+        from flask import send_from_directory
+        forms_dir = os.path.join(app.root_path, 'static', 'forms')
+        
+        # 폴더가 없으면 생성하고 빈 파일 만들기 (테스트용)
+        if not os.path.exists(forms_dir):
+            os.makedirs(forms_dir)
+            
+        # form_type에 따라 다른 파일 제공
+        filename_map = {
+            'bank': '금융기관조회서_은행용.docx',
+            'insurance': '금융기관조회서_보험용.docx',
+            'securities': '금융기관조회서_증권용.docx',
+            'card': '금융기관조회서_카드용.docx',
+            'other': '금융기관조회서_기타.docx'
+        }
+        
+        filename = filename_map.get(form_type, '금융기관조회서_기타.docx')
+        filepath = os.path.join(forms_dir, filename)
+        
+        # 빈 파일이 없으면 깡통 파일 생성
+        if not os.path.exists(filepath):
+            with open(filepath, 'w') as f:
+                f.write("이 파일은 양식 다운로드 테스트용 빈 파일입니다.")
+        
+        return send_from_directory(forms_dir, filename, as_attachment=True)
+        
+    except Exception as e:
+        print(f"Download form error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin/inquiry', methods=['GET'])
+def get_all_inquiries():
+    if session.get('email') != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+        
+    try:
+        res = supabase.table('inquiry_requests').select('*, financial_institutions(institution_name, form_type)').order('created_at', desc=True).execute()
+        return jsonify(res.data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/inquiry/update_status', methods=['POST'])
+def update_inquiry_status():
+    if session.get('email') != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    data = request.get_json()
+    request_id = data.get('request_id')
+    new_status = data.get('status')
+    mail_tracking_no = data.get('mail_tracking_no')
+    notes = data.get('notes')
+    
+    if not request_id or not new_status:
+        return jsonify({'error': 'Missing parameters'}), 400
+        
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+        
+    try:
+        # 기존 상태 조회
+        req_res = supabase.table('inquiry_requests').select('*').eq('id', request_id).execute()
+        if not req_res.data:
+            return jsonify({'error': 'Request not found'}), 404
+            
+        old_status = req_res.data[0]['status']
+        
+        # 규칙 4: 상태 전환 순서 강제 (역방향 불가, cancelled 예외)
+        status_order = {
+            'draft': 0, 'submitted': 1, 'fee_pending': 2, 'fee_paid': 3,
+            'form_downloaded': 4, 'mail_sent': 5, 'received': 6, 'completed': 7, 'cancelled': 99
+        }
+        
+        if new_status != 'cancelled' and status_order.get(new_status, 0) < status_order.get(old_status, 0):
+            return jsonify({'error': '역방향 상태 전환은 불가합니다.'}), 400
+            
+        update_data = {'status': new_status}
+        now_str = datetime.datetime.now().isoformat()
+        
+        if new_status == 'fee_paid':
+            update_data['fee_paid_at'] = now_str
+        elif new_status == 'mail_sent':
+            update_data['mail_sent_at'] = now_str
+        elif new_status == 'received':
+            update_data['received_at'] = now_str
+        elif new_status == 'completed':
+            update_data['completed_at'] = now_str
+            
+        if mail_tracking_no is not None:
+            update_data['mail_tracking_no'] = mail_tracking_no
+        if notes is not None:
+            update_data['notes'] = notes
+            
+        supabase.table('inquiry_requests').update(update_data).eq('id', request_id).execute()
+        
+        # 이력 로그 생성
+        supabase.table('inquiry_status_logs').insert({
+            'request_id': request_id,
+            'status_from': old_status,
+            'status_to': new_status,
+            'changed_by': session.get('email'),
+            'memo': f"상태가 {new_status}로 변경되었습니다."
+        }).execute()
+        
+        # TODO: 규칙 5: 상태 변경 시 고객 이메일 발송 (모의)
+        print(f"[EMAIL MOCK] 상태 변경 알림 메일 발송 -> 고객: {req_res.data[0]['client_id']}, 변경상태: {new_status}")
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Update inquiry status error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/inquiry/logs/<int:request_id>', methods=['GET'])
+def get_inquiry_logs(request_id):
+    if session.get('email') != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+        
+    try:
+        res = supabase.table('inquiry_status_logs').select('*').eq('request_id', request_id).order('changed_at', desc=True).execute()
+        return jsonify(res.data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     from openai import OpenAI
     openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)# --- ߰ :   Ʈ (ȣ, ޸) ---
+@app.route('/api/admin/inquiry/detail/<int:request_id>', methods=['PUT'])
+def admin_update_inquiry_detail(request_id):
+    if session.get('email') != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    req_data = request.json
+    updates = {}
+    if 'mail_tracking_no' in req_data:
+        updates['mail_tracking_no'] = req_data['mail_tracking_no']
+    if 'notes' in req_data:
+        updates['notes'] = req_data['notes']
+        
+    if updates:
+        try:
+            supabase.table('inquiry_requests').update(updates).eq('id', request_id).execute()
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+        
+    return jsonify({'success': True})
+
+# --- ߰ :   ---
+@app.route('/api/admin/inquiry/export', methods=['GET'])
+def admin_export_inquiries():
+    if session.get('email') != MASTER_EMAIL:
+        return "Unauthorized", 401
+    
+    res = supabase.table('inquiry_requests').select('request_no, company_name, fiscal_year, inquiry_type, status, fee_amount, mail_tracking_no, created_at, financial_institutions(institution_name)').execute()
+    data = res.data
+    
+    import csv
+    from io import StringIO
+    from flask import Response
+    
+    si = StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['ûȣ', 'ȸ', 'ؿ', '', 'ȸ', '', 'ȣ', 'û'])
+    for d in data:
+        bank_name = d['financial_institutions']['institution_name'] if d.get('financial_institutions') else ''
+        cw.writerow([
+            d.get('request_no'), d.get('company_name'), d.get('fiscal_year'),
+            bank_name, d.get('inquiry_type'), d.get('status'),
+            d.get('mail_tracking_no'), d.get('created_at')
+        ])
+    
+    output = '\ufeff' + si.getvalue()
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=inquiry_export.csv"}
+    )

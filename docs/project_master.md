@@ -217,3 +217,9 @@ un_parser.bat를 구성했습니다.
   - '회사기본사항(P-file)' 서브 탭 및 '전체 제출 이력 타임라인' 영역(partner-history-view)의 HTML 닫힘 태그(</div>) 누락을 최종적으로 식별 및 추가.
   - 부모-자식 태그 종속 관계로 인해 switchSubTab 자바스크립트 실행 시 '서면제출자료' 탭의 리스트(테이블)가 통째로 display: none 처리되던 이슈를 완벽하게 해결. 
   - 중복 선언되어 있던 switchSubTab 함수를 정리하여 main.js의 공통 함수로 일원화 처리.
+
+## [2026-06-26] 금융기관 조회업무 신청 시스템 구현 (고객/관리자 포털)
+- **DB 스키마 구성**: financial_institutions, inquiry_requests, inquiry_status_logs 테이블 구축 완료.
+- **백엔드 API 구현 (app.py)**: 관리자용 개별 상태 업데이트, 등기번호/메모 등록 API 및 엑셀 다운로드 API 구축. UTF-8 인코딩 헤더 추가.
+- **고객 포털 UI 고도화**: 외부조회(금융기관) 서브 탭 내 단계별 3-Step 마법사(Wizard) 폼 도입 및 상태 요약 카드 대시보드 연동.
+- **관리자 포털 UI 고도화**: 금융기관 조회 신청 관리 테이블, 일괄 상태 업데이트(Dropdown), Tracking 번호 및 Admin Note 입력, CSV 엑셀 다운로드 연동 완료.
