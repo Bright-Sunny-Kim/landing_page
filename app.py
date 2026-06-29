@@ -963,7 +963,7 @@ def faq_ask():
                 
             results = collection.query(
                 query_embeddings=[query_embedding],
-                n_results=5,
+                n_results=15,
                 where=where_clause if where_clause else None
             )
             
@@ -975,9 +975,10 @@ def faq_ask():
                     distance = results['distances'][0][i]
                     sim = 1.0 - distance
                     
-                    if sim >= 0.3: # match_threshold
+                    if sim >= 0.15: # match_threshold: text-embedding-3-large 특성 반영 (질문-문서 간 0.15~0.3도 유의미함)
                         matched_results.append({
                             "document_id": metadata.get("document_id", "알수없음"),
+                            "document_name": metadata.get("document_name", "알수없음"),
                             "category": metadata.get("category", ""),
                             "article_name": metadata.get("article_name", ""),
                             "chunk_text": document,
@@ -998,11 +999,12 @@ def faq_ask():
             sources = []
             for idx, c in enumerate(chunks):
                 doc_id = c.get('document_id', '알수없음')
+                doc_name = c.get('document_name', '알수없음')
                 art_name = c.get('article_name', '')
                 chunk_txt = c.get('chunk_text', '')
                 cat = c.get('category', '')
                 
-                source_label = f"[{cat}] {doc_id} {art_name}"
+                source_label = f"[{cat}] {doc_name} ({art_name})"
                 if source_label not in sources:
                     sources.append(source_label)
                 
