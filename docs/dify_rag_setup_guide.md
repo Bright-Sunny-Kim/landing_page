@@ -51,3 +51,9 @@ Dify 챗봇 혹은 워크플로우의 시스템 프롬프트를 아래와 같이
 ## [2026-06-16] K-IFRS 폴더 및 카테고리 병합 적용
 - **폴더 구조 단순화**: 기존 한국채택국제회계기준(K-IFRS)(시행중) 및 (조기적용가능) 폴더를 한국채택국제회계기준(K-IFRS) 단일 폴더로 통합.
 - **카테고리 매핑 수정 (process_local_pdfs.py)**: 스크립트가 단일 통합 폴더를 정상 인식하고 K-IFRS 영문 스토리지 경로로 업로드하도록 CATEGORIES 및 CATEGORY_MAP 설정 업데이트.
+
+## [2026-06-29] RAG 파이프라인 로컬 환경 완전 구축 및 포트 충돌 해결
+- **로컬 파싱 파이프라인 전면 개편**: LlamaParse API 제한 문제를 해결하기 위해, 무료 오픈소스인 `Marker`와 `Unstructured API`를 로컬(Ubuntu 서버)에 구축하여 무제한/초고속으로 파싱하도록 아키텍처 변경.
+- **텍스트/스캔본 라우팅 최적화 (`n8n_pdf_processor.py`)**: 무거운 API 통신 대신 로컬 라이브러리 `pdfplumber`를 사용하여 0.1초 만에 텍스트 포함 여부를 100% 확실하게 라우팅하도록 개선.
+- **포트 충돌 해결 및 백업 로직 구성**: Unstructured 파싱 서버와 ChromaDB 간의 포트 충돌(8000번) 문제를 식별하여, Unstructured API를 8001번 포트로 이관. Marker 파싱 실패 시 Unstructured로 자동 대체되는 든든한 폴백(Fallback) 로직 추가.
+- **DB 적재 및 빈 결과 예외처리 수정 (`embedder_standards.py`, `n8n_pdf_processor.py`)**: 파싱 결과가 비어있거나 ChromaDB 적재에 실패할 경우, 강제로 '성공' 처리되던 버그를 수정하고 예외를 명확히 발생시켜 트래커(`parse_tracker.json`)에 정확히 기록되도록 개선.

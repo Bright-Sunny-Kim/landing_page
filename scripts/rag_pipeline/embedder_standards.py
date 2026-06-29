@@ -71,6 +71,10 @@ class VectorEmbedder:
             article_name = metadata.get("article", "unknown")
             category = metadata.get("category", "분류없음")
             
+            document_name = metadata.get("document_name", "unknown")
+            standard_type = metadata.get("standard_type", "unknown")
+            page_number = metadata.get("page_number", 1)
+            
             # 임베딩 생성
             embedding_vector = self.get_embedding(text)
             
@@ -83,8 +87,11 @@ class VectorEmbedder:
             documents.append(text)
             metadatas.append({
                 "document_id": document_id,
+                "document_name": document_name,
                 "category": category,
-                "article_name": article_name
+                "standard_type": standard_type,
+                "article_name": article_name,
+                "page_number": page_number
             })
             
         if ids:
@@ -98,6 +105,7 @@ class VectorEmbedder:
                 print(f"[Embedder] {len(ids)}개의 청크를 ChromaDB에 적재 완료.")
             except Exception as e:
                 print(f"[Embedder] DB 적재 오류: {e}")
+                raise Exception(f"ChromaDB 적재 실패: {e}")
 
 if __name__ == "__main__":
     import os
