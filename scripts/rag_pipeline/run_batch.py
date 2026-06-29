@@ -46,9 +46,9 @@ def run_batch(base_dir: str):
             file_hash = hashlib.md5(filename.encode()).hexdigest()[:6]
             doc_id = f"{cat}_{file_hash}"
             
-            # 이미 성공했거나, 이번 달 한도 초과로 스킵된 기록이 있다면 스킵
+            # 이미 성공한 기록이 있다면 스킵 (skipped_limit은 다시 시도하도록 허용)
             status = tracker.get(doc_id, {}).get("status")
-            if status in ["success", "skipped_limit"]:
+            if status == "success":
                 continue
                 
             unparsed_pdfs.append((p, cat, filename, doc_id))
