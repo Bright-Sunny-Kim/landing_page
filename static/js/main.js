@@ -1339,7 +1339,6 @@ window.exportAdminInquiry = function() {
 
 
     // PDF 생성 기능
-        // PDF 생성 기능
     window.generatePDF = async function() {
         const formType = document.getElementById('pdf-form-type').value;
         const bankName = document.getElementById('pdf-bank-name').value || '';
@@ -1376,9 +1375,12 @@ window.exportAdminInquiry = function() {
         try {
             // 버튼 상태 변경
             const btn = document.querySelector('.btn-submit');
-            const originalBtnText = btn.textContent;
-            btn.textContent = "생성 중...";
-            btn.disabled = true;
+            let originalBtnText = "[PDF 다운로드]";
+            if(btn) {
+                originalBtnText = btn.textContent;
+                btn.textContent = "생성 중...";
+                btn.disabled = true;
+            }
 
             // 템플릿 로드
             const response = await fetch(`/static/pdf_templates/${encodeURIComponent(formType)}.html`);
@@ -1436,51 +1438,25 @@ window.exportAdminInquiry = function() {
             await html2pdf().set(opt).from(container).save();
             
             // 복구
-            btn.textContent = originalBtnText;
-            btn.disabled = false;
+            if(btn) {
+                btn.textContent = originalBtnText;
+                btn.disabled = false;
+            }
             container.innerHTML = '';
             
         } catch(e) {
             console.error(e);
-            alert("서식을 불러오거나 PDF를 생성하는 중 오류가 발생했습니다.
-상세: " + e.message);
+            alert("서식을 불러오거나 PDF를 생성하는 중 오류가 발생했습니다.\n상세: " + e.message);
             
             const btn = document.querySelector('.btn-submit');
             if(btn) {
                 btn.textContent = "[PDF 다운로드]";
                 btn.disabled = false;
             }
-        }
-    };
-            for (const [id, val] of Object.entries(fields)) {
-                const el = container.querySelector('#' + id);
-                if(el) el.textContent = val;
+            
+            const container = document.getElementById('pdf-template-container');
+            if(container) {
+                container.innerHTML = '';
             }
-            
-            // PDF 옵션
-            const opt = {
-                margin: 0,
-                filename: `${companyName}_${bankName}_${formType}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-            
-            // Generate PDF from the elements marked with class "page"
-            const elements = container.querySelectorAll('.page');
-            
-            // For MVP: html2pdf only takes one element directly, so we need to put them in a wrapper
-            // and use page-break css property
-            alert("PDF 다운로드를 시작합니다. 잠시만 기다려주세요.");
-            
-            // Create a wrapper
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = container.innerHTML;
-            
-            html2pdf().set(opt).from(wrapper).save();
-            
-        } catch(e) {
-            console.error(e);
-            alert("서식을 불러오거나 PDF를 생성하는 중 오류가 발생했습니다.\n상세: " + e.message);
         }
     };
