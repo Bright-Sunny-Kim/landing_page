@@ -104,7 +104,7 @@ def process_local_directory(base_dir: str):
         # 아래와 같이 uploader 스크립트 수정을 가정하고 호출
         uploader.upload_file(pdf_path, metadata, dest_path=storage_path)
         
-        print(f"✅ {filename} 처리 완벽 완료.")
+        print(f"[성공] {filename} 처리 완벽 완료.")
 
     print("\n[완료] 모든 로컬 PDF 파일의 일괄 적재 프로세스가 종료되었습니다.")
 

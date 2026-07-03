@@ -25,7 +25,7 @@ CATEGORIES = [
 ]
 
 TRACKER_FILE = "parse_tracker.json"
-MAX_FILES_PER_RUN = 3 # 하루/1회 실행 시 파싱할 최대 파일 개수 (무료 티어 보호)
+MAX_FILES_PER_RUN = 2 # 하루/1회 실행 시 파싱할 최대 파일 개수 (무료 티어 보호)
 
 def load_tracker():
     if os.path.exists(TRACKER_FILE):

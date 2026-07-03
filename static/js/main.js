@@ -983,7 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `
                 <td>${dateStr}</td>
                 <td style="color: #a78bfa;">${bankName}</td>
-                <td>${isPaper ? '서면 발송' : '온라인 발급'}</td>
+                <td>${isPaper ? '서면조회' : '전자조회'}</td>
                 <td><span class="status-badge" style="background: rgba(99,102,241,0.1); color: #818cf8; padding: 4px 8px;">${statusStr}</span></td>
                 <td>${actionBtn}</td>
             `;
@@ -1016,10 +1016,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // 은행 검색
     window.searchBanks = function() {
         const query = document.getElementById('bank-search-input').value.trim();
+        const filterEl = document.querySelector('input[name="inquiry_type_filter"]:checked');
+        const filterType = filterEl ? filterEl.value : 'all';
         const resultsDiv = document.getElementById('bank-search-results');
         resultsDiv.innerHTML = '';
+        
+        const banner = document.getElementById('online-redirect-banner');
+        const searchContainer = document.getElementById('bank-search-container');
+        const helpTextContainer = document.getElementById('help-text-container');
+        
+        if (filterType === 'online') {
+            if (banner) banner.style.display = 'block';
+            if (searchContainer) searchContainer.style.display = 'none';
+            if (helpTextContainer) helpTextContainer.style.display = 'none';
+            return;
+        } else {
+            if (banner) banner.style.display = 'none';
+            if (searchContainer) searchContainer.style.display = 'block';
+            if (helpTextContainer) helpTextContainer.style.display = 'block';
+        }
 
-        const filtered = allBanks.filter(b => b.institution_name.includes(query) || b.institution_code.includes(query));
+        const filtered = allBanks.filter(b => {
+            const matchName = b.institution_name.includes(query) || b.institution_code.includes(query);
+            const matchType = (filterType === 'all') || (b.inquiry_type === filterType);
+            return matchName && matchType;
+        });
         
         if(filtered.length === 0) {
             resultsDiv.innerHTML = '<p style="color: var(--text-secondary);">검색 결과가 없습니다.</p>';
@@ -1031,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.cssText = 'padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s;';
             div.innerHTML = `
                 <div style="font-weight: bold; margin-bottom: 5px;">${b.institution_name}</div>
-                <div style="font-size: 0.8rem; color: #a78bfa;">[${b.institution_code}] ${b.inquiry_type === 'online' ? '온라인발급' : '서면발송'}</div>
+                <div style="font-size: 0.8rem; color: #a78bfa;">[${b.institution_code}] ${b.inquiry_type === 'online' ? '전자조회' : '서면조회'}</div>
             `;
             div.onmouseover = () => div.style.borderColor = '#818cf8';
             div.onmouseout = () => div.style.borderColor = 'rgba(255,255,255,0.1)';
@@ -1044,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function selectBank(bank) {
         document.getElementById('selected-bank-id').value = bank.id;
         document.getElementById('selected-bank-type').value = bank.inquiry_type;
-        document.getElementById('selected-bank-name').textContent = `${bank.institution_name} (${bank.inquiry_type === 'online' ? '온라인발급' : '서면발송'})`;
+        document.getElementById('selected-bank-name').textContent = `${bank.institution_name} (${bank.inquiry_type === 'online' ? '전자조회' : '서면조회'})`;
         goToWizardStep(2);
     }
 

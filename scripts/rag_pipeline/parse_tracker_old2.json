@@ -1,0 +1,568 @@
+{
+    "K-IFRS_0b2236": {
+        "filename": "경영진설명서_작성을_위한_개념체계_번역서_수정(2011_번역_2018_타기준서_수정_수정목록25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:32"
+    },
+    "K-IFRS_9be58c": {
+        "filename": "국제회계기준_실무서_2_중요성에_대한_판단_번역서(2018_번역_2021_타기준서_개정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:34"
+    },
+    "K-IFRS_5c004b": {
+        "filename": "시행중_K-IFRS_재무보고를_위한_개념체계(2018_개정_2019_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:37"
+    },
+    "K-IFRS_e459c4": {
+        "filename": "시행중_K-IFRS_제1001호_재무제표_표시(2023_개정_2021_타기준서_제정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:39"
+    },
+    "K-IFRS_df45d4": {
+        "filename": "시행중_K-IFRS_제1002호_재고자산(2007_제정_2017_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:41"
+    },
+    "K-IFRS_aa899f": {
+        "filename": "시행중_K-IFRS_제1007호_현금흐름표(2024_개정_2021_타기준서_제정_수정목록_19-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:43"
+    },
+    "K-IFRS_902c29": {
+        "filename": "시행중_K-IFRS_제1008호_회계정책_회계추정치_변경과_오류(2021_개정_2018_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:45"
+    },
+    "K-IFRS_aca400": {
+        "filename": "시행중_K-IFRS_제1010호_보고기간후사건(2008_개정_2019_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:47"
+    },
+    "K-IFRS_e810d5": {
+        "filename": "시행중_K-IFRS_제1012호_법인세(2023_개정_2018_타기준서_개정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:49"
+    },
+    "K-IFRS_128713": {
+        "filename": "시행중_K-IFRS_제1016호_유형자산(2020_개정_2021_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:52"
+    },
+    "K-IFRS_242367": {
+        "filename": "시행중_K-IFRS_제1019호_종업원급여(2018_개정_2021_타기준서_제정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:54"
+    },
+    "K-IFRS_07dff0": {
+        "filename": "시행중_K-IFRS_제1020호_정부보조금의_회계처리와_정부지원의_공시(2008_개정_2015_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:56"
+    },
+    "K-IFRS_da8190": {
+        "filename": "시행중_K-IFRS_제1021호_환율변동효과(2023_개정_2018_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:37:58"
+    },
+    "K-IFRS_a97263": {
+        "filename": "시행중_K-IFRS_제1023호_차입원가(2018_개정_2017_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:00"
+    },
+    "K-IFRS_aeff52": {
+        "filename": "시행중_K-IFRS_제1024호_특수관계자공시(2014_개정_2013_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:02"
+    },
+    "K-IFRS_95d664": {
+        "filename": "시행중_K-IFRS_제1026호_퇴직급여제도에_의한_회계처리와_보고(2007_제정_2021_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:04"
+    },
+    "K-IFRS_bacb47": {
+        "filename": "시행중_K-IFRS_제1027호_별도재무제표(2014_개정_2015_타기준서_제정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:06"
+    },
+    "K-IFRS_f402ad": {
+        "filename": "시행중_K-IFRS_제1028호_관계기업과_공동기업에_대한_투자(2018_개정_2021_타기준서_제정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:08"
+    },
+    "K-IFRS_0f3ac6": {
+        "filename": "시행중_K-IFRS_제1029호_초인플레이션_경제에서의_재무보고(2008_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:10"
+    },
+    "K-IFRS_c72e50": {
+        "filename": "시행중_K-IFRS_제1032호_금융상품_표시(2014_개정_2021_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:12"
+    },
+    "K-IFRS_573657": {
+        "filename": "시행중_K-IFRS_제1033호_주당이익(2007_제정_2015_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:14"
+    },
+    "K-IFRS_046dec": {
+        "filename": "시행중_K-IFRS_제1034호_중간재무보고(2015_개정_2021_타기준서_개정_수정목록_24-1_2021_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:16"
+    },
+    "K-IFRS_e6517f": {
+        "filename": "시행중_K-IFRS_제1036호_자산손상(2015_개정_2021_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:19"
+    },
+    "K-IFRS_c3c41a": {
+        "filename": "시행중_K-IFRS_제1037호_충당부채_우발부채_우발자산(2020_개정_2021_타기준서_제정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:21"
+    },
+    "K-IFRS_1933a6": {
+        "filename": "시행중_K-IFRS_제1038호_무형자산(2014_개정_2021_타기준서_제정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:23"
+    },
+    "K-IFRS_b11077": {
+        "filename": "시행중_K-IFRS_제1039호_금융상품_인식과_측정(2020_개정_2017_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:25"
+    },
+    "K-IFRS_12086e": {
+        "filename": "시행중_K-IFRS_제1040호_투자부동산(2017_개정_2021_타기준서_제정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:27"
+    },
+    "K-IFRS_e2a79c": {
+        "filename": "시행중_K-IFRS_제1041호_농림어업(2020_개정_2018_타기준서_개정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:30"
+    },
+    "K-IFRS_a72b21": {
+        "filename": "시행중_K-IFRS_제1101호_한국채택국제회계기준의_최초채택(2024_개정_2023_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영)(1).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:33"
+    },
+    "K-IFRS_dd154f": {
+        "filename": "시행중_K-IFRS_제1102호_주식기준보상(2016_개정_2019_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:35"
+    },
+    "K-IFRS_dc44ee": {
+        "filename": "시행중_K-IFRS_제1103호_사업결합(2020_개정_2021_타기준서_제정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:37"
+    },
+    "K-IFRS_d9ba69": {
+        "filename": "시행중_K-IFRS_제1105호_매각예정비유동자산과_중단영업(2015_개정_2021_타기준서_제정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:39"
+    },
+    "K-IFRS_7911b1": {
+        "filename": "시행중_K-IFRS_제1106호_광물자원의_탐사와_평가(2009_개정_2018_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:42"
+    },
+    "K-IFRS_42ba82": {
+        "filename": "시행중_K-IFRS_제1107호_금융상품_공시(2025_개정_2021_타기준서_개정_수정목록_25-1_2020_구성양식_변경반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:44"
+    },
+    "K-IFRS_21b203": {
+        "filename": "시행중_K-IFRS_제1108호_영업부문(2014_개정_2021_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:46"
+    },
+    "K-IFRS_b27fdb": {
+        "filename": "시행중_K-IFRS_제1109호_금융상품(2025_개정_2021_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:48"
+    },
+    "K-IFRS_5eb7c8": {
+        "filename": "시행중_K-IFRS_제1110호_연결재무제표(2024_개정_2018_타기준서_개정_수정목록24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:51"
+    },
+    "K-IFRS_93e727": {
+        "filename": "시행중_K-IFRS_제1111호_공동약정(2018_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:53"
+    },
+    "K-IFRS_9e6d27": {
+        "filename": "시행중_K-IFRS_제1112호_타_기업에_대한_지분의_공시(2017_개정_2018_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:55"
+    },
+    "K-IFRS_778ec6": {
+        "filename": "시행중_K-IFRS_제1113호_공정가치_측정(2015_개정_2017_타기준서_제정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:38:57"
+    },
+    "K-IFRS_afdf3c": {
+        "filename": "시행중_K-IFRS_제1114호_규제이연계정(2014_제정_2021_타기준서_개정_수정목록23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:00"
+    },
+    "K-IFRS_547c10": {
+        "filename": "시행중_K-IFRS_제1115호_고객과의_계약에서_생기는_수익(2018_개정_2021_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:02"
+    },
+    "K-IFRS_ed9ddf": {
+        "filename": "시행중_K-IFRS_제1116호_리스(2023_개정_2018_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:05"
+    },
+    "K-IFRS_fb7791": {
+        "filename": "시행중_K-IFRS_제1117호_보험계약(2025_개정_수정목록_25-1).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:07"
+    },
+    "K-IFRS_f62b2d": {
+        "filename": "시행중_K-IFRS_제2010호_정부지원_영업활동과_특정한_관련이_없는_경우(2007_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:09"
+    },
+    "K-IFRS_db3f62": {
+        "filename": "시행중_K-IFRS_제2025호_법인세_기업이나_주주의_납세지위_변동(2007_제정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:11"
+    },
+    "K-IFRS_2603c4": {
+        "filename": "시행중_K-IFRS_제2029호_민간투자사업_공시(2007_제정_2018_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:13"
+    },
+    "K-IFRS_2324b6": {
+        "filename": "시행중_K-IFRS_제2032호_무형자산_웹_사이트_원가(2007_제정_2018_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:15"
+    },
+    "K-IFRS_dd9af6": {
+        "filename": "시행중_K-IFRS_제2101호_사후처리_및_복구관련_충당부채의_변경(2007_제정_2017_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:17"
+    },
+    "K-IFRS_ccf9ad": {
+        "filename": "시행중_K-IFRS_제2102호_조합원_지분과_유사_지분(2007_제정_2015_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "skipped_limit",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다.",
+        "processed_date": "2026-06-29 18:39:19"
+    },
+    "K-IFRS_5f7c0a": {
+        "filename": "시행중_K-IFRS_제2105호_사후처리_복구_및_환경정화를_위한_기금의_지분에_대한_권리(2007_제정_2018_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:11"
+    },
+    "K-IFRS_b160bd": {
+        "filename": "시행중_K-IFRS_제2106호_특정_시장에_참여함에_따라_발생하는_부채__폐전기·전자제품(2007_제정_수정목록_23-1_2020_구성양식_변경_.pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:16"
+    },
+    "K-IFRS_58a751": {
+        "filename": "시행중_K-IFRS_제2107호_제1029호_'초인플레이션_경제에서의_재무보고'에_따른_재작성_방법의_적용(2007_제정_수정목록_24-1_2021_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:20"
+    },
+    "K-IFRS_de9691": {
+        "filename": "시행중_K-IFRS_제2110호_중간재무보고와_손상(2007_제정_2018_타기준서_개정_수정목록24-1_2021_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:25"
+    },
+    "K-IFRS_2d0577": {
+        "filename": "시행중_K-IFRS_제2112호_민간투자사업(2007_제정_2018_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:30"
+    },
+    "K-IFRS_9b6193": {
+        "filename": "시행중_K-IFRS_제2114호_기업회계기준서_제1019호-확정급여자산한도_최소적립요구_및_그_상호작용_(2010_개정_2018_타기준서_개정_수정목록25-1_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:35"
+    },
+    "K-IFRS_83fafd": {
+        "filename": "시행중_K-IFRS_제2116호_해외사업장순투자의_위험회피(2009_개정_2015_타기준서_제정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:39"
+    },
+    "K-IFRS_c370e5": {
+        "filename": "시행중_K-IFRS_제2117호_소유주에_대한_비현금자산의_분배(2009_제정_2018_타기준서_개정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:44"
+    },
+    "K-IFRS_a6b0c9": {
+        "filename": "시행중_K-IFRS_제2119호_지분상품에_의한_금융부채의_소멸(2010_제정_2018_타기준서_개정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:49"
+    },
+    "K-IFRS_aef69a": {
+        "filename": "시행중_K-IFRS_제2120호_노천광산_생산단계의_박토원가(2012_제정_2018_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:54"
+    },
+    "K-IFRS_e705cc": {
+        "filename": "시행중_K-IFRS_제2121호_부담금(2013_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:41:58"
+    },
+    "K-IFRS_2c9083": {
+        "filename": "시행중_K-IFRS_제2122호_외화_거래와_선지급·선수취_대가(2017_제정_2021_타기준서_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:03"
+    },
+    "K-IFRS_9c2836": {
+        "filename": "시행중_K-IFRS_제2123호_법인세_처리의_불확실성(2017_제정_수정목록_23-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:08"
+    },
+    "K-GAAP_c1457f": {
+        "filename": "보험업회계처리준칙(수정목록_19-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:12"
+    },
+    "K-GAAP_a15f9f": {
+        "filename": "일반기업회계기준_시행일_및_경과규정(2023년_개정_반영_수정목록_23-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:17"
+    },
+    "K-GAAP_4c1b88": {
+        "filename": "재무회계개념체계(2019년_개정_수정목록_19-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:21"
+    },
+    "K-GAAP_164a4a": {
+        "filename": "제10장_유형자산(2017년_개정_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:26"
+    },
+    "K-GAAP_3434af": {
+        "filename": "제11장_무형자산(2017년_개정_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:30"
+    },
+    "K-GAAP_a28757": {
+        "filename": "제12장_사업결합(수정목록_18-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:34"
+    },
+    "K-GAAP_7ced79": {
+        "filename": "제13장_리스(2018년_개정_반영_수정목록_18-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:39"
+    },
+    "K-GAAP_e6232a": {
+        "filename": "제14장_충당부채,_우발부채_및_우발자산(2018_연차개선_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:43"
+    },
+    "K-GAAP_6e8447": {
+        "filename": "제15장_자본(수정목록_18-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:47"
+    },
+    "K-GAAP_c944a5": {
+        "filename": "제16장_수익(2019년_개정_수정목록_20-1_반영) (1).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:52"
+    },
+    "K-GAAP_20bd72": {
+        "filename": "제17장_정부보조금의_회계처리(제33장_2022_개정_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:42:56"
+    },
+    "K-GAAP_fc85af": {
+        "filename": "제18장_차입원가자본화(2019년_개정_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:01"
+    },
+    "K-GAAP_7313e4": {
+        "filename": "제19장_주식기준보상(수정목록_19-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:05"
+    },
+    "K-GAAP_93c0aa": {
+        "filename": "제1장_목적__구성_및_적용(수정목록_19-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:09"
+    },
+    "K-GAAP_290ad7": {
+        "filename": "제20장_자산손상(2018년_개정_반영_수정목록_18-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:14"
+    },
+    "K-GAAP_2f3d36": {
+        "filename": "제21장_종업원급여(2018_연차개선_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:18"
+    },
+    "K-GAAP_c70537": {
+        "filename": "제22장_법인세회계(2023년_개정_반영_수정목록_18-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:23"
+    },
+    "K-GAAP_fa47be": {
+        "filename": "제23장_환율변동효과(2017년_개정_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:27"
+    },
+    "K-GAAP_109475": {
+        "filename": "제24장_보고기간후사건(수정목록_19-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:32"
+    },
+    "K-GAAP_51acac": {
+        "filename": "제25장_특수관계자_공시(2020년_개정_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:36"
+    },
+    "K-GAAP_868b6d": {
+        "filename": "제26장_기본주당이익(수정목록_19-1_반영).pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:41"
+    },
+    "K-GAAP_f3676b": {
+        "filename": "제27장_특수활동.pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:46"
+    },
+    "K-GAAP_43ba17": {
+        "filename": "제28장_중단사업.pdf",
+        "category": "K-GAAP",
+        "status": "success",
+        "processed_date": "2026-06-29 18:43:51"
+    }
+}

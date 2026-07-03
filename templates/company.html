@@ -1268,21 +1268,140 @@
 
                     <!-- 2. 외부조회 (금융기관) 탭 -->
                     <div id="sub-ext-finance" class="sub-tab-pane" style="display: none;">
-                        <div class="audit-checklist-section">
-                            <p class="checklist-desc">금융기관 외부조회서 발송을 위해 은행, 증권사 등의 수신처 리스트를 업로드해 주세요.</p>
-                            
-                            <div class="form-group-block" style="margin-top: 20px;">
-                                <label class="field-label" style="display: block; margin-bottom: 10px; font-weight: 600;">금융기관 발송 대상 목록 (Excel 업로드)</label>
-                                <div class="mini-upload-box" id="box_finance_inquiry" style="max-width: 400px; margin-bottom: 10px;">
-                                    <input type="file" id="finance_inquiry" name="finance_inquiry" class="mini-file-input">
-                                    <label for="finance_inquiry" class="mini-upload-label" id="label-finance_inquiry">
-                                        <span class="upload-icon">↑</span>
-                                        <span class="file-text">수신처 리스트 업로드 (.xlsx)</span>
-                                    </label>
+                        
+                        <!-- 대시보드 뷰 -->
+                        <div id="ext-finance-dashboard" style="display: block;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <p class="checklist-desc" style="margin: 0;">각 금융기관별로 잔액조회서를 신청하고 발송 상태를 확인하세요.</p>
+                                <button type="button" class="btn-submit" style="width: auto; padding: 8px 16px;" onclick="showInquiryWizard()">+ 새 조회 신청</button>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px;">
+                                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">전체 신청</div>
+                                    <div id="summary-total" style="font-size: 1.5rem; font-weight: bold; color: #e2e8f0;">0</div>
                                 </div>
-                                <p style="font-size: 0.85rem; color: var(--text-secondary);">※ <a href="#" style="color: #a78bfa; text-decoration: underline;">표준 발송처 양식 다운로드</a> 후 작성하여 첨부해 주세요.</p>
+                                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">진행중</div>
+                                    <div id="summary-progress" style="font-size: 1.5rem; font-weight: bold; color: #60a5fa;">0</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">처리 대기</div>
+                                    <div id="summary-pending" style="font-size: 1.5rem; font-weight: bold; color: #fbbf24;">0</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: center;">
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 5px;">완료됨</div>
+                                    <div id="summary-completed" style="font-size: 1.5rem; font-weight: bold; color: #4ade80;">0</div>
+                                </div>
+                            </div>
+
+                            <div class="audit-table-wrapper">
+                                <table class="audit-upload-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 15%;">신청일자</th>
+                                            <th style="width: 25%;">금융기관명</th>
+                                            <th style="width: 20%;">조회 구분</th>
+                                            <th style="width: 20%;">진행 상태</th>
+                                            <th style="width: 20%;">서식 관리</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="finance-inquiry-list">
+                                        <!-- JS rendered -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
+
+                        <!-- 마법사 뷰 -->
+                        <div id="ext-finance-wizard" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.1); padding: 25px; border-radius: 12px; margin-top: 15px;">
+                            <input type="hidden" id="selected-bank-id">
+                            <input type="hidden" id="selected-bank-type">
+
+                            <!-- Step 1 -->
+                            <div id="wizard-step-1" style="display: block;">
+                                <h3 style="margin-top: 0; color: #a78bfa; margin-bottom: 20px;">1단계: 금융기관 검색</h3>
+                                <div class="form-group-block">
+                                    <div style="margin-bottom: 15px; display: flex; gap: 20px; color: var(--text-secondary);">
+                                        <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="all" checked onchange="searchBanks()"> 전체보기</label>
+                                        <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="online" onchange="searchBanks()"> 전자조회</label>
+                                        <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="paper" onchange="searchBanks()"> 서면조회</label>
+                                    </div>
+                                    
+                                    <div id="online-redirect-banner" style="display: none; background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                                        <h4 style="margin-top: 0; color: #a78bfa;">전자조회는 금융결제원 포털에서 진행됩니다</h4>
+                                        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 10px;">
+                                            전자조회가 가능한 금융기관은 별도의 시스템(금융결제원)을 통해 직접 발급 신청을 하셔야 합니다.
+                                        </p>
+                                        <div style="display: flex; gap: 10px;">
+                                            <a href="https://audit.kftc.or.kr/" target="_blank" class="btn-submit" style="width: auto; padding: 8px 16px; text-decoration: none; display: inline-flex; align-items: center;">금융결제원 포털로 이동</a>
+                                            <button type="button" class="btn-logout" style="width: auto; padding: 8px 16px;" onclick="document.getElementById('online-banks-modal').style.display='flex'">지원 가능 금융기관 보기</button>
+                                        </div>
+                                    </div>
+
+                                    <div id="bank-search-container">
+                                        <label class="field-label">조회할 금융기관의 이름을 입력하세요</label>
+                                        <div style="display: flex; gap: 10px;">
+                                            <input type="text" id="bank-search-input" placeholder="예: 국민은행, 신한은행..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" onkeypress="if(event.key === 'Enter') searchBanks()">
+                                            <button type="button" class="btn-logout" style="width: auto; padding: 0 20px;" onclick="searchBanks()">검색</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="bank-search-results" style="margin-top: 15px; display: grid; gap: 10px;">
+                                    <!-- JS rendered -->
+                                </div>
+                                
+                                <div style="margin-top: 25px; text-align: right;">
+                                    <button type="button" class="btn-logout" style="width: auto; padding: 8px 20px;" onclick="hideInquiryWizard()">취소</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div id="wizard-step-2" style="display: none;">
+                                <h3 style="margin-top: 0; color: #a78bfa; margin-bottom: 20px;">2단계: 신청 정보 확인</h3>
+                                
+                                <div class="form-group-block">
+                                    <label class="field-label">선택된 금융기관</label>
+                                    <div id="selected-bank-name" style="padding: 12px; background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 8px; color: #e2e8f0; font-weight: bold;">
+                                    </div>
+                                </div>
+
+                                <div class="form-group-block" style="margin-top: 20px;">
+                                    <label class="field-label">조회 기준 연도 (회계연도)</label>
+                                    <select id="inquiry-fiscal-year" class="faq-select">
+                                        <option value="2026">2026년</option>
+                                        <option value="2025" selected>2025년</option>
+                                        <option value="2024">2024년</option>
+                                    </select>
+                                </div>
+
+                                <div style="margin-top: 25px; display: flex; justify-content: space-between;">
+                                    <button type="button" class="btn-logout" style="width: auto; padding: 8px 20px;" onclick="goToWizardStep(1)">이전으로</button>
+                                    <button type="button" class="btn-submit" style="width: auto; padding: 8px 20px;" onclick="validateStep2()">다음 단계로</button>
+                                </div>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div id="wizard-step-3" style="display: none;">
+                                <h3 style="margin-top: 0; color: #a78bfa; margin-bottom: 20px;">3단계: 신청 내용 최종 확인</h3>
+                                
+                                <div id="online-guide-box" style="display: none; background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                                    <h4 style="margin-top: 0; color: #4ade80;">전자조회 금융기관 안내</h4>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 0;">이 기관은 온라인으로 직접 전자조회가 가능합니다.<br>최종 신청 후 발급용 인증번호(또는 링크)가 파트너사 포털로 자동 전달됩니다.</p>
+                                </div>
+
+                                <div id="paper-guide-box" style="display: none; background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                                    <h4 style="margin-top: 0; color: #fbbf24;">서면조회 금융기관 안내</h4>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 0;">이 기관은 서면 등기 우편으로만 서면조회를 발송해야 합니다.<br>신청 완료 후, [서식 다운로드]를 통해 표준 양식을 받아 직인 날인 후 발송해 주세요.</p>
+                                </div>
+
+                                <div style="margin-top: 25px; display: flex; justify-content: space-between;">
+                                    <button type="button" class="btn-logout" style="width: auto; padding: 8px 20px;" onclick="goToWizardStep(2)">이전으로</button>
+                                    <button type="button" class="btn-submit" style="width: auto; padding: 8px 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);" onclick="submitInquiryRequest()">최종 신청하기</button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- 3. 외부조회 (거래처) 탭 -->
@@ -1451,6 +1570,37 @@
                     fileInput.click();
                 }
             });
+            
+            // Drag and Drop Events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                fileArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                fileArea.addEventListener(eventName, () => {
+                    fileArea.style.borderColor = '#818cf8';
+                    fileArea.style.background = 'rgba(167,139,250,0.1)';
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                fileArea.addEventListener(eventName, () => {
+                    fileArea.style.borderColor = 'rgba(255,255,255,0.2)';
+                    fileArea.style.background = 'rgba(0,0,0,0.2)';
+                }, false);
+            });
+            
+            fileArea.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt.files && dt.files.length > 0) {
+                    fileInput.files = dt.files;
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            });
+            
             fileInput.addEventListener('change', () => {
                 const msg = fileArea.querySelector('.file-msg');
                 if (fileInput.files.length > 0) {
@@ -1528,6 +1678,98 @@
         </main>
     </div>
     
+    <!-- Script JS -->
+    <script src="/static/js/main.js"></script>
+
+    <!-- 전자조회 지원 금융기관 팝업 모달 -->
+    <div id="online-banks-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1); width: 90%; max-width: 600px; border-radius: 12px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-height: 80vh; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #a78bfa;">전자조회 지원 금융기관 목록 (59개)</h3>
+                <button type="button" onclick="document.getElementById('online-banks-modal').style.display='none'" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem;">&times;</button>
+            </div>
+            <div style="overflow-y: auto; flex: 1; padding-right: 10px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; color: #e2e8f0;">
+                    <thead style="background: rgba(255,255,255,0.05);">
+                        <tr>
+                            <th style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">참가기관명</th>
+                            <th style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">서비스 실시(예정)일자</th>
+                            <th style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">고객센터</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Banks list based on user's exact input -->
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">HSBC</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2019. 9. 23</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)2004-0298</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">KEB하나은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2014. 12. 1</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1599-1111</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">SC제일은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2015. 6. 15</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-1599</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">경남은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 12. 2</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1600-8585</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">광주은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 10. 31</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-3388</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">국민은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 12. 18</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1599-9999</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">기업은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 12. 16</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1566-2566</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">농협은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 11. 11</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-2100</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">미즈호은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2025. 3. 10</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02-3782-6094</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">부산은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 11. 20</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-6200</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">산업은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2015. 12. 1</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-1500</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">수협은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 12. 2</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-1515</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">신한은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 12. 2</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1599-8000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">씨티은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 12. 27</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-7000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">아이엠뱅크(구 대구)</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 12. 2</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-5050</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">우리은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2014. 1. 3</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-5000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">전북은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2014. 6. 1</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-4477</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">제이피모간체이스은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2024. 11. 6</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02-758-5026</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">제주은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2013. 11. 11</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-0079</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">중소벤처기업진흥공단</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2026. 6. 1</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">055-751-9607</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">카카오뱅크</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2017. 12. 19</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1599-3333</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">케이뱅크</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2018. 12. 10</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1522-1000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">토스뱅크</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2023. 11. 20</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1661-7654</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">한국수출입은행</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2024. 1. 2</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)3779-6114</td></tr>
+                        
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">KB증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 1. 3</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-6611</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">NH투자증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2019. 12. 20</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1544-0000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">SK증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2023. 12. 27</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1544-8245</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">교보증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2017. 12. 21</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1544-0900</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">대신증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2024. 11. 8</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1544-4488</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">메리츠증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2023. 11. 3</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-3400</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">미래에셋증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 12. 28</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-6800</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">삼성증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2017. 12. 21</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-2323</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">신한투자증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 12. 31</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-0365</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">아이엠증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2018. 5. 11</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-7171</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">키움증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 1. 28</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)1544-9000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">하나증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 10. 16</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-3111</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">한국증권금융</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 1. 13</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)3770-8800</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">한국투자증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2019. 8. 5</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1544-5000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">한화투자증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 12. 28</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)3772-7727</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">현대차증권</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 12. 18</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-6655</td></tr>
+
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">DB손해보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2021. 12. 31</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-0100</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">KB손해보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2021. 11. 1</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)6900-2556</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">NH농협생명보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2022. 12. 13</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)3786-8156</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">NH농협손해보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2024. 5. 10</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1644-9000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">교보생명보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2021. 11. 22</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)721-2707</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">롯데손해보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2022. 1. 14</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)3455-3621</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">메리츠화재해상보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2018. 1. 15</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1566-7711</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">미래에셋생명</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2023. 6. 16</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02-3271-4948</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">삼성생명보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2022. 8. 16</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-3114</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">삼성화재해상보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 1. 10</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)758-4634</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">신한라이프생명보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2023. 1. 6</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)3455-4741</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">에이아이지 손해보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2024. 11. 18</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02-316-5982</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">한화생명보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2025. 1. 13</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-6363</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">한화손해보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 12. 31</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">02)316-0476</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">현대해상화재보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2019. 8. 19</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-5656</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">흥국생명보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2025. 1. 13</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-2288</td></tr>
+
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">기술보증기금</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2020. 12. 31</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1544-1120</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">서울보증보험</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2017. 12. 21</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1670-7000</td></tr>
+                        <tr><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">신용보증기금</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">2024. 12. 30</td><td style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">1588-6565</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 15px; text-align: center;">
+                <button type="button" class="btn-logout" onclick="document.getElementById('online-banks-modal').style.display='none'" style="padding: 8px 30px; width: auto;">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Script JS -->
     <script src="/static/js/main.js"></script>
 

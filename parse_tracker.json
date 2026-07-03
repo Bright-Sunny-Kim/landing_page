@@ -40,5 +40,26 @@
         "status": "failed",
         "error": "'VectorEmbedder' object has no attribute 'insert_chunks'",
         "processed_date": "2026-06-25 12:34:52"
+    },
+    "K-IFRS_0b2236": {
+        "filename": "경영진설명서_작성을_위한_개념체계_번역서_수정(2011_번역_2018_타기준서_수정_수정목록25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "failed",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다. (API 한도 초과 또는 파싱 오류)",
+        "processed_date": "2026-06-28 07:57:56"
+    },
+    "K-IFRS_9be58c": {
+        "filename": "국제회계기준_실무서_2_중요성에_대한_판단_번역서(2018_번역_2021_타기준서_개정_수정목록_25-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "failed",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다. (API 한도 초과 또는 파싱 오류)",
+        "processed_date": "2026-06-28 07:57:57"
+    },
+    "K-IFRS_5c004b": {
+        "filename": "시행중_K-IFRS_재무보고를_위한_개념체계(2018_개정_2019_타기준서_개정_수정목록_24-1_2020_구성양식_변경_반영).pdf",
+        "category": "K-IFRS",
+        "status": "failed",
+        "error": "LlamaParse에서 반환된 데이터가 없습니다. (API 한도 초과 또는 파싱 오류)",
+        "processed_date": "2026-06-27 19:42:14"
     }
 }
