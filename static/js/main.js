@@ -1379,12 +1379,10 @@ window.exportAdminInquiry = function() {
                 btn.disabled = true;
             }
 
-            // 템플릿 로드
             const response = await fetch(`/static/pdf_templates/${encodeURIComponent(formType)}.html`);
             if(!response.ok) throw new Error("Template not found");
             const htmlText = await response.text();
             
-            // DOMParser를 이용해 메모리 상에서 HTML 파싱 (화면 깨짐 및 백지화 원천 차단)
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
             
@@ -1409,8 +1407,40 @@ window.exportAdminInquiry = function() {
                 });
             }
             
-            // 완성된 HTML을 다시 문자열로 변환
-            const finalHtmlString = doc.documentElement.outerHTML;
+            // Extract the style and body content from the parsed doc
+            const styleElement = doc.querySelector('style');
+            let styleText = styleElement ? styleElement.innerHTML : '';
+            
+            // To completely prevent cutting off left edges or scaling issues,
+            // we will create a fixed container exactly at 0,0
+            const printContainer = document.createElement('div');
+            printContainer.id = 'print-container-temp';
+            printContainer.style.position = 'fixed'; // Do not scroll with page
+            printContainer.style.top = '0';
+            printContainer.style.left = '0';
+            printContainer.style.width = '210mm'; // A4 width strictly
+            printContainer.style.zIndex = '-9999'; // Hide behind everything
+            printContainer.style.backgroundColor = '#fff';
+            
+            // We must inject the CSS locally to this container, or into the document head temporarily
+            const tempStyle = document.createElement('style');
+            tempStyle.id = 'print-style-temp';
+            // We append a specific prefix so it doesn't mess up the rest of the app, 
+            // but since it's only active during html2pdf, it's mostly fine. 
+            // Actually, just append it to the printContainer
+            tempStyle.innerHTML = styleText;
+            
+            printContainer.appendChild(tempStyle);
+            
+            // Copy all .page elements
+            const pages = doc.querySelectorAll('.page');
+            pages.forEach(p => {
+                // Ensure margin is strictly 0 and padding handles the layout
+                p.style.margin = '0';
+                printContainer.appendChild(p.cloneNode(true));
+            });
+            
+            document.body.appendChild(printContainer);
             
             const opt = {
                 margin: 0,
@@ -1420,14 +1450,21 @@ window.exportAdminInquiry = function() {
                     scale: 2, 
                     useCORS: true, 
                     logging: false, 
-                    windowWidth: 794
+                    scrollX: 0, 
+                    scrollY: 0, 
+                    windowWidth: 794 // 210mm
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: 'css', after: '.page' }
             };
             
-            // html2pdf에 문자열을 직접 전달하여 렌더링 (보이지 않는 iframe 자동 생성됨)
-            await html2pdf().set(opt).from(finalHtmlString).save();
+            // Give browser a tiny moment to render the new elements
+            await new Promise(r => setTimeout(r, 100));
+            
+            await html2pdf().set(opt).from(printContainer).save();
+            
+            // Clean up
+            document.body.removeChild(printContainer);
             
             if(btn) {
                 btn.textContent = originalBtnText;
@@ -1442,6 +1479,10 @@ window.exportAdminInquiry = function() {
             if(btn) {
                 btn.textContent = "[PDF 다운로드]";
                 btn.disabled = false;
+            }
+            const pc = document.getElementById('print-container-temp');
+            if(pc && pc.parentNode) {
+                pc.parentNode.removeChild(pc);
             }
         }
     };
