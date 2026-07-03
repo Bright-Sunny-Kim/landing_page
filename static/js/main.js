@@ -1350,30 +1350,27 @@ window.exportAdminInquiry = function() {
         const inquiryDateStr = document.getElementById('pdf-inquiry-date').value;
         const baseDateStr = document.getElementById('pdf-base-date').value;
         
-        // 새로 추가된 시작일/종료일
         const targetStartStr = document.getElementById('pdf-target-start') ? document.getElementById('pdf-target-start').value : '';
         const targetEndStr = document.getElementById('pdf-target-end') ? document.getElementById('pdf-target-end').value : '';
         
         let iYear = '20__', iMonth = '__', iDay = '__';
         if(inquiryDateStr) {
             const d = new Date(inquiryDateStr);
-            iYear = d.getFullYear(); iMonth = d.getMonth() + 1; iDay = d.getDate();
+            iYear = d.getFullYear(); iMonth = (d.getMonth() + 1).toString().padStart(2, '0'); iDay = d.getDate().toString().padStart(2, '0');
         }
         
         let bYear = '20__', bMonth = '__', bDay = '__';
         if(baseDateStr) {
             const d = new Date(baseDateStr);
-            bYear = d.getFullYear(); bMonth = d.getMonth() + 1; bDay = d.getDate();
+            bYear = d.getFullYear(); bMonth = (d.getMonth() + 1).toString().padStart(2, '0'); bDay = d.getDate().toString().padStart(2, '0');
         }
         
-        // 대상기간 포맷팅
         let targetPeriod = '';
         if (targetStartStr && targetEndStr) {
             targetPeriod = `${targetStartStr.replace(/-/g, '.')} ~ ${targetEndStr.replace(/-/g, '.')}`;
         }
 
         try {
-            // 버튼 상태 변경
             const btn = document.querySelector('.btn-submit');
             let originalBtnText = "[PDF 다운로드]";
             if(btn) {
@@ -1387,17 +1384,10 @@ window.exportAdminInquiry = function() {
             if(!response.ok) throw new Error("Template not found");
             const htmlText = await response.text();
             
-            const container = document.getElementById('pdf-template-container');
-            // DOM에 추가하여 브라우저가 CSS를 계산할 수 있게 하되, 화면에 보이지 않게 처리
-            container.innerHTML = htmlText;
-            container.style.display = 'block';
-            container.style.position = 'absolute';
-            container.style.left = '-9999px';
-            container.style.top = '0';
-            container.style.width = '210mm'; // A4 width
-            container.style.backgroundColor = '#ffffff';
+            // DOMParser를 이용해 메모리 상에서 HTML 파싱 (화면 깨짐 및 백지화 원천 차단)
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
             
-            // 데이터 매핑
             const fields = {
                 'p-bank-name': bankName, 'p-branch-name': branchName,
                 'p-current-year': iYear, 'p-current-month': iMonth, 'p-current-day': iDay,
@@ -1413,13 +1403,15 @@ window.exportAdminInquiry = function() {
             };
             
             for (const [id, val] of Object.entries(fields)) {
-                const els = container.querySelectorAll('#' + id);
+                const els = doc.querySelectorAll('#' + id);
                 els.forEach(el => {
                     if(el) el.textContent = val;
                 });
             }
             
-            // PDF 옵션 - 매우 중요: layout 깨짐 방지
+            // 완성된 HTML을 다시 문자열로 변환
+            const finalHtmlString = doc.documentElement.outerHTML;
+            
             const opt = {
                 margin: 0,
                 filename: `${companyName}_${bankName}_${formType}.pdf`,
@@ -1428,21 +1420,19 @@ window.exportAdminInquiry = function() {
                     scale: 2, 
                     useCORS: true, 
                     logging: false, 
-                    windowWidth: 794 // 210mm in pixels at 96dpi
+                    windowWidth: 794
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: 'css', after: '.page' }
             };
             
-            // PDF 생성 (비동기 처리 완벽 대응)
-            await html2pdf().set(opt).from(container).save();
+            // html2pdf에 문자열을 직접 전달하여 렌더링 (보이지 않는 iframe 자동 생성됨)
+            await html2pdf().set(opt).from(finalHtmlString).save();
             
-            // 복구
             if(btn) {
                 btn.textContent = originalBtnText;
                 btn.disabled = false;
             }
-            container.innerHTML = '';
             
         } catch(e) {
             console.error(e);
@@ -1452,11 +1442,6 @@ window.exportAdminInquiry = function() {
             if(btn) {
                 btn.textContent = "[PDF 다운로드]";
                 btn.disabled = false;
-            }
-            
-            const container = document.getElementById('pdf-template-container');
-            if(container) {
-                container.innerHTML = '';
             }
         }
     };
