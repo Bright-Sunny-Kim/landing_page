@@ -1314,59 +1314,111 @@
                         </div>
 
                         <!-- 마법사 뷰 -->
+                        
                         <div id="ext-finance-wizard" style="display: none; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.1); padding: 25px; border-radius: 12px; margin-top: 15px;">
                             <input type="hidden" id="selected-bank-id">
                             <input type="hidden" id="selected-bank-type">
 
-                            <!-- Step 1 -->
-                            <div id="wizard-step-1" style="display: block;">
-                                <h3 style="margin-top: 0; color: #a78bfa; margin-bottom: 20px;">1단계: 금융기관 검색</h3>
-                                <div class="form-group-block">
-                                    <div style="margin-bottom: 15px; display: flex; gap: 20px; color: var(--text-secondary);">
-                                        <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="all" checked onchange="searchBanks()"> 전체보기</label>
-                                        <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="online" onchange="searchBanks()"> 전자조회</label>
-                                        <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="paper" onchange="searchBanks()"> 서면조회</label>
-                                    </div>
-                                    
-                                    <div id="online-redirect-banner" style="display: none; background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                                        <h4 style="margin-top: 0; color: #a78bfa;">전자조회는 금융결제원 포털에서 진행됩니다</h4>
-                                        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 10px;">
-                                            전자조회가 가능한 금융기관은 별도의 시스템(금융결제원)을 통해 직접 발급 신청을 하셔야 합니다.
-                                        </p>
-                                        <div style="display: flex; gap: 10px;">
-                                            <a href="https://audit.kftc.or.kr/" target="_blank" class="btn-submit" style="width: auto; padding: 8px 16px; text-decoration: none; display: inline-flex; align-items: center;">금융결제원 포털로 이동</a>
-                                            <button type="button" class="btn-logout" style="width: auto; padding: 8px 16px;" onclick="document.getElementById('online-banks-modal').style.display='flex'">지원 가능 금융기관 보기</button>
-                                        </div>
-                                    </div>
-
-                                    <div id="bank-search-container">
-                                        <label class="field-label">조회할 금융기관의 이름을 입력하세요</label>
-                                        <div style="display: flex; gap: 10px;">
-                                            <input type="text" id="bank-search-input" placeholder="예: 국민은행, 신한은행..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" onkeypress="if(event.key === 'Enter') searchBanks()">
-                                            <button type="button" class="btn-logout" style="width: auto; padding: 0 20px;" onclick="searchBanks()">검색</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="bank-search-results" style="margin-top: 15px; display: grid; gap: 10px;">
-                                    <!-- JS rendered -->
+                            <!-- Single Form View -->
+                            <h3 style="margin-top: 0; color: #a78bfa; margin-bottom: 20px;">조회 신청하기</h3>
+                            
+                            <div class="form-group-block">
+                                <div style="margin-bottom: 15px; display: flex; gap: 20px; color: var(--text-secondary);">
+                                    <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="all" checked onchange="searchBanks()"> 전체보기</label>
+                                    <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="online" onchange="searchBanks()"> 전자조회</label>
+                                    <label style="cursor: pointer;"><input type="radio" name="inquiry_type_filter" value="paper" onchange="searchBanks()"> 서면조회</label>
                                 </div>
                                 
-                                <div style="margin-top: 25px; text-align: right;">
-                                    <button type="button" class="btn-logout" style="width: auto; padding: 8px 20px;" onclick="hideInquiryWizard()">취소</button>
+                                <div id="online-redirect-banner" style="display: none; background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                                    <h4 style="margin-top: 0; color: #a78bfa;">전자조회는 금융결제원 포털에서 진행됩니다</h4>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 10px;">
+                                        전자조회가 가능한 금융기관은 별도의 시스템(금융결제원)을 통해 직접 발급 신청을 하셔야 합니다.
+                                    </p>
+                                    <div style="display: flex; gap: 10px;">
+                                        <a href="https://audit.kftc.or.kr/" target="_blank" class="btn-submit" style="width: auto; padding: 8px 16px; text-decoration: none; display: inline-flex; align-items: center;">금융결제원 포털로 이동</a>
+                                        <button type="button" class="btn-logout" style="width: auto; padding: 8px 16px;" onclick="document.getElementById('online-banks-modal').style.display='flex'">지원 가능 금융기관 보기</button>
+                                    </div>
+                                </div>
+
+                                <div id="paper-guide-box" style="display: none; background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                                    <h4 style="margin-top: 0; color: #fbbf24;">서면조회 금융기관 안내 및 서식 발급</h4>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 15px;">이 기관은 서면 등기 우편으로만 서면조회를 발송해야 합니다.<br>아래 정보를 입력하신 후 [PDF 다운로드] 버튼을 클릭해 서면 양식을 발급받으세요.</p>
+                                    
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                        <div>
+                                            <label class="field-label" style="font-size: 0.85rem;">조회 양식</label>
+                                            <select id="pdf-form-type" class="faq-select" style="width: 100%; padding: 8px; border-radius: 4px;">
+                                                <option value="은행조회서">은행조회서</option>
+                                                <option value="금융거래조회서(비은행)">금융거래조회서(비은행)</option>
+                                                <option value="금융거래조회서(여신)">금융거래조회서(여신)</option>
+                                                <option value="보험거래조회서">보험거래조회서</option>
+                                                <option value="금융거래조회서(증권)">금융거래조회서(증권)</option>
+                                                <option value="금융거래조회서(보증기관용)">금융거래조회서(보증기관용)</option>
+                                                <option value="채권채무조회서">채권채무조회서</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="field-label" style="font-size: 0.85rem;">조회일</label>
+                                            <input type="date" id="pdf-inquiry-date" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label class="field-label" style="font-size: 0.85rem;">은행/수신처명</label>
+                                            <input type="text" id="pdf-bank-name" placeholder="선택된 은행명 자동입력" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label class="field-label" style="font-size: 0.85rem;">지점명</label>
+                                            <input type="text" id="pdf-branch-name" placeholder="지점명 입력" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label class="field-label" style="font-size: 0.85rem;">회계법인정보</label>
+                                            <input type="text" id="pdf-cpa-info" placeholder="회계법인명 및 담당자" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label class="field-label" style="font-size: 0.85rem;">회사명</label>
+                                            <input type="text" id="pdf-company-name" placeholder="조회 대상 회사명" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label class="field-label" style="font-size: 0.85rem;">대표이사</label>
+                                            <input type="text" id="pdf-ceo-name" placeholder="대표이사 성명" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div>
+                                            <label class="field-label" style="font-size: 0.85rem;">조회기준일</label>
+                                            <input type="date" id="pdf-base-date" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                        <div style="grid-column: span 2;">
+                                            <label class="field-label" style="font-size: 0.85rem;">조회대상기간</label>
+                                            <input type="text" id="pdf-target-period" placeholder="예: 2024.01.01 ~ 2024.12.31" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <button type="button" class="btn-submit" style="width: auto; padding: 6px 12px; font-size: 0.9rem;" onclick="generatePDF()">[PDF 다운로드]</button>
+                                    </div>
+                                </div>
+
+                                <div id="bank-search-container">
+                                    <label class="field-label">조회할 금융기관의 이름을 입력하세요</label>
+                                    <div style="display: flex; gap: 10px;">
+                                        <input type="text" id="bank-search-input" placeholder="예: 국민은행, 신한은행..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" onkeypress="if(event.key === 'Enter') searchBanks()">
+                                        <button type="button" class="btn-logout" style="width: auto; padding: 0 20px;" onclick="searchBanks()">검색</button>
+                                    </div>
                                 </div>
                             </div>
-
-                            <!-- Step 2 -->
-                            <div id="wizard-step-2" style="display: none;">
-                                <h3 style="margin-top: 0; color: #a78bfa; margin-bottom: 20px;">2단계: 신청 정보 확인</h3>
+                            
+                            <div id="bank-search-results" style="margin-top: 15px; display: grid; gap: 10px; max-height: 300px; overflow-y: auto;">
+                                <!-- JS rendered -->
+                            </div>
+                            
+                            <!-- Application Details Form (shown after bank is selected) -->
+                            <div id="application-details-form" style="display: none; margin-top: 25px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                <h4 style="margin-top: 0; color: #a78bfa;">신청 정보 입력</h4>
                                 
-                                <div class="form-group-block">
+                                <div class="form-group-block" style="margin-bottom: 20px;">
                                     <label class="field-label">선택된 금융기관</label>
                                     <div id="selected-bank-name" style="padding: 12px; background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.3); border-radius: 8px; color: #e2e8f0; font-weight: bold;">
                                     </div>
                                 </div>
 
-                                <div class="form-group-block" style="margin-top: 20px;">
+                                <div class="form-group-block">
                                     <label class="field-label">조회 기준 연도 (회계연도)</label>
                                     <select id="inquiry-fiscal-year" class="faq-select">
                                         <option value="2026">2026년</option>
@@ -1374,32 +1426,18 @@
                                         <option value="2024">2024년</option>
                                     </select>
                                 </div>
-
-                                <div style="margin-top: 25px; display: flex; justify-content: space-between;">
-                                    <button type="button" class="btn-logout" style="width: auto; padding: 8px 20px;" onclick="goToWizardStep(1)">이전으로</button>
-                                    <button type="button" class="btn-submit" style="width: auto; padding: 8px 20px;" onclick="validateStep2()">다음 단계로</button>
-                                </div>
-                            </div>
-
-                            <!-- Step 3 -->
-                            <div id="wizard-step-3" style="display: none;">
-                                <h3 style="margin-top: 0; color: #a78bfa; margin-bottom: 20px;">3단계: 신청 내용 최종 확인</h3>
                                 
-                                <div id="online-guide-box" style="display: none; background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                                    <h4 style="margin-top: 0; color: #4ade80;">전자조회 금융기관 안내</h4>
-                                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 0;">이 기관은 온라인으로 직접 전자조회가 가능합니다.<br>최종 신청 후 발급용 인증번호(또는 링크)가 파트너사 포털로 자동 전달됩니다.</p>
-                                </div>
-
-                                <div id="paper-guide-box" style="display: none; background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                                    <h4 style="margin-top: 0; color: #fbbf24;">서면조회 금융기관 안내</h4>
-                                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 0;">이 기관은 서면 등기 우편으로만 서면조회를 발송해야 합니다.<br>신청 완료 후, [서식 다운로드]를 통해 표준 양식을 받아 직인 날인 후 발송해 주세요.</p>
+                                <div id="online-guide-box" style="display: none; background: rgba(34,197,94,0.05); border: 1px solid rgba(34,197,94,0.2); padding: 15px; border-radius: 8px; margin-top: 20px;">
+                                    <h4 style="margin-top: 0; color: #4ade80;">전자조회 안내</h4>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin-bottom: 0;">이 기관은 온라인으로 직접 전자조회가 가능합니다.<br>최종 신청 후 발급용 인증번호(또는 링크)가 자동 전달됩니다.</p>
                                 </div>
 
                                 <div style="margin-top: 25px; display: flex; justify-content: space-between;">
-                                    <button type="button" class="btn-logout" style="width: auto; padding: 8px 20px;" onclick="goToWizardStep(2)">이전으로</button>
+                                    <button type="button" class="btn-logout" style="width: auto; padding: 8px 20px;" onclick="hideInquiryWizard()">취소</button>
                                     <button type="button" class="btn-submit" style="width: auto; padding: 8px 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);" onclick="submitInquiryRequest()">최종 신청하기</button>
                                 </div>
                             </div>
+                        </div>
                         </div>
 
                     </div>

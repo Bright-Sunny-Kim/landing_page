@@ -992,10 +992,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 마법사 열기
-    window.showInquiryWizard = function() {
+        window.showInquiryWizard = function() {
+        const financeDashboard = document.getElementById('ext-finance-dashboard');
+        const financeWizard = document.getElementById('ext-finance-wizard');
         financeDashboard.style.display = 'none';
         financeWizard.style.display = 'block';
-        goToWizardStep(1);
+        
+        // 폼 초기화
+        document.getElementById('bank-search-input').value = '';
+        document.querySelector('input[name="inquiry_type_filter"][value="all"]').checked = true;
+        document.getElementById('bank-search-results').innerHTML = '';
+        
+        const detailsForm = document.getElementById('application-details-form');
+        if (detailsForm) detailsForm.style.display = 'none';
+        
+        searchBanks();
     };
 
     window.hideInquiryWizard = function() {
@@ -1004,34 +1015,37 @@ document.addEventListener('DOMContentLoaded', () => {
         loadInquiryStatus();
     };
 
-    // Step 이동
-    window.goToWizardStep = function(stepNum) {
-        document.getElementById('wizard-step-1').style.display = 'none';
-        document.getElementById('wizard-step-2').style.display = 'none';
-        document.getElementById('wizard-step-3').style.display = 'none';
-        
-        document.getElementById(`wizard-step-${stepNum}`).style.display = 'block';
-    };
-
-    // 은행 검색
     window.searchBanks = function() {
         const query = document.getElementById('bank-search-input').value.trim();
         const filterEl = document.querySelector('input[name="inquiry_type_filter"]:checked');
         const filterType = filterEl ? filterEl.value : 'all';
         const resultsDiv = document.getElementById('bank-search-results');
         resultsDiv.innerHTML = '';
+        const detailsForm = document.getElementById('application-details-form');
+        if (detailsForm) detailsForm.style.display = 'none';
+        resultsDiv.style.display = 'grid';
         
         const banner = document.getElementById('online-redirect-banner');
         const searchContainer = document.getElementById('bank-search-container');
         const helpTextContainer = document.getElementById('help-text-container');
         
+        const paperBox = document.getElementById('paper-guide-box');
+        
         if (filterType === 'online') {
             if (banner) banner.style.display = 'block';
+            if (paperBox) paperBox.style.display = 'none';
+            if (searchContainer) searchContainer.style.display = 'none';
+            if (helpTextContainer) helpTextContainer.style.display = 'none';
+            return;
+        } else if (filterType === 'paper') {
+            if (banner) banner.style.display = 'none';
+            if (paperBox) paperBox.style.display = 'block';
             if (searchContainer) searchContainer.style.display = 'none';
             if (helpTextContainer) helpTextContainer.style.display = 'none';
             return;
         } else {
             if (banner) banner.style.display = 'none';
+            if (paperBox) paperBox.style.display = 'none';
             if (searchContainer) searchContainer.style.display = 'block';
             if (helpTextContainer) helpTextContainer.style.display = 'block';
         }
@@ -1056,39 +1070,25 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             div.onmouseover = () => div.style.borderColor = '#818cf8';
             div.onmouseout = () => div.style.borderColor = 'rgba(255,255,255,0.1)';
-            div.onclick = () => selectBank(b);
+            div.onclick = () => window.selectBank(b);
             resultsDiv.appendChild(div);
         });
     };
 
     // 은행 선택
-    function selectBank(bank) {
+    window.selectBank = function(bank) {
         document.getElementById('selected-bank-id').value = bank.id;
         document.getElementById('selected-bank-type').value = bank.inquiry_type;
         document.getElementById('selected-bank-name').textContent = `${bank.institution_name} (${bank.inquiry_type === 'online' ? '전자조회' : '서면조회'})`;
-        goToWizardStep(2);
-    }
-
-    // Step 2 유효성 검사 및 Step 3 이동
-    window.validateStep2 = function() {
-        const bankId = document.getElementById('selected-bank-id').value;
-        const fy = document.getElementById('inquiry-fiscal-year').value;
         
-        if(!bankId || !fy) {
-            alert('필수 값을 모두 입력해주세요.');
-            return;
-        }
+        document.getElementById('bank-search-results').style.display = 'none';
+        document.getElementById('application-details-form').style.display = 'block';
         
-        const type = document.getElementById('selected-bank-type').value;
-        if(type === 'online') {
+        if(bank.inquiry_type === 'online') {
             document.getElementById('online-guide-box').style.display = 'block';
-            document.getElementById('paper-guide-box').style.display = 'none';
         } else {
             document.getElementById('online-guide-box').style.display = 'none';
-            document.getElementById('paper-guide-box').style.display = 'block';
         }
-        
-        goToWizardStep(3);
     };
 
     // 최종 신청
