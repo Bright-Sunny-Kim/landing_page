@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <title>서식</title>
     <style>
-        body { font-family: 'Malgun Gothic', 'Dotum', sans-serif; font-size: 11pt; color: #000; margin: 0; padding: 0; background: #fff; }
-        /* Removed margin: 0 auto to prevent negative offsets in iframe */
+        /* html, body에 overflow: hidden을 주어 스크롤바 생성으로 인한 픽셀 쏠림(크롭)을 원천 차단 */
+        html, body { margin: 0 !important; padding: 0 !important; width: 210mm; background: #fff; overflow: hidden !important; }
+        
         .page { width: 210mm; height: 296mm; padding: 20mm 15mm; box-sizing: border-box; position: relative; background: #fff; margin: 0 !important; overflow: hidden; page-break-after: always; }
+        
         .title-box { border: 2px solid #000; text-align: center; padding: 15px; margin: 0 auto 30px auto; width: 55%; }
         .title-box h1 { font-size: 24pt; letter-spacing: 15px; margin: 0; font-weight: bold; }
         .header-row { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 11pt; }
