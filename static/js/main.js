@@ -1346,6 +1346,7 @@ window.exportAdminInquiry = function() {
         
         // 새로운 회계법인 및 환급계좌 정보
         const cpaFirm = document.getElementById('pdf-cpa-firm') ? document.getElementById('pdf-cpa-firm').value : '';
+        const cpaBiznum = document.getElementById('pdf-cpa-biznum') ? document.getElementById('pdf-cpa-biznum').value : '';
         const cpaName = document.getElementById('pdf-cpa-name') ? document.getElementById('pdf-cpa-name').value : '';
         const cpaPhone = document.getElementById('pdf-cpa-phone') ? document.getElementById('pdf-cpa-phone').value : '';
         const cpaFax = document.getElementById('pdf-cpa-fax') ? document.getElementById('pdf-cpa-fax').value : '';
@@ -1409,6 +1410,7 @@ window.exportAdminInquiry = function() {
                 
                 // 페이지 1 CPA 및 환급정보
                 'p-cpa-firm': cpaFirm,
+                'p-cpa-biznum': cpaBiznum,
                 'p-cpa-name': cpaName,
                 'p-cpa-phone': cpaPhone,
                 'p-cpa-fax': cpaFax,
