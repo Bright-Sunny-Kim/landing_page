@@ -1387,9 +1387,15 @@
                                             <label class="field-label" style="font-size: 0.85rem;">조회기준일</label>
                                             <input type="date" id="pdf-base-date" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; color-scheme: dark;">
                                         </div>
-                                        <div style="grid-column: span 2;">
-                                            <label class="field-label" style="font-size: 0.85rem;">조회대상기간</label>
-                                            <input type="text" id="pdf-target-period" placeholder="예: 2024.01.01 ~ 2024.12.31" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                        <div style="grid-column: span 2; display: flex; gap: 10px;">
+                                            <div style="flex: 1;">
+                                                <label class="field-label" style="font-size: 0.85rem;">조회대상기간 (시작일)</label>
+                                                <input type="date" id="pdf-target-start" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; color-scheme: dark;">
+                                            </div>
+                                            <div style="flex: 1;">
+                                                <label class="field-label" style="font-size: 0.85rem;">조회대상기간 (종료일)</label>
+                                                <input type="date" id="pdf-target-end" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; color-scheme: dark;">
+                                            </div>
                                         </div>
                                     </div>
                                     <div style="text-align: right;">
