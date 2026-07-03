@@ -1379,12 +1379,10 @@ window.exportAdminInquiry = function() {
                 btn.disabled = true;
             }
 
-            // 템플릿 로드
             const response = await fetch(`/static/pdf_templates/${encodeURIComponent(formType)}.html`);
             if(!response.ok) throw new Error("Template not found");
             const htmlText = await response.text();
             
-            // DOMParser를 이용해 메모리 상에서 HTML 파싱 (화면 깨짐 및 백지화 원천 차단)
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
             
@@ -1409,8 +1407,26 @@ window.exportAdminInquiry = function() {
                 });
             }
             
-            // 완성된 HTML을 다시 문자열로 변환
             const finalHtmlString = doc.documentElement.outerHTML;
+            
+            // iframe을 사용한 완벽한 렌더링 (메인 페이지 CSS 간섭 및 좌표 쏠림 100% 차단)
+            const iframe = document.createElement('iframe');
+            iframe.id = 'pdf-render-iframe';
+            iframe.style.position = 'fixed';
+            iframe.style.top = '0';
+            iframe.style.left = '0';
+            iframe.style.width = '210mm'; // 정확한 A4 규격
+            iframe.style.height = '297mm';
+            iframe.style.zIndex = '-9999';
+            iframe.style.border = 'none';
+            document.body.appendChild(iframe);
+            
+            iframe.contentWindow.document.open();
+            iframe.contentWindow.document.write(finalHtmlString);
+            iframe.contentWindow.document.close();
+            
+            // 폰트 로드 및 렌더링 대기
+            await new Promise(r => setTimeout(r, 500));
             
             const opt = {
                 margin: 0,
@@ -1419,15 +1435,16 @@ window.exportAdminInquiry = function() {
                 html2canvas: { 
                     scale: 2, 
                     useCORS: true, 
-                    logging: false, 
-                    windowWidth: 794
+                    logging: false,
+                    windowWidth: 794 // 210mm in px at 96dpi
                 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: 'css', after: '.page' }
             };
             
-            // html2pdf에 문자열을 직접 전달하여 렌더링 (보이지 않는 iframe 자동 생성됨)
-            await html2pdf().set(opt).from(finalHtmlString).save();
+            await html2pdf().set(opt).from(iframe.contentWindow.document.body).save();
+            
+            document.body.removeChild(iframe);
             
             if(btn) {
                 btn.textContent = originalBtnText;
@@ -1443,5 +1460,7 @@ window.exportAdminInquiry = function() {
                 btn.textContent = "[PDF 다운로드]";
                 btn.disabled = false;
             }
+            const frame = document.getElementById('pdf-render-iframe');
+            if (frame) document.body.removeChild(frame);
         }
     };
