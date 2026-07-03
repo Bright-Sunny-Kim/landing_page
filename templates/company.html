@@ -1371,10 +1371,7 @@
                                             <label class="field-label" style="font-size: 0.85rem;">지점명</label>
                                             <input type="text" id="pdf-branch-name" placeholder="지점명 입력" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
                                         </div>
-                                        <div>
-                                            <label class="field-label" style="font-size: 0.85rem;">회계법인정보</label>
-                                            <input type="text" id="pdf-cpa-info" placeholder="회계법인명 및 담당자" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
-                                        </div>
+                                        
                                         <div>
                                             <label class="field-label" style="font-size: 0.85rem;">회사명</label>
                                             <input type="text" id="pdf-company-name" placeholder="조회 대상 회사명" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
@@ -1397,6 +1394,52 @@
                                                 <input type="date" id="pdf-target-end" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; color-scheme: dark;">
                                             </div>
                                         </div>
+                                        <!-- 신설: 회계법인정보 (맨 아래) -->
+                                        <div style="grid-column: span 2; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
+                                            <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: #a0aec0;">회계법인 상세 정보</h4>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                                <div>
+                                                    <label class="field-label" style="font-size: 0.85rem;">회계법인명(또는 감사반)</label>
+                                                    <input type="text" id="pdf-cpa-firm" placeholder="예: 삼일회계법인" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                                </div>
+                                                <div>
+                                                    <label class="field-label" style="font-size: 0.85rem;">담당회계사 이름</label>
+                                                    <input type="text" id="pdf-cpa-name" placeholder="예: 홍길동" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                                </div>
+                                                <div>
+                                                    <label class="field-label" style="font-size: 0.85rem;">전화번호</label>
+                                                    <input type="text" id="pdf-cpa-phone" placeholder="예: 02-123-4567" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                                </div>
+                                                <div>
+                                                    <label class="field-label" style="font-size: 0.85rem;">팩스번호</label>
+                                                    <input type="text" id="pdf-cpa-fax" placeholder="예: 02-123-4568" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                                </div>
+                                                <div style="grid-column: span 2;">
+                                                    <label class="field-label" style="font-size: 0.85rem;">이메일</label>
+                                                    <input type="text" id="pdf-cpa-email" placeholder="예: cpa@example.com" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 신설: 수수료 환급계좌정보 -->
+                                        <div style="grid-column: span 2; margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                                            <h4 style="margin: 0 0 10px 0; font-size: 0.95rem; color: #a0aec0;">수수료 환급계좌 정보</h4>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px;">
+                                                <div>
+                                                    <label class="field-label" style="font-size: 0.85rem;">은행명</label>
+                                                    <input type="text" id="pdf-refund-bank" placeholder="예: 신한은행" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                                </div>
+                                                <div>
+                                                    <label class="field-label" style="font-size: 0.85rem;">예금주</label>
+                                                    <input type="text" id="pdf-refund-owner" placeholder="예: 홍길동" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                                </div>
+                                                <div>
+                                                    <label class="field-label" style="font-size: 0.85rem;">계좌번호</label>
+                                                    <input type="text" id="pdf-refund-account" placeholder="예: 110-123-456789" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                                                </div>
+                                            </div>
+                                        </div>
+    
                                     </div>
                                     <div style="text-align: right;">
                                         <button type="button" class="btn-submit" style="width: auto; padding: 6px 12px; font-size: 0.9rem;" onclick="generatePDF()">[PDF 다운로드]</button>

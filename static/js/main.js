@@ -1343,9 +1343,19 @@ window.exportAdminInquiry = function() {
         const formType = document.getElementById('pdf-form-type').value;
         const bankName = document.getElementById('pdf-bank-name').value || '';
         const branchName = document.getElementById('pdf-branch-name').value || '';
-        const cpaInfo = document.getElementById('pdf-cpa-info').value || '________';
-        const companyName = document.getElementById('pdf-company-name').value || '________';
-        const ceoName = document.getElementById('pdf-ceo-name').value || '________';
+        
+        // 새로운 회계법인 및 환급계좌 정보
+        const cpaFirm = document.getElementById('pdf-cpa-firm') ? document.getElementById('pdf-cpa-firm').value : '';
+        const cpaName = document.getElementById('pdf-cpa-name') ? document.getElementById('pdf-cpa-name').value : '';
+        const cpaPhone = document.getElementById('pdf-cpa-phone') ? document.getElementById('pdf-cpa-phone').value : '';
+        const cpaFax = document.getElementById('pdf-cpa-fax') ? document.getElementById('pdf-cpa-fax').value : '';
+        const cpaEmail = document.getElementById('pdf-cpa-email') ? document.getElementById('pdf-cpa-email').value : '';
+        const refundBank = document.getElementById('pdf-refund-bank') ? document.getElementById('pdf-refund-bank').value : '';
+        const refundOwner = document.getElementById('pdf-refund-owner') ? document.getElementById('pdf-refund-owner').value : '';
+        const refundAccount = document.getElementById('pdf-refund-account') ? document.getElementById('pdf-refund-account').value : '';
+        
+        const companyName = document.getElementById('pdf-company-name').value || '';
+        const ceoName = document.getElementById('pdf-ceo-name').value || '';
         
         const inquiryDateStr = document.getElementById('pdf-inquiry-date').value;
         const baseDateStr = document.getElementById('pdf-base-date').value;
@@ -1360,9 +1370,16 @@ window.exportAdminInquiry = function() {
         }
         
         let bYear = '20__', bMonth = '__', bDay = '__';
+        let eYear = '20__', eMonth = '__', eDay = '__';
+        
         if(baseDateStr) {
             const d = new Date(baseDateStr);
             bYear = d.getFullYear(); bMonth = (d.getMonth() + 1).toString().padStart(2, '0'); bDay = d.getDate().toString().padStart(2, '0');
+            
+            // 요구서 유효기간: 조회기준일로부터 3개월 후
+            const ed = new Date(baseDateStr);
+            ed.setMonth(ed.getMonth() + 3);
+            eYear = ed.getFullYear(); eMonth = (ed.getMonth() + 1).toString().padStart(2, '0'); eDay = ed.getDate().toString().padStart(2, '0');
         }
         
         let targetPeriod = '';
@@ -1386,19 +1403,42 @@ window.exportAdminInquiry = function() {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
             
-            const fields = {
+            let fields = {
                 'p-bank-name': bankName, 'p-branch-name': branchName,
                 'p-current-year': iYear, 'p-current-month': iMonth, 'p-current-day': iDay,
-                'p-cpa-info': cpaInfo, 'p-company-name': companyName, 'p-ceo-name': ceoName,
+                
+                // 페이지 1 CPA 및 환급정보
+                'p-cpa-firm': cpaFirm,
+                'p-cpa-name': cpaName,
+                'p-cpa-phone': cpaPhone,
+                'p-cpa-fax': cpaFax,
+                'p-cpa-email': cpaEmail,
+                'p-refund-bank': refundBank,
+                'p-refund-owner': refundOwner,
+                'p-refund-account': refundAccount,
+                
+                'p-company-name': companyName, 'p-ceo-name': ceoName,
                 'p2-bank-name': bankName, 'p2-branch-name': branchName,
                 'p2-current-year': iYear, 'p2-current-month': iMonth, 'p2-current-day': iDay,
-                'p2-cpa-info': cpaInfo, 'p2-company-name': companyName, 'p2-ceo-name': ceoName,
+                'p2-cpa-firm': cpaFirm, 
+                'p2-company-name': companyName, 'p2-ceo-name': ceoName,
                 'p2-company-name-sign': companyName,
+                
                 'p-base-year': bYear, 'p-base-month': bMonth, 'p-base-day': bDay,
-                'p3-company-name': companyName,
-                'p3-base-year': bYear, 'p3-base-month': bMonth, 'p3-base-day': bDay,
+                
+                // 만료일
+                'p-expire-year': eYear, 'p-expire-month': eMonth, 'p-expire-day': eDay,
                 'p-target-period': targetPeriod
             };
+            
+            // 3~8페이지 상단 (t1~t6, index 1~6)
+            for(let i=1; i<=6; i++) {
+                fields[`p3-cpa-firm-top-${i}`] = cpaFirm;
+                fields[`p3-company-name-${i}`] = companyName;
+                fields[`p3-base-year-${i}`] = bYear;
+                fields[`p3-base-month-${i}`] = bMonth;
+                fields[`p3-base-day-${i}`] = bDay;
+            }
             
             for (const [id, val] of Object.entries(fields)) {
                 const els = doc.querySelectorAll('#' + id);
@@ -1409,8 +1449,6 @@ window.exportAdminInquiry = function() {
             
             const finalHtmlString = doc.documentElement.outerHTML;
             
-            // html2pdf 렌더링 대신 새 창을 열어 네이티브 인쇄(PDF 저장) 기능 호출
-            // 이 방식이 화질 저하 및 레이아웃 깨짐이 절대 없는 가장 완벽한 방식입니다.
             const printWindow = window.open('', '_blank');
             if (printWindow) {
                 printWindow.document.open();

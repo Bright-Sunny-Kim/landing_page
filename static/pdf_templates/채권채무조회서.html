@@ -46,7 +46,7 @@
             }
             .page { 
                 width: 210mm; 
-                height: 296mm; /* 약간의 오차로 인한 빈페이지 방지 */
+                height: 296mm; 
                 padding: 20mm 15mm; 
                 box-sizing: border-box; 
                 position: relative; 
@@ -57,14 +57,13 @@
                 page-break-inside: avoid;
                 overflow: hidden;
             }
-            /* 프린트 모드에서 배경색 강제 적용 (웹킷 브라우저 용) */
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
 
         /* 화면(모니터) 표시용 스타일 - 미리보기 용 */
         @media screen {
             body { 
-                background: #525659; /* PDF 리더와 비슷한 짙은 회색 배경 */
+                background: #525659; 
                 display: flex; 
                 flex-direction: column; 
                 align-items: center; 
@@ -78,17 +77,16 @@
                 position: relative; 
                 background: #fff; 
                 margin-bottom: 20px; 
-                box-shadow: 0 0 10px rgba(0,0,0,0.5); /* 종이처럼 보이게 그림자 */
+                box-shadow: 0 0 10px rgba(0,0,0,0.5); 
                 overflow: hidden;
             }
         }
     </style>
-    <!-- 인쇄를 자동으로 시작하는 스크립트 -->
     <script>
         window.onload = function() {
             setTimeout(() => {
                 window.print();
-            }, 300); // 렌더링 안정화 대기
+            }, 300);
         };
     </script>
 </head>
@@ -99,7 +97,7 @@
                 <h1 style="letter-spacing:10px;">채 권 채 무 조 회 서</h1>
             </div>
             <div class="header-row">
-                <div><span class="field-line" id="p-bank-name"></span> 조회처 <span class="field-line" id="p-branch-name"></span> 귀중</div>
+                <div><span class="field-line" id="p-bank-name"></span> <span class="field-line" id="p-branch-name"></span> 귀중</div>
                 <div><span class="field-line" id="p-current-year"></span>년 <span class="field-line" id="p-current-month"></span>월 <span class="field-line" id="p-current-day"></span>일</div>
             </div>
             <div class="text-body">
@@ -113,10 +111,10 @@
                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;조회서 1부.
             </div>
             <div class="sign-area">
-                <span class="field-line" id="p-cpa-info" style="min-width:150px;"></span> 회계법인(또는 <span class="field-line"></span> 감사반) (사업자등록번호 : <span class="field-line" style="min-width:100px;"></span>)<br>
-                담당공인회계사 <span class="field-line" style="min-width:120px;"></span><br>
-                (전화 : <span class="field-line" style="min-width:100px;"></span> fax : <span class="field-line" style="min-width:100px;"></span> , e-mail : <span class="field-line" style="min-width:150px;"></span>)<br>
-                수수료 환급계좌번호 : &nbsp;&nbsp;&nbsp;&nbsp; 은행명 : &nbsp;&nbsp;&nbsp;&nbsp; 예금주 : <span class="field-line" style="min-width:100px;"></span>
+                <span class="field-line" id="p-cpa-firm" style="min-width:250px;"></span> (사업자등록번호 : <span class="field-line" style="min-width:100px;"></span>)<br>
+                담당공인회계사 <span class="field-line" id="p-cpa-name" style="min-width:120px;"></span><br>
+                (전화 : <span class="field-line" id="p-cpa-phone" style="min-width:100px;"></span> fax : <span class="field-line" id="p-cpa-fax" style="min-width:100px;"></span> , e-mail : <span class="field-line" id="p-cpa-email" style="min-width:150px;"></span>)<br>
+                수수료 환급계좌 : 은행명 <span class="field-line" id="p-refund-bank" style="min-width:80px;"></span> 예금주 <span class="field-line" id="p-refund-owner" style="min-width:80px;"></span> 계좌번호 <span class="field-line" id="p-refund-account" style="min-width:150px;"></span>
             </div>
             <div class="footer-sign">
                 회 사 명 <span class="field-line" id="p-company-name" style="min-width: 250px;"></span><br>
@@ -127,19 +125,19 @@
         <div class="page">
             <div class="page-title">금융거래 정보제공 요구서</div>
             <div class="header-row">
-                <div><span class="field-line" id="p2-bank-name"></span> 조회처 <span class="field-line" id="p2-branch-name"></span> 귀중</div>
+                <div><span class="field-line" id="p2-bank-name"></span> <span class="field-line" id="p2-branch-name"></span> 귀중</div>
                 <div><span class="field-line" id="p2-current-year"></span>년 <span class="field-line" id="p2-current-month"></span>월 <span class="field-line" id="p2-current-day"></span>일</div>
             </div>
             <div class="list-text">
                 <p>○ 정보제공 요구내용 : 금융상품, 대출금, 담보제공, 지급보증 및 파생상품계약 등의 내역과 어음·수표용지와 전자어음 교부 및 미회수내역, 당좌거래명세내용</p>
                 <p>○ 정보제공 요구범위 : 회사와 귀 기관과의 거래내역에 대한 조회</p>
-                <p>○ 정보 등을 제공받을 자 : <span class="field-line" id="p2-cpa-info" style="min-width:150px;"></span> 회계법인 또는 <span class="field-line"></span> 감사반</p>
+                <p>○ 정보 등을 제공받을 자 : <span class="field-line" id="p2-cpa-firm" style="min-width:200px;"></span></p>
                 <p><strong>○ 조회 대상 회사 : <span class="field-line" id="p2-company-name" style="min-width:200px;"></span></strong></p>
                 <p>○ 조회 대상 회사의 법인등록번호와 사업자등록번호(2이상인 경우 목록첨부):</p>
                 <p><strong>○ 조회 기준일 : <span class="field-line" id="p-base-year"></span>년 <span class="field-line" id="p-base-month"></span>월 <span class="field-line" id="p-base-day"></span>일 현재</strong></p>
                 <p>○ 조회 대상기간 : <span class="field-line" id="p-target-period" style="min-width:150px;"></span></p>
                 <p>○ 회신 방법 : 등기, 전자적 방식( <span class="field-line" style="min-width:100px;"></span> ), 기타( <span class="field-line" style="min-width:100px;"></span> )</p>
-                <p>○ 요구서의 유효기간 : 20__년 __월 __일</p>
+                <p>○ 요구서의 유효기간 : <span class="field-line" id="p-expire-year" style="min-width:40px;"></span>년 <span class="field-line" id="p-expire-month" style="min-width:30px;"></span>월 <span class="field-line" id="p-expire-day" style="min-width:30px;"></span>일</p>
             </div>
             <div class="attachments" style="margin-top: 30px;">
                 붙 임 : 법인인감증명서 1부 또는 법인공인인증서.<br>
@@ -156,9 +154,9 @@
             <div class="reply-box">회 신 용</div>
             <div class="clear"></div>
             <div style="margin-bottom: 10px; font-size: 10pt;">
-                <span class="field-line" style="min-width:100px;"></span> 회계법인 또는 <span class="field-line" style="min-width:80px;"></span> 감사반 귀중<br>
-                조회 대상 회사 : <span class="field-line" id="p3-company-name" style="min-width:150px;"></span> 
-                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year"></span>년 <span class="field-line" id="p3-base-month"></span>월 <span class="field-line" id="p3-base-day"></span>일 현재</span>
+                <span class="field-line" id="p3-cpa-firm-top-1" style="min-width:200px;"></span> 귀중<br>
+                조회 대상 회사 : <span class="field-line" id="p3-company-name-1" style="min-width:150px;"></span> 
+                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year-1"></span>년 <span class="field-line" id="p3-base-month-1"></span>월 <span class="field-line" id="p3-base-day-1"></span>일 현재</span>
             </div>
         
             <p class="table-title">1. 조회기준일 현재 조회대상회사의 당 기관에 대한 금융상품의 내용은 다음과 같습니다.</p>
@@ -192,9 +190,9 @@
             <div class="reply-box">회 신 용</div>
             <div class="clear"></div>
             <div style="margin-bottom: 10px; font-size: 10pt;">
-                <span class="field-line" style="min-width:100px;"></span> 회계법인 또는 <span class="field-line" style="min-width:80px;"></span> 감사반 귀중<br>
-                조회 대상 회사 : <span class="field-line" id="p3-company-name" style="min-width:150px;"></span> 
-                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year"></span>년 <span class="field-line" id="p3-base-month"></span>월 <span class="field-line" id="p3-base-day"></span>일 현재</span>
+                <span class="field-line" id="p3-cpa-firm-top-2" style="min-width:200px;"></span> 귀중<br>
+                조회 대상 회사 : <span class="field-line" id="p3-company-name-2" style="min-width:150px;"></span> 
+                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year-2"></span>년 <span class="field-line" id="p3-base-month-2"></span>월 <span class="field-line" id="p3-base-day-2"></span>일 현재</span>
             </div>
         
             <p class="table-title">2. 조회기준일 현재 조회대상회사에 대한 당 기관의 대출 거래의 내용은 다음과 같습니다.</p>
@@ -232,9 +230,9 @@
             <div class="reply-box">회 신 용</div>
             <div class="clear"></div>
             <div style="margin-bottom: 10px; font-size: 10pt;">
-                <span class="field-line" style="min-width:100px;"></span> 회계법인 또는 <span class="field-line" style="min-width:80px;"></span> 감사반 귀중<br>
-                조회 대상 회사 : <span class="field-line" id="p3-company-name" style="min-width:150px;"></span> 
-                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year"></span>년 <span class="field-line" id="p3-base-month"></span>월 <span class="field-line" id="p3-base-day"></span>일 현재</span>
+                <span class="field-line" id="p3-cpa-firm-top-3" style="min-width:200px;"></span> 귀중<br>
+                조회 대상 회사 : <span class="field-line" id="p3-company-name-3" style="min-width:150px;"></span> 
+                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year-3"></span>년 <span class="field-line" id="p3-base-month-3"></span>월 <span class="field-line" id="p3-base-day-3"></span>일 현재</span>
             </div>
         
             <p class="table-title">3. 당 기관이 조회대상회사를 위하여 제공한 지급보증 내역은 다음과 같습니다.</p>
@@ -256,9 +254,9 @@
             <div class="reply-box">회 신 용</div>
             <div class="clear"></div>
             <div style="margin-bottom: 10px; font-size: 10pt;">
-                <span class="field-line" style="min-width:100px;"></span> 회계법인 또는 <span class="field-line" style="min-width:80px;"></span> 감사반 귀중<br>
-                조회 대상 회사 : <span class="field-line" id="p3-company-name" style="min-width:150px;"></span> 
-                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year"></span>년 <span class="field-line" id="p3-base-month"></span>월 <span class="field-line" id="p3-base-day"></span>일 현재</span>
+                <span class="field-line" id="p3-cpa-firm-top-4" style="min-width:200px;"></span> 귀중<br>
+                조회 대상 회사 : <span class="field-line" id="p3-company-name-4" style="min-width:150px;"></span> 
+                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year-4"></span>년 <span class="field-line" id="p3-base-month-4"></span>월 <span class="field-line" id="p3-base-day-4"></span>일 현재</span>
             </div>
         
             <p class="table-title">5. 조회기준일 현재 타인이 조회대상회사를 위하여 제공한 보증의 내용은 다음과 같습니다.</p>
@@ -275,9 +273,9 @@
             <div class="reply-box">회 신 용</div>
             <div class="clear"></div>
             <div style="margin-bottom: 10px; font-size: 10pt;">
-                <span class="field-line" style="min-width:100px;"></span> 회계법인 또는 <span class="field-line" style="min-width:80px;"></span> 감사반 귀중<br>
-                조회 대상 회사 : <span class="field-line" id="p3-company-name" style="min-width:150px;"></span> 
-                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year"></span>년 <span class="field-line" id="p3-base-month"></span>월 <span class="field-line" id="p3-base-day"></span>일 현재</span>
+                <span class="field-line" id="p3-cpa-firm-top-5" style="min-width:200px;"></span> 귀중<br>
+                조회 대상 회사 : <span class="field-line" id="p3-company-name-5" style="min-width:150px;"></span> 
+                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year-5"></span>년 <span class="field-line" id="p3-base-month-5"></span>월 <span class="field-line" id="p3-base-day-5"></span>일 현재</span>
             </div>
         
             <p class="table-title">6. 조회대상회사가 귀 기관에 담보로 제공한 어음, 수표 내역은 다음과 같습니다.</p>
@@ -299,9 +297,9 @@
             <div class="reply-box">회 신 용</div>
             <div class="clear"></div>
             <div style="margin-bottom: 10px; font-size: 10pt;">
-                <span class="field-line" style="min-width:100px;"></span> 회계법인 또는 <span class="field-line" style="min-width:80px;"></span> 감사반 귀중<br>
-                조회 대상 회사 : <span class="field-line" id="p3-company-name" style="min-width:150px;"></span> 
-                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year"></span>년 <span class="field-line" id="p3-base-month"></span>월 <span class="field-line" id="p3-base-day"></span>일 현재</span>
+                <span class="field-line" id="p3-cpa-firm-top-6" style="min-width:200px;"></span> 귀중<br>
+                조회 대상 회사 : <span class="field-line" id="p3-company-name-6" style="min-width:150px;"></span> 
+                <span style="float:right;">조회 기준일 : <span class="field-line" id="p3-base-year-6"></span>년 <span class="field-line" id="p3-base-month-6"></span>월 <span class="field-line" id="p3-base-day-6"></span>일 현재</span>
             </div>
         
             <p class="table-title">8. 조회대상회사가 차입금 등을 위하여 타인으로부터 제공받은 담보 내역은 다음과 같습니다.</p>
