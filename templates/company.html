@@ -1348,7 +1348,10 @@
                                     
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                                         <div>
-                                            <label class="field-label" style="font-size: 0.85rem;">조회 양식</label>
+                                            <label class="field-label" style="font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                                                조회 양식
+                                                <span onclick="document.getElementById('form-guide-modal').style.display='flex'" style="color: #fbbf24; border: 1px solid #fbbf24; border-radius: 4px; padding: 2px 6px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(251,191,36,0.1)'" onmouseout="this.style.background='transparent'">양식 안내</span>
+                                            </label>
                                             <select id="pdf-form-type" class="faq-select" style="width: 100%; padding: 8px; border-radius: 4px;">
                                                 <option value="은행조회서">은행조회서</option>
                                                 <option value="금융거래조회서(비은행)">금융거래조회서(비은행)</option>
@@ -1356,7 +1359,7 @@
                                                 <option value="보험거래조회서">보험거래조회서</option>
                                                 <option value="금융거래조회서(증권)">금융거래조회서(증권)</option>
                                                 <option value="금융거래조회서(보증기관용)">금융거래조회서(보증기관용)</option>
-                                                <option value="채권채무조회서">채권채무조회서</option>
+                                                
                                             </select>
                                         </div>
                                         <div>
@@ -1912,6 +1915,24 @@
         }
     </script>
     <div id="pdf-template-container" style="position: absolute; width: 0; height: 0; overflow: hidden; left: -9999px;"></div>
+
+    <!-- 조회 양식 안내 모달 -->
+    <div id="form-guide-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: #1f2937; border: 1px solid rgba(255,255,255,0.1); padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; color: #fbbf24; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">조회 양식 구분 안내</h3>
+            <ul style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; padding-left: 20px; margin: 0;">
+                <li style="margin-bottom: 15px;"><strong>은행조회서:</strong> 제1금융권(시중은행, 특수은행, 지방은행 등) 은행을 대상으로 조회할 때 선택합니다.</li>
+                <li style="margin-bottom: 15px;"><strong>금융거래조회서(비은행):</strong> 상호저축은행, 신협, 새마을금고 등 제2금융권 은행을 대상으로 할 때 사용합니다.</li>
+                <li style="margin-bottom: 15px;"><strong>금융거래조회서(여신):</strong> 카드사, 캐피탈, 리스 등 여신전문 금융회사를 대상으로 합니다.</li>
+                <li style="margin-bottom: 15px;"><strong>보험거래조회서:</strong> 생명보험, 손해보험 등 각종 보험사를 대상으로 합니다.</li>
+                <li style="margin-bottom: 15px;"><strong>금융거래조회서(증권):</strong> 증권사, 투자신탁, 자산운용사 등 금융투자업자를 대상으로 합니다.</li>
+                <li style="margin-bottom: 5px;"><strong>금융거래조회서(보증기관용):</strong> 신용보증기금, 기술보증기금 등 각종 보증기관을 대상으로 할 때 사용합니다.</li>
+            </ul>
+            <div style="text-align: right; margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                <button type="button" class="btn-submit" onclick="document.getElementById('form-guide-modal').style.display='none'" style="width: auto; padding: 8px 24px; font-size: 0.9rem;">확인</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
