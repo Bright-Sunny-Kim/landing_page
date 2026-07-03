@@ -1336,3 +1336,84 @@ window.promptUpdateDetail = async function(id) {
 window.exportAdminInquiry = function() {
     window.location.href = '/api/admin/inquiry/export';
 };
+
+
+    // PDF 생성 기능
+    window.generatePDF = async function() {
+        const formType = document.getElementById('pdf-form-type').value;
+        const bankName = document.getElementById('pdf-bank-name').value;
+        const branchName = document.getElementById('pdf-branch-name').value;
+        const cpaInfo = document.getElementById('pdf-cpa-info').value || '________';
+        const companyName = document.getElementById('pdf-company-name').value || '________';
+        const ceoName = document.getElementById('pdf-ceo-name').value || '________';
+        
+        const inquiryDateStr = document.getElementById('pdf-inquiry-date').value;
+        const baseDateStr = document.getElementById('pdf-base-date').value;
+        
+        let iYear = '20__', iMonth = '__', iDay = '__';
+        if(inquiryDateStr) {
+            const d = new Date(inquiryDateStr);
+            iYear = d.getFullYear(); iMonth = d.getMonth() + 1; iDay = d.getDate();
+        }
+        
+        let bYear = '20__', bMonth = '__', bDay = '__';
+        if(baseDateStr) {
+            const d = new Date(baseDateStr);
+            bYear = d.getFullYear(); bMonth = d.getMonth() + 1; bDay = d.getDate();
+        }
+
+        try {
+            // 템플릿 로드
+            const response = await fetch(`/static/pdf_templates/${encodeURIComponent(formType)}.html`);
+            if(!response.ok) throw new Error("Template not found");
+            const htmlText = await response.text();
+            
+            const container = document.getElementById('pdf-template-container');
+            container.innerHTML = htmlText;
+            
+            // 데이터 매핑
+            const fields = {
+                'p-bank-name': bankName, 'p-branch-name': branchName,
+                'p-current-year': iYear, 'p-current-month': iMonth, 'p-current-day': iDay,
+                'p-cpa-info': cpaInfo, 'p-company-name': companyName, 'p-ceo-name': ceoName,
+                'p2-bank-name': bankName, 'p2-branch-name': branchName,
+                'p2-current-year': iYear, 'p2-current-month': iMonth, 'p2-current-day': iDay,
+                'p2-cpa-info': cpaInfo, 'p2-company-name': companyName, 'p2-ceo-name': ceoName,
+                'p2-company-name-sign': companyName,
+                'p-base-year': bYear, 'p-base-month': bMonth, 'p-base-day': bDay,
+                'p3-company-name': companyName,
+                'p3-base-year': bYear, 'p3-base-month': bMonth, 'p3-base-day': bDay
+            };
+            
+            for (const [id, val] of Object.entries(fields)) {
+                const el = container.querySelector('#' + id);
+                if(el) el.textContent = val;
+            }
+            
+            // PDF 옵션
+            const opt = {
+                margin: 0,
+                filename: `${companyName}_${bankName}_${formType}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // Generate PDF from the elements marked with class "page"
+            const elements = container.querySelectorAll('.page');
+            
+            // For MVP: html2pdf only takes one element directly, so we need to put them in a wrapper
+            // and use page-break css property
+            alert("PDF 다운로드를 시작합니다. 잠시만 기다려주세요.");
+            
+            // Create a wrapper
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = container.innerHTML;
+            
+            html2pdf().set(opt).from(wrapper).save();
+            
+        } catch(e) {
+            console.error(e);
+            alert("서식을 불러오거나 PDF를 생성하는 중 오류가 발생했습니다.");
+        }
+    };
