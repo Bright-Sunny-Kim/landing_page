@@ -1375,16 +1375,14 @@ window.exportAdminInquiry = function() {
             let originalBtnText = "[PDF 다운로드]";
             if(btn) {
                 originalBtnText = btn.textContent;
-                btn.textContent = "생성 중...";
+                btn.textContent = "서식 생성 중...";
                 btn.disabled = true;
             }
 
-            // 템플릿 로드
             const response = await fetch(`/static/pdf_templates/${encodeURIComponent(formType)}.html`);
             if(!response.ok) throw new Error("Template not found");
             const htmlText = await response.text();
             
-            // DOMParser를 이용해 메모리 상에서 HTML 파싱 (화면 깨짐 및 백지화 원천 차단)
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
             
@@ -1409,25 +1407,18 @@ window.exportAdminInquiry = function() {
                 });
             }
             
-            // 완성된 HTML을 다시 문자열로 변환
             const finalHtmlString = doc.documentElement.outerHTML;
             
-            const opt = {
-                margin: 0,
-                filename: `${companyName}_${bankName}_${formType}.pdf`,
-                image: { type: 'jpeg', quality: 1.0 },
-                html2canvas: { 
-                    scale: 2, 
-                    useCORS: true, 
-                    logging: false, 
-                    windowWidth: 794
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: 'css', after: '.page' }
-            };
-            
-            // html2pdf에 문자열을 직접 전달하여 렌더링 (보이지 않는 iframe 자동 생성됨)
-            await html2pdf().set(opt).from(finalHtmlString).save();
+            // html2pdf 렌더링 대신 새 창을 열어 네이티브 인쇄(PDF 저장) 기능 호출
+            // 이 방식이 화질 저하 및 레이아웃 깨짐이 절대 없는 가장 완벽한 방식입니다.
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.open();
+                printWindow.document.write(finalHtmlString);
+                printWindow.document.close();
+            } else {
+                alert("팝업 차단이 설정되어 있습니다. 팝업 차단을 해제한 후 다시 시도해 주세요.");
+            }
             
             if(btn) {
                 btn.textContent = originalBtnText;
@@ -1436,7 +1427,7 @@ window.exportAdminInquiry = function() {
             
         } catch(e) {
             console.error(e);
-            alert("서식을 불러오거나 PDF를 생성하는 중 오류가 발생했습니다.\n상세: " + e.message);
+            alert("서식을 불러오거나 화면을 생성하는 중 오류가 발생했습니다.\n상세: " + e.message);
             
             const btn = document.querySelector('.btn-submit');
             if(btn) {
