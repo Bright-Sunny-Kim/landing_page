@@ -1339,16 +1339,21 @@ window.exportAdminInquiry = function() {
 
 
     // PDF 생성 기능
+        // PDF 생성 기능
     window.generatePDF = async function() {
         const formType = document.getElementById('pdf-form-type').value;
-        const bankName = document.getElementById('pdf-bank-name').value;
-        const branchName = document.getElementById('pdf-branch-name').value;
+        const bankName = document.getElementById('pdf-bank-name').value || '';
+        const branchName = document.getElementById('pdf-branch-name').value || '';
         const cpaInfo = document.getElementById('pdf-cpa-info').value || '________';
         const companyName = document.getElementById('pdf-company-name').value || '________';
         const ceoName = document.getElementById('pdf-ceo-name').value || '________';
         
         const inquiryDateStr = document.getElementById('pdf-inquiry-date').value;
         const baseDateStr = document.getElementById('pdf-base-date').value;
+        
+        // 새로 추가된 시작일/종료일
+        const targetStartStr = document.getElementById('pdf-target-start') ? document.getElementById('pdf-target-start').value : '';
+        const targetEndStr = document.getElementById('pdf-target-end') ? document.getElementById('pdf-target-end').value : '';
         
         let iYear = '20__', iMonth = '__', iDay = '__';
         if(inquiryDateStr) {
@@ -1361,15 +1366,34 @@ window.exportAdminInquiry = function() {
             const d = new Date(baseDateStr);
             bYear = d.getFullYear(); bMonth = d.getMonth() + 1; bDay = d.getDate();
         }
+        
+        // 대상기간 포맷팅
+        let targetPeriod = '';
+        if (targetStartStr && targetEndStr) {
+            targetPeriod = `${targetStartStr.replace(/-/g, '.')} ~ ${targetEndStr.replace(/-/g, '.')}`;
+        }
 
         try {
+            // 버튼 상태 변경
+            const btn = document.querySelector('.btn-submit');
+            const originalBtnText = btn.textContent;
+            btn.textContent = "생성 중...";
+            btn.disabled = true;
+
             // 템플릿 로드
             const response = await fetch(`/static/pdf_templates/${encodeURIComponent(formType)}.html`);
             if(!response.ok) throw new Error("Template not found");
             const htmlText = await response.text();
             
             const container = document.getElementById('pdf-template-container');
+            // DOM에 추가하여 브라우저가 CSS를 계산할 수 있게 하되, 화면에 보이지 않게 처리
             container.innerHTML = htmlText;
+            container.style.display = 'block';
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+            container.style.width = '210mm'; // A4 width
+            container.style.backgroundColor = '#ffffff';
             
             // 데이터 매핑
             const fields = {
@@ -1382,9 +1406,52 @@ window.exportAdminInquiry = function() {
                 'p2-company-name-sign': companyName,
                 'p-base-year': bYear, 'p-base-month': bMonth, 'p-base-day': bDay,
                 'p3-company-name': companyName,
-                'p3-base-year': bYear, 'p3-base-month': bMonth, 'p3-base-day': bDay
+                'p3-base-year': bYear, 'p3-base-month': bMonth, 'p3-base-day': bDay,
+                'p-target-period': targetPeriod
             };
             
+            for (const [id, val] of Object.entries(fields)) {
+                const els = container.querySelectorAll('#' + id);
+                els.forEach(el => {
+                    if(el) el.textContent = val;
+                });
+            }
+            
+            // PDF 옵션 - 매우 중요: layout 깨짐 방지
+            const opt = {
+                margin: 0,
+                filename: `${companyName}_${bankName}_${formType}.pdf`,
+                image: { type: 'jpeg', quality: 1.0 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false, 
+                    windowWidth: 794 // 210mm in pixels at 96dpi
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: 'css', after: '.page' }
+            };
+            
+            // PDF 생성 (비동기 처리 완벽 대응)
+            await html2pdf().set(opt).from(container).save();
+            
+            // 복구
+            btn.textContent = originalBtnText;
+            btn.disabled = false;
+            container.innerHTML = '';
+            
+        } catch(e) {
+            console.error(e);
+            alert("서식을 불러오거나 PDF를 생성하는 중 오류가 발생했습니다.
+상세: " + e.message);
+            
+            const btn = document.querySelector('.btn-submit');
+            if(btn) {
+                btn.textContent = "[PDF 다운로드]";
+                btn.disabled = false;
+            }
+        }
+    };
             for (const [id, val] of Object.entries(fields)) {
                 const el = container.querySelector('#' + id);
                 if(el) el.textContent = val;
