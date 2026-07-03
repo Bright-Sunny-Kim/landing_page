@@ -1414,6 +1414,6 @@ window.exportAdminInquiry = function() {
             
         } catch(e) {
             console.error(e);
-            alert("서식을 불러오거나 PDF를 생성하는 중 오류가 발생했습니다.");
+            alert("서식을 불러오거나 PDF를 생성하는 중 오류가 발생했습니다.\n상세: " + e.message);
         }
     };
