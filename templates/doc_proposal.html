@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>제안서 - {{ doc.doc_number }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background: #fff;
+        }
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 10mm auto;
+            background: white;
+            box-sizing: border-box;
+            position: relative;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 20px;
+            color: #2563eb;
+        }
+        .header h1 {
+            font-size: 28px;
+            letter-spacing: 5px;
+            margin: 0 0 10px 0;
+        }
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .client-info, .company-info {
+            width: 48%;
+        }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .info-table th, .info-table td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+        }
+        .info-table th {
+            background-color: #f3f4f6;
+            text-align: left;
+            width: 30%;
+        }
+        .title-row {
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e40af;
+            border-left: 4px solid #2563eb;
+            padding-left: 10px;
+        }
+        .content-box {
+            border: 1px solid #e5e7eb;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.8;
+            background-color: #fafafa;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            font-size: 13px;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid #d1d5db;
+            padding: 10px;
+        }
+        .items-table th {
+            background-color: #f3f4f6;
+            text-align: center;
+        }
+        .items-table td.num {
+            text-align: right;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #e5e7eb;
+        }
+        .footer {
+            margin-top: 50px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 20px;
+        }
+        
+        @media print {
+            body { background: none; }
+            .page { margin: 0; padding: 15mm; box-shadow: none; }
+            .no-print { display: none; }
+            @page { size: A4; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align: center; padding: 20px; background: #f0f0f0;">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">PDF 인쇄하기</button>
+    </div>
+
+    <div class="page">
+        <div class="header">
+            <h1>업 무 제 안 서</h1>
+        </div>
+
+        <div class="info-section">
+            <div class="client-info">
+                <table class="info-table">
+                    <tr>
+                        <th>수 신</th>
+                        <td>{{ doc.client_name }} 대표이사 귀하</td>
+                    </tr>
+                    <tr>
+                        <th>제안일자</th>
+                        <td>{{ doc.created_at[:10] }}</td>
+                    </tr>
+                    <tr>
+                        <th>문서번호</th>
+                        <td>{{ doc.doc_number }}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="company-info">
+                <table class="info-table">
+                    <tr>
+                        <th>제 안 사</th>
+                        <td>혜안 파트너스</td>
+                    </tr>
+                    <tr>
+                        <th>주 소</th>
+                        <td>서울시 강남구 테헤란로 123</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="title-row">
+            제안명 : {{ doc.title }}
+        </div>
+
+        <div class="content-box">
+            귀사의 무궁한 발전을 기원합니다.<br><br>
+            당사는 위 제안명과 관련하여, 다음과 같이 최고 수준의 서비스와 솔루션을 제공하고자 본 제안서를 제출합니다. 본 제안을 통해 귀사의 비즈니스 효율성 증대와 성공적인 목표 달성에 기여할 것을 확신합니다.
+        </div>
+
+        <h3 style="margin-bottom:10px; font-size:15px; color:#374151;">■ 예상 소요 예산 및 내역</h3>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>제안 항목</th>
+                    <th>단가</th>
+                    <th>수량</th>
+                    <th>금액 (VAT 별도)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td style="text-align: center;">{{ loop.index }}</td>
+                    <td>{{ item.category }}</td>
+                    <td class="num">{{ "{:,.0f}".format(item.unit_price) }}</td>
+                    <td style="text-align: center;">{{ "{:,.0f}".format(item.quantity) }}</td>
+                    <td class="num">{{ "{:,.0f}".format(item.total_price) }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="4" style="text-align: center;">총 제안 금액 (합계)</td>
+                    <td class="num">{{ "{:,.0f}".format(doc.total_amount) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            본 제안서에 포함된 내용은 혜안 파트너스의 영업 비밀에 해당하므로, 당사의 서면 동의 없이 제3자에게 공개하거나 복제할 수 없습니다.<br>
+            <strong>혜 안 파 트 너 스</strong>
+        </div>
+    </div>
+</body>
+</html>

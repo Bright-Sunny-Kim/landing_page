@@ -615,6 +615,91 @@
                     </table>
                 </div>
             </div>
+
+            <!-- 수수료 및 청구 관리 (문서 자동화) 뷰 -->
+            <div class="glass-card dashboard-card master-card" id="billing-dashboard-view" style="display: none;">
+                <header class="dashboard-header">
+                    <div class="status-badge master-badge" style="background: rgba(167,139,250,0.1); color: #a78bfa;">
+                        <span class="pulse-dot"></span>
+                        <span>문서 자동화 및 청구 관리</span>
+                    </div>
+                    <h2>제안서 / 견적서 / 청구서 발급 현황</h2>
+                    <p class="welcome-message">고객사에게 발송할 수수료 및 서비스 문서를 생성하고 이력을 관리합니다.</p>
+                </header>
+                
+                <div class="action-bar" style="display: flex; gap: 15px; margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; align-items: center;">
+                    <button class="btn-submit" onclick="openBillingDocForm('quote')" style="padding: 8px 16px; width: auto; font-size: 0.9rem;">+ 새 견적서</button>
+                    <button class="btn-submit" onclick="openBillingDocForm('proposal')" style="padding: 8px 16px; width: auto; font-size: 0.9rem;">+ 새 제안서</button>
+                    <button class="btn-submit" onclick="openBillingDocForm('invoice')" style="padding: 8px 16px; width: auto; font-size: 0.9rem;">+ 새 청구서</button>
+                    <div style="flex: 1;"></div>
+                    <button class="btn-logout" onclick="loadBillingDocs()" style="padding: 8px 16px; width: auto; font-size: 0.9rem;">새로고침</button>
+                </div>
+
+                <div class="table-container">
+                    <table class="partners-table">
+                        <thead>
+                            <tr>
+                                <th>생성일자</th>
+                                <th>문서종류</th>
+                                <th>문서번호</th>
+                                <th>의뢰인/고객명</th>
+                                <th>건명/제목</th>
+                                <th>총금액</th>
+                                <th>작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="billing-doc-list">
+                            <!-- JS로 렌더링 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 문서 작성 폼 (처음엔 숨김) -->
+                <div id="billing-doc-form-container" style="display: none; margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                    <h3 id="billing-form-title" style="margin-bottom: 15px;">새 문서 작성</h3>
+                    <form id="billing-doc-form">
+                        <input type="hidden" id="billing-doc-type" name="doc_type">
+                        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <label>문서번호</label>
+                                <input type="text" id="billing-doc-number" class="input-field" placeholder="예: 2024-001" required>
+                            </div>
+                            <div style="flex: 1;">
+                                <label>의뢰인명</label>
+                                <input type="text" id="billing-client-name" class="input-field" placeholder="기업명 입력" required>
+                            </div>
+                            <div style="flex: 2;">
+                                <label>건명/제목</label>
+                                <input type="text" id="billing-doc-title" class="input-field" placeholder="예: 2024년 외부회계감사" required>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <h4>상세 내역 (항목)</h4>
+                            <table class="partners-table" style="margin-top: 10px;">
+                                <thead>
+                                    <tr>
+                                        <th>구분(항목명)</th>
+                                        <th>단위금액</th>
+                                        <th>수량</th>
+                                        <th>총금액</th>
+                                        <th>삭제</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="billing-items-body">
+                                    <!-- 동적 항목 -->
+                                </tbody>
+                            </table>
+                            <button type="button" class="btn-logout" onclick="addBillingItem()" style="margin-top: 10px; padding: 5px 10px;">+ 항목 추가</button>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" class="btn-logout" onclick="closeBillingDocForm()">취소</button>
+                            <button type="submit" class="btn-submit" style="width: auto; padding: 10px 20px;">문서 저장</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </main>
     </div>
     

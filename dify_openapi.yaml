@@ -1,0 +1,42 @@
+openapi: 3.0.0
+info:
+  title: Hyean RAG Retrieval API
+  version: 1.0.0
+  description: 혜안 파트너스 회계감사 기준서 벡터 검색 API
+servers:
+  - url: https://hyean-dskim.com
+    description: Production Server
+paths:
+  /api/dify/retrieval:
+    post:
+      summary: 기준서 조항 검색 (Retrieve Context Chunks)
+      operationId: retrieveContext
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: 사용자의 질문 또는 검색 키워드
+      responses:
+        '200':
+          description: 성공적으로 관련 조항 목록을 반환함
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        content:
+                          type: string
+                          description: 기준서 카테고리, 문서명, 조항명 및 본문 내용
+                        score:
+                          type: number
+                          description: 코사인 유사도 점수 (Cosine Similarity)

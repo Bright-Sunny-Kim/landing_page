@@ -2425,3 +2425,44 @@ textarea:focus {
     to { opacity: 1; transform: translateY(0); }
 }
 
+
+/* Markdown Content Styling */
+.message-text-container {
+    word-break: break-word;
+}
+.message-text-container h1, .message-text-container h2, .message-text-container h3 {
+    margin-top: 1.2em;
+    margin-bottom: 0.6em;
+    font-weight: 700;
+    color: #fff;
+}
+.message-text-container h3 {
+    font-size: 1.15rem;
+    color: #818cf8;
+}
+.message-text-container p {
+    margin-bottom: 0.8em;
+}
+.message-text-container p:last-child {
+    margin-bottom: 0;
+}
+.message-text-container ul, .message-text-container ol {
+    margin-left: 1.5em;
+    margin-bottom: 1em;
+}
+.message-text-container li {
+    margin-bottom: 0.4em;
+    display: list-item;
+    list-style-type: disc;
+}
+.message-text-container strong {
+    font-weight: 700;
+    color: #c7d2fe;
+}
+.message-text-container code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}

@@ -1,6 +1,12 @@
 // Premium Interaction JavaScript
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof marked === 'undefined') {
+        const script = document.createElement('script');
+        script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+        document.head.appendChild(script);
+    }
+
     // 1. 로그인 폼 동적 제어 로직
     const loginForm = document.getElementById('login-form');
     const emailInput = document.getElementById('email');
@@ -786,6 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const messagesContainer = document.getElementById('faq-chat-messages');
 
     if (submitBtn && inputArea && messagesContainer) {
+        let currentConversationId = "";
         
         // Enter 키로도 전송 (Shift+Enter는 줄바꿈)
         inputArea.addEventListener('keydown', (e) => {
@@ -817,20 +824,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/faq/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, category })
+                    body: JSON.stringify({ question, category, conversation_id: currentConversationId })
                 });
 
-                const data = await response.json();
-                
                 // 4. 로딩 애니메이션 제거
                 const loadingEl = document.getElementById(loadingId);
                 if (loadingEl) loadingEl.remove();
 
-                if (response.ok) {
-                    // 5. AI 답변 추가
-                    appendMessage('ai', data.answer, data.sources);
-                } else {
-                    appendMessage('ai', '오류가 발생했습니다: ' + (data.error || '서버 에러'));
+                if (!response.ok) {
+                    appendMessage('ai', '오류가 발생했습니다: 서버 에러');
+                    return;
+                }
+
+                // 5. 스트리밍(SSE) 읽기
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let fullText = '';
+                const contentP = appendMessage('ai', '', []);
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.substring(6).trim();
+                            if (!dataStr) continue;
+                            try {
+                                const data = JSON.parse(dataStr);
+                                if (data.event === 'message' || data.event === 'agent_message') {
+                                    fullText += data.answer;
+                                    if (contentP) {
+                                        contentP.innerHTML = typeof marked !== 'undefined' ? marked.parse(fullText) : fullText.replace(/\n/g, '<br>');
+                                    }
+                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                }
+                                if (data.conversation_id) {
+                                    currentConversationId = data.conversation_id;
+                                }
+                            } catch (e) {
+                                // JSON 파싱 에러 무시
+                            }
+                        }
+                    }
                 }
 
             } catch (error) {
@@ -847,7 +886,10 @@ document.addEventListener('DOMContentLoaded', () => {
             bubble.className = `chat-bubble ${role}-bubble`;
             
             let avatar = role === 'ai' ? '🤖' : 'P';
-            let formattedText = text.replace(/\n/g, '<br>');
+            let formattedText = '';
+            if (text) {
+                formattedText = (role === 'ai' && typeof marked !== 'undefined') ? marked.parse(text) : text.replace(/\n/g, '<br>');
+            }
             
             let sourcesHtml = '';
             if (sources && sources.length > 0) {
@@ -861,11 +903,12 @@ document.addEventListener('DOMContentLoaded', () => {
             bubble.innerHTML = `
                 <div class="bubble-avatar">${avatar}</div>
                 <div class="bubble-content">
-                    <p>${formattedText}</p>
+                    <div class="message-text-container">${formattedText}</div>
                     ${sourcesHtml}
                 </div>
             `;
             messagesContainer.appendChild(bubble);
+            return bubble.querySelector('.message-text-container');
         }
 
         function appendLoading(id) {
@@ -1177,6 +1220,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(homeDashboardView) homeDashboardView.style.display = 'block';
             });
         }
+        
+        // 수수료 및 청구 관리 (Billing) 뷰 확장
+        const adminBillingMenu = document.querySelector('.master-menu-item[data-menu="billing"]');
+        const adminBillingView = document.getElementById('billing-dashboard-view');
+        
+        if (adminBillingMenu && adminBillingView) {
+            adminBillingMenu.addEventListener('click', (e) => {
+                e.preventDefault();
+                const allCards = document.querySelectorAll('.master-card');
+                allCards.forEach(c => c.style.display = 'none');
+                
+                const allMenus = document.querySelectorAll('.master-menu-item');
+                allMenus.forEach(m => m.classList.remove('active'));
+                
+                adminBillingView.style.display = 'block';
+                adminBillingMenu.classList.add('active');
+                
+                window.loadBillingDocs();
+            });
+            
+            if(homeMenu) {
+                homeMenu.addEventListener('click', () => {
+                    if(adminBillingView) adminBillingView.style.display = 'none';
+                });
+            }
+        }
     }
 });
 
@@ -1476,3 +1545,139 @@ window.exportAdminInquiry = function() {
             }
         }
     };
+
+// ==========================================
+// 문서 자동화 (견적/제안/청구) 관련 함수
+// ==========================================
+window.loadBillingDocs = async function() {
+    try {
+        const res = await fetch('/api/billing/docs');
+        if(res.ok) {
+            const json = await res.json();
+            renderBillingDocList(json.data || []);
+        }
+    } catch(e) {
+        console.error(e);
+    }
+};
+
+function renderBillingDocList(data) {
+    const tbody = document.getElementById('billing-doc-list');
+    if(!tbody) return;
+    
+    tbody.innerHTML = '';
+    if(data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-secondary);">생성된 문서가 없습니다.</td></tr>';
+        return;
+    }
+    
+    const typeMap = { 'quote': '견적서', 'proposal': '제안서', 'invoice': '청구서' };
+    
+    data.forEach(item => {
+        const tr = document.createElement('tr');
+        const dateStr = item.created_at ? item.created_at.split('T')[0] : '';
+        const tStr = typeMap[item.type] || item.type;
+        const amt = Number(item.total_amount).toLocaleString();
+        
+        tr.innerHTML = `
+            <td>${dateStr}</td>
+            <td><span class="status-badge" style="background:rgba(167,139,250,0.1); color:#a78bfa;">${tStr}</span></td>
+            <td>${item.doc_number}</td>
+            <td style="font-weight:bold;">${item.client_name}</td>
+            <td>${item.title}</td>
+            <td style="text-align:right;">${amt} 원</td>
+            <td>
+                <button class="btn-submit" style="padding:4px 8px; font-size:0.8rem;" onclick="printBillingDoc('${item.id}', '${item.type}')">PDF 인쇄</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.openBillingDocForm = function(type) {
+    document.getElementById('billing-doc-form-container').style.display = 'block';
+    document.getElementById('billing-doc-type').value = type;
+    const typeMap = { 'quote': '견적서', 'proposal': '제안서', 'invoice': '청구서' };
+    document.getElementById('billing-form-title').innerText = '새 ' + typeMap[type] + ' 작성';
+    
+    // 초기화
+    document.getElementById('billing-doc-number').value = '';
+    document.getElementById('billing-client-name').value = '';
+    document.getElementById('billing-doc-title').value = '';
+    document.getElementById('billing-items-body').innerHTML = '';
+    addBillingItem();
+};
+
+window.closeBillingDocForm = function() {
+    document.getElementById('billing-doc-form-container').style.display = 'none';
+};
+
+window.addBillingItem = function() {
+    const tbody = document.getElementById('billing-items-body');
+    const tr = document.createElement('tr');
+    tr.className = 'billing-item-row';
+    tr.innerHTML = `
+        <td><input type="text" class="input-field item-category" placeholder="항목명" required></td>
+        <td><input type="number" class="input-field item-unit-price" placeholder="0" onchange="calcBillingRow(this)" required></td>
+        <td><input type="number" class="input-field item-qty" placeholder="1" value="1" onchange="calcBillingRow(this)" required></td>
+        <td><input type="text" class="input-field item-total" readonly placeholder="0"></td>
+        <td><button type="button" class="btn-logout" style="padding:4px 8px;" onclick="this.closest('tr').remove()">X</button></td>
+    `;
+    tbody.appendChild(tr);
+};
+
+window.calcBillingRow = function(el) {
+    const tr = el.closest('tr');
+    const price = parseFloat(tr.querySelector('.item-unit-price').value) || 0;
+    const qty = parseFloat(tr.querySelector('.item-qty').value) || 0;
+    tr.querySelector('.item-total').value = price * qty;
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const docForm = document.getElementById('billing-doc-form');
+    if(docForm) {
+        docForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const type = document.getElementById('billing-doc-type').value;
+            const doc_number = document.getElementById('billing-doc-number').value;
+            const client_name = document.getElementById('billing-client-name').value;
+            const title = document.getElementById('billing-doc-title').value;
+            
+            const rows = document.querySelectorAll('.billing-item-row');
+            const items = [];
+            rows.forEach(r => {
+                items.push({
+                    category: r.querySelector('.item-category').value,
+                    unit_price: parseFloat(r.querySelector('.item-unit-price').value) || 0,
+                    quantity: parseFloat(r.querySelector('.item-qty').value) || 0,
+                    total_price: parseFloat(r.querySelector('.item-total').value) || 0
+                });
+            });
+            
+            const payload = { type, doc_number, client_name, title, items };
+            
+            try {
+                const res = await fetch('/api/billing/docs', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if(res.ok) {
+                    alert('저장되었습니다.');
+                    closeBillingDocForm();
+                    loadBillingDocs();
+                } else {
+                    alert('저장 실패');
+                }
+            } catch(err) {
+                console.error(err);
+                alert('오류 발생');
+            }
+        });
+    }
+});
+
+window.printBillingDoc = function(docId, type) {
+    window.open('/print/docs/' + type + '?id=' + docId, '_blank');
+};

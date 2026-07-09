@@ -2,8 +2,16 @@
 import os
 import re
 import time
+import logging
 from datetime import timedelta
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify
+
+# 로깅 기본 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client, Client
@@ -939,115 +947,177 @@ def faq_ask():
         return jsonify({'error': '질문을 입력해주세요.'}), 400
 
     try:
-        # 1. 질문 임베딩 생성 (text-embedding-3-large, 1536 dims)
+        conversation_id = data.get('conversation_id', '').strip()
+        
+        # --- 일상어/금칙어 사전 필터링 (Fast Cut-off) ---
+        import json
+        from flask import Response, stream_with_context
+        
+        clean_q = question.replace(" ", "").lower()
+        trivial_keywords = ["안녕", "반가워", "고마워", "수고", "감사", "안뇽", "하이", "hello"]
+        swear_keywords = ["시발", "씨발", "개새끼", "미친", "존나", "좆", "병신"]
+        
+        # 욕설 체크
+        if any(w in clean_q for w in swear_keywords):
+            def generate_trivial():
+                msg = "올바른 언어를 사용해주세요. 저는 회계감사 기준에 대해 답변해 드리는 AI입니다."
+                yield f'data: {json.dumps({"event": "message", "answer": msg, "conversation_id": conversation_id})}\n\n'.encode('utf-8')
+            return Response(stream_with_context(generate_trivial()), content_type='text/event-stream')
+            
+        # 단순 인사 체크 (질문 길이가 짧은 경우에만 적용하여 정상적인 회계 질문이 필터링되지 않게 방어)
+        if len(clean_q) <= 10 and any(w in clean_q for w in trivial_keywords):
+            def generate_trivial():
+                msg = "안녕하세요! 혜안 파트너스 회계감사 AI 어시스턴트입니다. 회계 기준이나 감사 기준에 대해 무엇이든 물어보세요!"
+                yield f'data: {json.dumps({"event": "message", "answer": msg, "conversation_id": conversation_id})}\n\n'.encode('utf-8')
+            return Response(stream_with_context(generate_trivial()), content_type='text/event-stream')
+        # -----------------------------------------------
+        
+        logger.info(f"[FAQ Ask] Received question: {question}, category: {category}, conv_id: {conversation_id}")
+        
+        dify_api_key = os.environ.get("DIFY_API_KEY", "app-mIeCNphyBVBn6diJpnybnzdS")
+        
+        payload = {
+            "inputs": {"category": category},
+            "query": question,
+            "response_mode": "streaming",
+            "user": session.get("user_id", "web-user")
+        }
+        
+        if conversation_id:
+            payload["conversation_id"] = conversation_id
+            
+        headers = {
+            "Authorization": f"Bearer {dify_api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        import requests
+        from flask import Response, stream_with_context
+        logger.info("[FAQ Ask] Forwarding streaming request to Dify API...")
+        
+        dify_response = requests.post("https://api.dify.ai/v1/chat-messages", json=payload, headers=headers, stream=True)
+        
+        if dify_response.status_code != 200:
+            logger.error(f"[FAQ Ask] Dify API returned status {dify_response.status_code}: {dify_response.text}")
+            return jsonify({'error': 'Dify AI 챗봇 연동 중 오류가 발생했습니다.'}), 500
+
+        def generate():
+            for line in dify_response.iter_lines():
+                if line:
+                    yield line + b'\n\n'
+                    
+        return Response(stream_with_context(generate()), content_type='text/event-stream')
+
+    except Exception as e:
+        logger.error(f"FAQ Ask error: {e}", exc_info=True)
+        return jsonify({'error': '질의 처리 중 오류가 발생했습니다.'}), 500
+
+# ==========================================
+# Dify External Data Tool Retrieval API
+# ==========================================
+@app.route('/api/dify/retrieval', methods=['POST'])
+def dify_retrieval():
+    data = request.get_json() or {}
+    query = data.get('query', '').strip()
+    
+    logger.info(f"[Dify Retrieval] Received query: {query}")
+    
+    if not query:
+        logger.warning("[Dify Retrieval] Empty query received.")
+        return jsonify({"records": []}), 200
+        
+    try:
+        # 1. 임베딩
+        logger.info("[Dify Retrieval] Generating embeddings for query...")
         embed_response = openai_client.embeddings.create(
-            input=question,
+            input=query,
             model="text-embedding-3-large",
             dimensions=1536
         )
         query_embedding = embed_response.data[0].embedding
-
-        # 2. Ubuntu 서버 ChromaDB에서 유사 조항 검색
+        logger.info("[Dify Retrieval] Embedding generated successfully.")
+        
+        # 2. ChromaDB 검색
         import chromadb
         host = os.environ.get("CHROMA_SERVER_HOST", "localhost")
         port = int(os.environ.get("CHROMA_SERVER_PORT", "8000"))
+        logger.info(f"[Dify Retrieval] Connecting to ChromaDB at {host}:{port}...")
         
-        chunks = []
-        try:
-            chroma_client = chromadb.HttpClient(host=host, port=port)
-            collection = chroma_client.get_collection(name="document_chunks")
-            
-            where_clause = {}
-            if category and category != '전체':
-                where_clause["category"] = category
+        chroma_client = chromadb.HttpClient(host=host, port=port)
+        collection = chroma_client.get_collection(name="document_chunks")
+        
+        # 넉넉하게 상위 30개를 추출
+        n_results_target = 30
+        logger.info(f"[Dify Retrieval] Querying top {n_results_target} results from collection...")
+        
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=n_results_target
+        )
+        
+        initial_records = []
+        documents_for_rerank = []
+        
+        if results and results['ids'] and len(results['ids'][0]) > 0:
+            for i in range(len(results['ids'][0])):
+                metadata = results['metadatas'][0][i]
+                document = results['documents'][0][i]
+                distance = results['distances'][0][i]
+                sim = 1.0 - distance
                 
-            results = collection.query(
-                query_embeddings=[query_embedding],
-                n_results=15,
-                where=where_clause if where_clause else None
-            )
-            
-            if results and results['ids'] and len(results['ids'][0]) > 0:
-                matched_results = []
-                for i in range(len(results['ids'][0])):
-                    metadata = results['metadatas'][0][i]
-                    document = results['documents'][0][i]
-                    distance = results['distances'][0][i]
-                    sim = 1.0 - distance
+                if sim >= 0.10:
+                    doc_name = metadata.get("document_name", "알수없음")
+                    cat = metadata.get("category", "기타")
+                    art_name = metadata.get("article_name", "")
                     
-                    if sim >= 0.15: # match_threshold: text-embedding-3-large 특성 반영 (질문-문서 간 0.15~0.3도 유의미함)
-                        matched_results.append({
-                            "document_id": metadata.get("document_id", "알수없음"),
-                            "document_name": metadata.get("document_name", "알수없음"),
-                            "category": metadata.get("category", ""),
-                            "article_name": metadata.get("article_name", ""),
-                            "chunk_text": document,
-                            "score": sim
-                        })
-                
-                matched_results.sort(key=lambda x: x["score"], reverse=True)
-                chunks = matched_results
-        except Exception as e:
-            print(f"ChromaDB search error: {e}")
-
-        # 3. 컨텍스트 구성
-        if not chunks:
-            context_text = "관련된 회계기준/감사기준을 찾을 수 없습니다."
-            sources = []
+                    content = f"[{cat}] {doc_name} ({art_name})\n{document}"
+                    initial_records.append({
+                        "content": content,
+                        "score": float(sim)
+                    })
+                    documents_for_rerank.append(content)
+                    
+            logger.info(f"[Dify Retrieval] Successfully retrieved {len(initial_records)} chunks for reranking.")
         else:
-            context_pieces = []
-            sources = []
-            for idx, c in enumerate(chunks):
-                doc_id = c.get('document_id', '알수없음')
-                doc_name = c.get('document_name', '알수없음')
-                art_name = c.get('article_name', '')
-                chunk_txt = c.get('chunk_text', '')
-                cat = c.get('category', '')
-                
-                source_label = f"[{cat}] {doc_name} ({art_name})"
-                if source_label not in sources:
-                    sources.append(source_label)
-                
-                context_pieces.append(f"[{idx+1}] {source_label}\n{chunk_txt}")
+            logger.info("[Dify Retrieval] No matching results found in ChromaDB.")
             
-            context_text = "\n\n".join(context_pieces)
-
-        # 4. OpenAI ChatCompletion 호출
-        system_prompt = (
-            "당신은 '회계법인 혜안'의 최고 수준 공인회계사(CPA)이자 친절한 AI 회계감사 어시스턴트입니다.\n"
-            "사용자의 질문에 대해 주어진 [참조 기준서 조항]을 바탕으로 전문가적이고 이해하기 쉽게 설명해 주세요.\n"
-            "단순히 조문을 복사하는 것에 그치지 않고, 그 조항의 의미와 실무적 적용 방법을 풀어서 해석해 주어야 합니다.\n"
-            "답변 작성 시 반드시 다음 포맷(마크다운 형식)을 사용하여 시각적으로 명확하게 구분해 주세요:\n\n"
-            "### [결론]\n(여기에 질문에 대한 명확한 핵심 답변을 요약)\n\n"
-            "### [상세 설명]\n(여기에 결론에 대한 구체적인 이유, 실무적 적용 방법, 해석 등을 상세히 작성)\n\n"
-            "### [관련 근거(조항)]\n(여기에 참조한 기준서 카테고리, 문서명, 조항 번호 및 주요 원문 요약)\n\n"
-            "만약 참조 기준서에 관련된 내용이 전혀 없다면, '제공된 기준서 내에서는 정확한 규정을 찾을 수 없습니다.'라고 솔직히 안내하세요."
-        )
-
-        user_prompt = (
-            f"[사용자 질문]\n{question}\n\n"
-            f"[참조 기준서 조항 (RAG Context)]\n{context_text}"
-        )
-
-        chat_resp = openai_client.chat.completions.create(
-            model="gpt-4o-mini", # 비용 효율적인 빠른 모델 사용
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.4
-        )
-
-        answer = chat_resp.choices[0].message.content
-
-        return jsonify({
-            'answer': answer,
-            'sources': sources
-        })
-
+        final_records = []
+        if documents_for_rerank:
+            import cohere
+            cohere_api_key = os.environ.get("COHERE_API_KEY")
+            if cohere_api_key:
+                logger.info("[Dify Retrieval] Reranking results with Cohere...")
+                try:
+                    co_client = cohere.Client(cohere_api_key)
+                    rerank_response = co_client.rerank(
+                        model="rerank-multilingual-v3.0",
+                        query=query,
+                        documents=documents_for_rerank,
+                        top_n=5
+                    )
+                    
+                    for r_result in rerank_response.results:
+                        idx = r_result.index
+                        if r_result.relevance_score >= 0.3:
+                            initial_records[idx]["score"] = r_result.relevance_score
+                            final_records.append(initial_records[idx])
+                            
+                    logger.info(f"[Dify Retrieval] Reranking complete. Selected {len(final_records)} records.")
+                except Exception as ce:
+                    logger.error(f"[Dify Retrieval] Cohere Rerank failed: {ce}")
+                    initial_records.sort(key=lambda x: x["score"], reverse=True)
+                    final_records = initial_records[:5]
+            else:
+                logger.warning("[Dify Retrieval] No COHERE_API_KEY found, skipping rerank.")
+                initial_records.sort(key=lambda x: x["score"], reverse=True)
+                final_records = initial_records[:5]
+            
+        logger.info(f"[Dify Retrieval] Returning {len(final_records)} records.")
+        return jsonify({"records": final_records}), 200
+        
     except Exception as e:
-        print(f"FAQ Ask error: {e}")
-        return jsonify({'error': '질의 처리 중 오류가 발생했습니다.'}), 500
+        logger.error(f"[Dify Retrieval] Error: {e}", exc_info=True)
+        return jsonify({"records": []}), 500
 
 # ==========================================
 # 금융기관 조회업무 신청 시스템 (External Inquiry API)
@@ -1374,3 +1444,132 @@ def admin_export_inquiries():
         mimetype="text/csv",
         headers={"Content-disposition": "attachment; filename=inquiry_export.csv"}
     )
+
+# ==========================================
+# 수수료 및 청구 관리 (문서 자동화) API
+# ==========================================
+@app.route('/api/billing/docs', methods=['GET'])
+def get_billing_docs():
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        if not supabase:
+            return jsonify({'error': 'Supabase not initialized'}), 500
+            
+        res = supabase.table('documents').select('*').order('created_at', desc=True).execute()
+        return jsonify({'data': res.data})
+    except Exception as e:
+        logger.error(f"Error fetching docs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/billing/docs', methods=['POST'])
+def create_billing_doc():
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        data = request.json
+        doc_type = data.get('type')
+        doc_number = data.get('doc_number')
+        client_name = data.get('client_name')
+        title = data.get('title')
+        items = data.get('items', [])
+        
+        if not supabase:
+            return jsonify({'error': 'Supabase not initialized'}), 500
+            
+        # 총 금액 계산
+        total_amount = sum(float(item.get('total_price', 0)) for item in items)
+        
+        # 문서 삽입
+        doc_res = supabase.table('documents').insert({
+            'type': doc_type,
+            'doc_number': doc_number,
+            'client_name': client_name,
+            'title': title,
+            'author_email': session['email'],
+            'total_amount': total_amount,
+            'status': 'draft'
+        }).execute()
+        
+        if not doc_res.data:
+            return jsonify({'error': 'Failed to insert document'}), 500
+            
+        doc_id = doc_res.data[0]['id']
+        
+        # 품목 삽입
+        if items:
+            for item in items:
+                item['document_id'] = doc_id
+                if 'id' in item:
+                    del item['id']
+            supabase.table('document_items').insert(items).execute()
+            
+        return jsonify({'success': True, 'doc_id': doc_id})
+        
+    except Exception as e:
+        logger.error(f"Error creating doc: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/billing/docs/<doc_id>', methods=['GET'])
+def get_billing_doc_detail(doc_id):
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        if not supabase:
+            return jsonify({'error': 'Supabase not initialized'}), 500
+            
+        doc_res = supabase.table('documents').select('*').eq('id', doc_id).execute()
+        if not doc_res.data:
+            return jsonify({'error': 'Document not found'}), 404
+            
+        doc = doc_res.data[0]
+        items_res = supabase.table('document_items').select('*').eq('document_id', doc_id).execute()
+        doc['items'] = items_res.data
+        
+        return jsonify({'data': doc})
+    except Exception as e:
+        logger.error(f"Error fetching doc detail: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/print/docs/<doc_type>', methods=['GET'])
+def print_document(doc_type):
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return "Unauthorized", 403
+        
+    doc_id = request.args.get('id')
+    if not doc_id:
+        return "문서 ID가 없습니다.", 400
+        
+    try:
+        if not supabase:
+            return "Supabase not initialized", 500
+            
+        # 문서 기본 정보 가져오기
+        doc_res = supabase.table('documents').select('*').eq('id', doc_id).execute()
+        if not doc_res.data:
+            return "문서를 찾을 수 없습니다.", 404
+        doc_data = doc_res.data[0]
+        
+        # 문서 항목 리스트 가져오기
+        items_res = supabase.table('document_items').select('*').eq('document_id', doc_id).execute()
+        items_data = items_res.data
+        
+        # 템플릿 파일 매핑
+        template_map = {
+            'quote': 'doc_quote.html',
+            'proposal': 'doc_proposal.html',
+            'invoice': 'doc_invoice.html'
+        }
+        
+        template_name = template_map.get(doc_type)
+        if not template_name:
+            return "잘못된 문서 종류입니다.", 400
+            
+        return render_template(template_name, doc=doc_data, items=items_data)
+    except Exception as e:
+        logger.error(f"Error rendering print doc: {e}")
+        return str(e), 500
+
