@@ -1390,10 +1390,7 @@ def get_inquiry_logs(request_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-if __name__ == '__main__':
-    from openai import OpenAI
-    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    app.run(debug=True, host='0.0.0.0', port=5000)# --- ߰ :   Ʈ (ȣ, ޸) ---
+# --- 추가 라우트 ---
 @app.route('/api/admin/inquiry/detail/<int:request_id>', methods=['PUT'])
 def admin_update_inquiry_detail(request_id):
     if session.get('email') != MASTER_EMAIL:
@@ -1534,6 +1531,25 @@ def get_billing_doc_detail(doc_id):
         logger.error(f"Error fetching doc detail: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/billing/docs/<doc_id>', methods=['DELETE'])
+def delete_billing_doc(doc_id):
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    try:
+        if not supabase:
+            return jsonify({'error': 'Supabase not initialized'}), 500
+            
+        # document_items는 document의 FK CASCADE가 걸려있다면 자동 삭제되겠지만
+        # 안전하게 수동으로 먼저 지워준다.
+        supabase.table('document_items').delete().eq('document_id', doc_id).execute()
+        res = supabase.table('documents').delete().eq('id', doc_id).execute()
+        
+        return jsonify({'success': True, 'deleted': res.data})
+    except Exception as e:
+        logger.error(f"Error deleting doc: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/print/docs/<doc_type>', methods=['GET'])
 def print_document(doc_type):
     if 'email' not in session or session['email'] != MASTER_EMAIL:
@@ -1573,3 +1589,7 @@ def print_document(doc_type):
         logger.error(f"Error rendering print doc: {e}")
         return str(e), 500
 
+if __name__ == '__main__':
+    from openai import OpenAI
+    openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    app.run(debug=True, host='0.0.0.0', port=5000)

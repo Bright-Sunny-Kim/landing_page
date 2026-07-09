@@ -4,108 +4,277 @@
     <meta charset="UTF-8">
     <title>제안서 - {{ doc.doc_number }}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;700&display=swap');
         
+        :root {
+            --primary-color: #4b5563; 
+            --accent-color: #6366f1; 
+            --border-color: #e5e7eb;
+            --bg-light: #f9fafb;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
         body {
-            font-family: 'Noto Sans KR', sans-serif;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            color: #333;
-            background: #fff;
+            color: var(--text-main);
+            background: #e5e7eb;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
+
         .page {
             width: 210mm;
             min-height: 297mm;
-            padding: 20mm;
+            padding: 15mm;
             margin: 10mm auto;
             background: white;
             box-sizing: border-box;
             position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            
+            display: flex;
+            flex-direction: column;
         }
+
+        .page-content {
+            flex: 1; 
+        }
+
         .header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 2px solid #2563eb;
-            padding-bottom: 20px;
-            color: #2563eb;
-        }
-        .header h1 {
-            font-size: 28px;
-            letter-spacing: 5px;
-            margin: 0 0 10px 0;
-        }
-        .info-section {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 30px;
-        }
-        .client-info, .company-info {
-            width: 48%;
-        }
-        .info-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        .info-table th, .info-table td {
-            border: 1px solid #e5e7eb;
-            padding: 8px;
-        }
-        .info-table th {
-            background-color: #f3f4f6;
-            text-align: left;
-            width: 30%;
-        }
-        .title-row {
+            align-items: flex-end;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 15px;
             margin-bottom: 20px;
-            font-size: 18px;
-            font-weight: bold;
-            color: #1e40af;
-            border-left: 4px solid #2563eb;
-            padding-left: 10px;
         }
-        .content-box {
-            border: 1px solid #e5e7eb;
-            padding: 20px;
-            margin-bottom: 30px;
-            border-radius: 8px;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header-logo img {
+            height: 40px;
+            object-fit: contain;
+        }
+        .header-title h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            margin: 0;
+            color: var(--primary-color);
+        }
+        .header-docno {
+            text-align: right;
+        }
+        .docno-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .docno-value {
             font-size: 14px;
-            line-height: 1.8;
-            background-color: #fafafa;
+            font-weight: 500;
         }
-        .items-table {
+
+        .company-contact {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .contact-right {
+            text-align: right;
+        }
+
+        .doc-title {
+            text-align: center;
+            margin-bottom: 25px;
+            margin-top: 0;
+        }
+        .doc-title span {
+            display: inline-block;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 20px;
+            color: var(--primary-color);
+            position: relative;
+            padding-left: 20px;
+        }
+        .doc-title span::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+
+        .greeting {
+            font-size: 14px;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+            background: var(--bg-light);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .info-row {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        .info-label {
+            width: 100px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .info-value {
+            font-weight: 600;
+            flex: 1;
+            color: var(--text-main);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .section-title-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title-left::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+        .page-indicator {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        table.items-table {
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-            font-size: 13px;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 20px;
         }
         .items-table th, .items-table td {
-            border: 1px solid #d1d5db;
-            padding: 10px;
+            padding: 10px 8px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
         }
         .items-table th {
-            background-color: #f3f4f6;
             text-align: center;
+            font-weight: 600;
+            color: var(--text-muted);
+            background-color: white; 
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .items-table td {
+            color: var(--text-main);
         }
         .items-table td.num {
             text-align: right;
+            font-variant-numeric: tabular-nums;
         }
-        .total-row {
-            font-weight: bold;
-            background-color: #e5e7eb;
-        }
-        .footer {
-            margin-top: 50px;
-            font-size: 12px;
-            color: #666;
+        .items-table td.center {
             text-align: center;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 20px;
+        }
+        
+        .total-highlight {
+            text-align: right;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            padding: 15px 10px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .notes {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: var(--bg-light);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .footer-wrap {
+            margin-top: auto; 
+            padding-top: 25px;
+        }
+        .footer-date {
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+        .footer-sign {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: var(--text-main);
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .stamp-img {
+            width: 65px;
+            height: 65px;
+            margin-left: 15px;
+            object-fit: contain;
+            mix-blend-mode: multiply;
         }
         
         @media print {
-            body { background: none; }
-            .page { margin: 0; padding: 15mm; box-shadow: none; }
+            body { background: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .page { 
+                margin: 0; 
+                padding: 15mm; 
+                width: 100%; 
+                min-height: 297mm;
+                box-shadow: none; 
+                border: none; 
+            }
+            .page-break {
+                page-break-after: always;
+            }
             .no-print { display: none; }
             @page { size: A4; margin: 0; }
         }
@@ -113,87 +282,135 @@
 </head>
 <body>
     <div class="no-print" style="text-align: center; padding: 20px; background: #f0f0f0;">
-        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">PDF 인쇄하기</button>
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; border:none; background:#6366f1; color:white; border-radius:5px; font-weight:bold;">PDF 인쇄하기</button>
+        <p style="font-size:12px; color:#666; margin-top:5px;">※ 3항목 초과 시, 완벽한 양식의 다음 장이 자동으로 생성되어 인쇄됩니다.</p>
     </div>
 
-    <div class="page">
-        <div class="header">
-            <h1>업 무 제 안 서</h1>
-        </div>
+    {% set total_items_count = items|length %}
+    {% if total_items_count == 0 %}
+        {% set chunked_items = [[]] %}
+    {% else %}
+        {% set chunked_items = items | batch(3) | list %}
+    {% endif %}
+    {% set total_pages = chunked_items|length %}
 
-        <div class="info-section">
-            <div class="client-info">
-                <table class="info-table">
-                    <tr>
-                        <th>수 신</th>
-                        <td>{{ doc.client_name }} 대표이사 귀하</td>
-                    </tr>
-                    <tr>
-                        <th>제안일자</th>
-                        <td>{{ doc.created_at[:10] }}</td>
-                    </tr>
-                    <tr>
-                        <th>문서번호</th>
-                        <td>{{ doc.doc_number }}</td>
-                    </tr>
-                </table>
+    {% for chunk in chunked_items %}
+    <div class="page {% if not loop.last %}page-break{% endif %}">
+        <div class="page-content">
+            <!-- 헤더 및 연락처 (공통) -->
+            <div class="header">
+                <div class="header-left">
+                    <div class="header-logo">
+                        <img src="/static/images/logo_transparent.png" alt="로고">
+                    </div>
+                    <div class="header-title">
+                        <h1>회계법인 혜안</h1>
+                    </div>
+                </div>
+                <div class="header-docno">
+                    <div class="docno-label">Document No.</div>
+                    <div class="docno-value">{{ doc.doc_number }}</div>
+                </div>
             </div>
-            
-            <div class="company-info">
-                <table class="info-table">
-                    <tr>
-                        <th>제 안 사</th>
-                        <td>혜안 파트너스</td>
-                    </tr>
-                    <tr>
-                        <th>주 소</th>
-                        <td>서울시 강남구 테헤란로 123</td>
-                    </tr>
-                </table>
+
+            <div class="company-contact">
+                <div class="contact-left">
+                    경기도 수원시 팔달구 경수대로 488, 2층 202호<br>
+                    T. 031-231-0003&nbsp;&nbsp;&nbsp;F. 031-898-6655
+                </div>
+                <div class="contact-right">
+                    담당이사 <strong>김동선</strong><br>
+                    M. 010-9429-4182<br>
+                    E. cpaeastsun@gmail.com
+                </div>
             </div>
+
+            {% if loop.first %}
+            <!-- 첫 페이지에만 표시: 제목, 인사말, 개요 -->
+            <div class="doc-title">
+                <span>제안서</span>
+            </div>
+
+            <div class="greeting">
+                귀 법인(사업장)의 무궁한 발전을 기원합니다.<br>
+                의뢰하신 업무와 관련하여 아래와 같이 제안서를 제출하오니 참조하시기 바랍니다.
+            </div>
+
+            <div class="section-title">
+                <div class="section-title-left">개요</div>
+            </div>
+            <div class="info-grid">
+                <div class="info-row">
+                    <div class="info-label">의 뢰 인</div>
+                    <div class="info-value">{{ doc.client_name }} 귀하</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">건 명</div>
+                    <div class="info-value">{{ doc.title }}</div>
+                </div>
+                <div class="info-row">
+                    <div class="info-label">작 성 일</div>
+                    <div class="info-value">{{ doc.created_at[:10] }}</div>
+                </div>
+            </div>
+            {% else %}
+            <!-- 2페이지부터는 상단 여백만 살짝 줌 -->
+            <div style="height: 30px;"></div>
+            {% endif %}
+
+            <!-- 제안내역 (공통) -->
+            <div class="section-title">
+                <div class="section-title-left">제안 상세 내역</div>
+                {% if total_pages > 1 %}
+                <div class="page-indicator">{{ loop.index }} / {{ total_pages }} 페이지</div>
+                {% endif %}
+            </div>
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width:40%;">구분 (제안항목)</th>
+                        <th style="width:25%;">단위금액 (원)</th>
+                        <th style="width:10%;">수량</th>
+                        <th style="width:25%;">금액 (원)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in chunk %}
+                    <tr>
+                        <td class="center" style="font-weight:500;">{{ item.category }}</td>
+                        <td class="num">{{ "{:,.0f}".format(item.unit_price) }}</td>
+                        <td class="center">{{ item.quantity }}</td>
+                        <td class="num">{{ "{:,.0f}".format(item.total_price) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- 총 금액 하이라이트는 모든 페이지에 노출 -->
+            <div class="total-highlight">
+                <span style="font-size:14px; font-weight:500; color:#6b7280; margin-right:15px;">총 제안금액 (VAT 별도)</span>
+                ₩ {{ "{:,.0f}".format(doc.total_amount) }}
+            </div>
+
+            {% if loop.last %}
+            <!-- 주의사항은 마지막 페이지에만 노출 -->
+            <div class="notes">
+                ※ 본 제안서에 포함된 내용은 혜안 파트너스의 영업 비밀에 해당하므로, 당사의 서면 동의 없이 제3자에게 공개하거나 복제할 수 없습니다.
+            </div>
+            {% endif %}
         </div>
 
-        <div class="title-row">
-            제안명 : {{ doc.title }}
-        </div>
-
-        <div class="content-box">
-            귀사의 무궁한 발전을 기원합니다.<br><br>
-            당사는 위 제안명과 관련하여, 다음과 같이 최고 수준의 서비스와 솔루션을 제공하고자 본 제안서를 제출합니다. 본 제안을 통해 귀사의 비즈니스 효율성 증대와 성공적인 목표 달성에 기여할 것을 확신합니다.
-        </div>
-
-        <h3 style="margin-bottom:10px; font-size:15px; color:#374151;">■ 예상 소요 예산 및 내역</h3>
-        <table class="items-table">
-            <thead>
-                <tr>
-                    <th>No.</th>
-                    <th>제안 항목</th>
-                    <th>단가</th>
-                    <th>수량</th>
-                    <th>금액 (VAT 별도)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td style="text-align: center;">{{ loop.index }}</td>
-                    <td>{{ item.category }}</td>
-                    <td class="num">{{ "{:,.0f}".format(item.unit_price) }}</td>
-                    <td style="text-align: center;">{{ "{:,.0f}".format(item.quantity) }}</td>
-                    <td class="num">{{ "{:,.0f}".format(item.total_price) }}</td>
-                </tr>
-                {% endfor %}
-                <tr class="total-row">
-                    <td colspan="4" style="text-align: center;">총 제안 금액 (합계)</td>
-                    <td class="num">{{ "{:,.0f}".format(doc.total_amount) }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div class="footer">
-            본 제안서에 포함된 내용은 혜안 파트너스의 영업 비밀에 해당하므로, 당사의 서면 동의 없이 제3자에게 공개하거나 복제할 수 없습니다.<br>
-            <strong>혜 안 파 트 너 스</strong>
+        <!-- 하단 서명부 (매 페이지 고정 노출) -->
+        <div class="footer-wrap">
+            <div class="footer-date">
+                {{ doc.created_at[:10] }}
+            </div>
+            <div class="footer-sign">
+                대표이사 공인회계사 윤 창 인 
+                <img src="/static/images/stamp.png" alt="직인" class="stamp-img">
+            </div>
         </div>
     </div>
+    {% endfor %}
 </body>
 </html>

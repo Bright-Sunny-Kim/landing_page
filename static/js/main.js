@@ -1549,17 +1549,46 @@ window.exportAdminInquiry = function() {
 // ==========================================
 // 문서 자동화 (견적/제안/청구) 관련 함수
 // ==========================================
+window.billingDocsData = []; // 데이터 전역 저장용
+
 window.loadBillingDocs = async function() {
     try {
         const res = await fetch('/api/billing/docs');
         if(res.ok) {
             const json = await res.json();
-            renderBillingDocList(json.data || []);
+            window.billingDocsData = json.data || [];
+            renderBillingDocList(window.billingDocsData);
         }
     } catch(e) {
         console.error(e);
     }
 };
+
+// 문서번호 자동 생성 함수
+function generateBillingDocNumber(type) {
+    const codeMap = { 'quote': '02A', 'proposal': '02B', 'invoice': '02C' };
+    const code = codeMap[type] || '000';
+    
+    const now = new Date();
+    const yy = String(now.getFullYear()).substring(2,4);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateStr = yy + mm + dd;
+    
+    const prefix = `HyeAn${code}${dateStr}`;
+    
+    let count = 0;
+    if(window.billingDocsData) {
+        window.billingDocsData.forEach(doc => {
+            if(doc.type === type && doc.doc_number && doc.doc_number.startsWith(prefix)) {
+                count++;
+            }
+        });
+    }
+    
+    const seq = String(count + 1).padStart(3, '0');
+    return prefix + seq;
+}
 
 function renderBillingDocList(data) {
     const tbody = document.getElementById('billing-doc-list');
@@ -1573,7 +1602,10 @@ function renderBillingDocList(data) {
     
     const typeMap = { 'quote': '견적서', 'proposal': '제안서', 'invoice': '청구서' };
     
-    data.forEach(item => {
+    // 최근 3개만 표시
+    const displayData = data.slice(0, 3);
+    
+    displayData.forEach(item => {
         const tr = document.createElement('tr');
         const dateStr = item.created_at ? item.created_at.split('T')[0] : '';
         const tStr = typeMap[item.type] || item.type;
@@ -1588,11 +1620,28 @@ function renderBillingDocList(data) {
             <td style="text-align:right;">${amt} 원</td>
             <td>
                 <button class="btn-submit" style="padding:4px 8px; font-size:0.8rem;" onclick="printBillingDoc('${item.id}', '${item.type}')">PDF 인쇄</button>
+                <button class="btn-logout" style="padding:4px 8px; font-size:0.8rem; background: rgba(239, 68, 68, 0.2); color: #ef4444;" onclick="deleteBillingDoc('${item.id}')">삭제</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
+
+window.deleteBillingDoc = async function(docId) {
+    if(!confirm('해당 문서를 정말 삭제하시겠습니까?')) return;
+    try {
+        const res = await fetch('/api/billing/docs/' + docId, { method: 'DELETE' });
+        if(res.ok) {
+            alert('삭제되었습니다.');
+            loadBillingDocs();
+        } else {
+            alert('삭제 실패');
+        }
+    } catch(err) {
+        console.error(err);
+        alert('오류 발생');
+    }
+};
 
 window.openBillingDocForm = function(type) {
     document.getElementById('billing-doc-form-container').style.display = 'block';
@@ -1600,8 +1649,8 @@ window.openBillingDocForm = function(type) {
     const typeMap = { 'quote': '견적서', 'proposal': '제안서', 'invoice': '청구서' };
     document.getElementById('billing-form-title').innerText = '새 ' + typeMap[type] + ' 작성';
     
-    // 초기화
-    document.getElementById('billing-doc-number').value = '';
+    // 자동 문서 번호 입력 및 폼 초기화
+    document.getElementById('billing-doc-number').value = generateBillingDocNumber(type);
     document.getElementById('billing-client-name').value = '';
     document.getElementById('billing-doc-title').value = '';
     document.getElementById('billing-items-body').innerHTML = '';
