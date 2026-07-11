@@ -14,6 +14,14 @@ if [ -d "${APP_DIR}/.git" ]; then
     git fetch origin
     git checkout "${BRANCH}"
     git pull origin "${BRANCH}"
+elif [ -d "${APP_DIR}" ]; then
+    if [ -n "$(ls -A "${APP_DIR}" 2>/dev/null)" ]; then
+        echo "ERROR: ${APP_DIR} exists but is not a git repository."
+        echo "Remove the directory or empty it before re-running deploy."
+        exit 1
+    fi
+    git clone --branch "${BRANCH}" "${REPO_URL}" "${APP_DIR}"
+    cd "${APP_DIR}"
 else
     git clone --branch "${BRANCH}" "${REPO_URL}" "${APP_DIR}"
     cd "${APP_DIR}"
@@ -39,6 +47,6 @@ echo "Run: cd ${APP_DIR} && source venv/bin/activate && gunicorn --bind 127.0.0.
 echo "Test: curl http://127.0.0.1:5000/"
 
 echo "==> [6/6] Optional: user systemd service"
-echo "Copy server_setup/portal/hyean-portal-user.service to ~/.config/systemd/user/"
-echo "Edit paths, then: systemctl --user daemon-reload && systemctl --user enable --now hyean-portal"
+echo "Copy server_setup/portal/hyean-portal-user.service to ~/.config/systemd/user/hyean-portal-user.service"
+echo "Then: systemctl --user daemon-reload && systemctl --user enable --now hyean-portal-user"
 echo "Done."
