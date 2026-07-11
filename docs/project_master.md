@@ -33,6 +33,23 @@ un_parser.bat를 구성했습니다.
    - 기준서 폴더명 및 파일 분류 메타데이터의 한글 의존성(인코딩 에러)을 해결하기 위해 K-IFRS, K-GAAP, SME-GAAP, NPO-GAAP, SPC-GAAP, K-GAAS 등 영문 약자로 구조를 개편했습니다.
    - 사용자 편의를 위해 UI(company.html) 드롭다운은 한글로 표기하되, 서버 전달 시 영문으로 매핑되도록 처리했습니다.
 
+## 최근 업데이트 (2026-07-11) - Ubuntu 단일 노드 마이그레이션 Phase 1 착수
+1. **마이그레이션 계획 수립 (Blue-Green 전략)**
+   - Render + Windows ngrok + Dify Cloud + Ubuntu ChromaDB 분산 구조의 단점 분석 및 4단계 이전 로드맵 확정.
+   - 상세 진행 현황: `docs/migration_progress.md`, `docs/analysis_results.md` 참조.
+2. **Phase 1 사전 준비 (로컬 저장소)**
+   - `requirements.txt`에 RAG 필수 패키지(`chromadb`, `cohere`, `requests`) 추가.
+   - `server_setup/portal/` — Gunicorn systemd 유닛, 사용자 서비스, `.env.example`, `deploy.sh` 작성.
+3. **Ubuntu 서버 사전 점검 (2026-07-11)**
+   - SSH 원격 접속 확인 (`ssh.hyean-dskim.com`, cloudflared + id_server).
+   - ChromaDB(:8000), Dify(:8090), MinIO, NPM, n8n, Nextcloud Docker 서비스 정상 가동 확인.
+   - Flask Portal(:5000) 및 `/opt/hyean-portal` — **미배포** (Phase 1 잔여 작업).
+4. **Phase 1 잔여 / Phase 2~4 예정**
+   - Phase 1: Ubuntu에 Flask 배포, Gunicorn, staging.hyean-dskim.com 프록시.
+   - Phase 2: Dify Cloud → 로컬 Dify(`dify.hyean-dskim.com`) 설정 이전, `app.py` Dify URL 환경변수화.
+   - Phase 3: localhost ChromaDB 직결, ngrok 제거.
+   - Phase 4: hyean-dskim.com DNS를 Render → Ubuntu로 전환 (예상 다운타임 5~15분).
+
 # HyeAn_DSKim (회계법인 혜안 고객 포털) 프로젝트 마스터 문서
 
 ## 최근 업데이트 (2026-07-09) - 수수료 및 청구 관리 (문서 자동화) 연동 고도화

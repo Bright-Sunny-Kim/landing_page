@@ -2,6 +2,12 @@
 
 이 문서는 Supabase pgvector에 적재된 회계기준/감사기준 데이터를 Dify AI 에이전트와 연동하고 테스트하기 위한 가이드입니다.
 
+## [2026-07-11] Ubuntu 단일 노드 마이그레이션 연동 (Phase 2~3 예정)
+- **배경**: FAQ RAG는 Dify External Data Tool → Flask `/api/dify/retrieval` → ChromaDB + Cohere 경로를 사용.
+- **Phase 2 예정**: External Tool URL을 `http://172.17.0.1:5000/api/dify/retrieval`로 변경 (Dify Docker → 호스트 Flask).
+- **Phase 3 예정**: ngrok/Windows 의존 제거, `CHROMA_SERVER_HOST=localhost` 직결.
+- **진행 현황**: [migration_progress.md](./migration_progress.md)
+
 ## 1. Supabase pgvector 데이터 소스 연결
 Dify는 외부 API(External Data Tool)를 통해 데이터베이스에 쿼리할 수 있습니다. 
 

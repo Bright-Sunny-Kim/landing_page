@@ -1,5 +1,10 @@
 # AI 자동화 회계감사 프로젝트 마스터 가이드 (Audit Master Guide)
 
+## 최근 업데이트 (2026-07-11) - Ubuntu 단일 노드 마이그레이션 계획 반영
+- AI 감사 자동화 파이프라인(Flask + n8n + Dify + ChromaDB)의 **분산 구조 통합 계획** 수립.
+- Phase 1~4 Blue-Green 마이그레이션 로드맵 및 진행 현황: [migration_progress.md](./migration_progress.md)
+- Phase 2~3 완료 시 Dify External Tool → localhost Flask → ChromaDB 직결, ngrok 제거 예정.
+
 ## 최근 업데이트 (2026-07-04) - 서면조회서 발급 시스템 전면 개편
 1. **PDF 렌더링 방식 전면 교체 (안정성 확보)**
    - 기존 html2pdf.js의 IFrame 렌더링 버그(레이아웃 쏠림 및 찌그러짐 현상)를 원천 차단하기 위해, 브라우저 네이티브 인쇄(window.print) 방식을 활용한 PDF 저장 방식으로 전면 개편.

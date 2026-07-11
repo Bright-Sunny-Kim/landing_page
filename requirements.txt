@@ -11,3 +11,6 @@ openai>=1.0.0
 OpenDartReader>=0.2.1
 boto3>=1.28.0
 pyarrow>=14.0.0
+chromadb>=0.4.0
+cohere>=5.0.0
+requests>=2.31.0

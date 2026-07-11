@@ -1,0 +1,23 @@
+[Unit]
+Description=HyeAn Portal Flask App (Gunicorn, user service)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/hyean-portal
+EnvironmentFile=%h/hyean-portal/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/hyean-portal/venv/bin/gunicorn \
+    --bind 127.0.0.1:5000 \
+    --workers 2 \
+    --threads 4 \
+    --timeout 120 \
+    --access-logfile %h/logs/hyean-portal/access.log \
+    --error-logfile %h/logs/hyean-portal/error.log \
+    app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

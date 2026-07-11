@@ -65,6 +65,14 @@ Nginx Proxy Manager(대표 웹 관문)와 Cloudflare Tunnel 설정을 연동하�
 ---
 
 ## 5. 향후 대기 및 장기 과제 (Future To-Do List)
+
+### [2026-07-11] Flask Portal Ubuntu 이전 (Phase 1~4 마이그레이션)
+- **현황**: ChromaDB, Dify, MinIO, NPM 등 Docker 인프라는 가동 중. **Flask Portal(:5000)은 미배포**.
+- **목표**: Render + ngrok + Dify Cloud 분산 구조 → Ubuntu 단일 노드 + Cloudflare Tunnel 통합.
+- **Phase 1 준비 완료**: `server_setup/portal/hyean-portal.service`, `.env.example`, `requirements.txt` 패키지 추가.
+- **Phase 1 잔여**: `/opt/hyean-portal`(또는 `~/hyean-portal`) 배포, Gunicorn, `staging.hyean-dskim.com` NPM 프록시.
+- **상세**: [migration_progress.md](./migration_progress.md)
+
 1.  향후 스토리지 용량 증설 필요 시 3.5인치 내장형 HDD 추가 구매 및 장착 검토.
 2.  리눅스 GUI 원격 데스크톱(RDP) 제어 기능 구축:
     *   리눅스 서버에 `xrdp` 관련 패키지 설치.
