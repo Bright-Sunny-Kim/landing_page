@@ -9,7 +9,7 @@ WorkingDirectory=%h/hyean-portal
 EnvironmentFile=%h/hyean-portal/.env
 Environment=PYTHONUNBUFFERED=1
 ExecStart=%h/hyean-portal/venv/bin/gunicorn \
-    --bind 127.0.0.1:5000 \
+    --bind 0.0.0.0:5000 \
     --workers 2 \
     --threads 4 \
     --timeout 120 \

@@ -995,7 +995,8 @@ def faq_ask():
         from flask import Response, stream_with_context
         logger.info("[FAQ Ask] Forwarding streaming request to Dify API...")
         
-        dify_response = requests.post("https://api.dify.ai/v1/chat-messages", json=payload, headers=headers, stream=True)
+        dify_api_base_url = os.environ.get("DIFY_API_BASE_URL", "https://api.dify.ai/v1")
+        dify_response = requests.post(f"{dify_api_base_url}/chat-messages", json=payload, headers=headers, stream=True)
         
         if dify_response.status_code != 200:
             logger.error(f"[FAQ Ask] Dify API returned status {dify_response.status_code}: {dify_response.text}")

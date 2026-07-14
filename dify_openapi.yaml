@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: 혜안 파트너스 회계감사 기준서 벡터 검색 API
 servers:
-  - url: https://hyean-dskim.com
-    description: Production Server
+  - url: http://172.17.0.1:5000
+    description: Local Ubuntu Docker Bridge (staging/local Dify)
 paths:
   /api/dify/retrieval:
     post:

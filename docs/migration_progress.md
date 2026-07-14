@@ -69,14 +69,14 @@
 | 1-3 | `server_setup/portal/.env.example` 템플릿 작성 | ✅ | 2026-07-11 |
 | 1-4 | Ubuntu SSH 원격 접속 검증 (`ssh.hyean-dskim.com`) | ✅ | cloudflared + id_server |
 | 1-5 | Ubuntu Docker 서비스 확인 (ChromaDB, Dify, MinIO, NPM) | ✅ | 정상 가동 |
-| 1-6 | 소스 배포 (`/opt/hyean-portal` 또는 `~/hyean-portal`) | ☐ | |
-| 1-7 | venv + `pip install -r requirements.txt` | ☐ | |
-| 1-8 | `.env` 생성 (`CHROMA_SERVER_HOST=localhost`) | ☐ | |
-| 1-9 | Gunicorn 기동 및 헬스체크 | ☐ | |
-| 1-10 | systemd 등록 (`hyean-portal.service`) | ☐ | sudo 필요 |
-| 1-11 | NPM `staging.hyean-dskim.com` → `:5000` 프록시 | ☐ | |
+| 1-6 | 소스 배포 (`~/hyean-portal`, git clone) | ✅ | 2026-07-14, sudo 없이 `~/hyean-portal` 경로 |
+| 1-7 | venv + `pip install -r requirements.txt` | ✅ | 2026-07-14, Python 3.14 `ensurepip` 미탑재로 `--without-pip` + `get-pip.py` 우회. `sentence-transformers`가 끌어오는 GPU torch(2GB+) 대신 CPU 전용 torch(`torch==2.13.0+cpu`)로 전환 설치 |
+| 1-8 | `.env` 생성 (`CHROMA_SERVER_HOST=localhost`) | ✅ | 2026-07-14, `chmod 600`. `FLASK_SECRET_KEY`는 임시 랜덤값 — Phase 4 DNS 전환 전 Render 값과 동일하게 맞춰야 세션 유지됨 |
+| 1-9 | Gunicorn 기동 및 헬스체크 | ✅ | 2026-07-14, `curl 127.0.0.1:5000` → HTTP 200, 실제 로그인 페이지 렌더링 확인 |
+| 1-10 | systemd 등록 (`hyean-portal-user.service`) | ✅ | 2026-07-14, sudo 불필요(`~/.config/systemd/user`), `loginctl enable-linger dskim` 확인(`Linger=yes`)으로 SSH 종료/재부팅에도 유지 |
+| 1-11 | `staging.hyean-dskim.com` → `:5000` 외부 노출 | ✅ | 2026-07-14, **NPM 대신 Cloudflare Tunnel Public Hostname**으로 직결(`my-ubuntu-server` 터널에 `staging.hyean-dskim.com → http://localhost:5000` 라우트 추가). 외부 `curl -I https://staging.hyean-dskim.com` → `HTTP/1.1 200`, `Cf-Cache-Status: DYNAMIC`, 앱의 `no-store` 헤더까지 확인되어 실제 앱 응답 확인. NPM(`192.168.0.224:81`)은 이 경로에서는 불필요 — Phase 4의 `hyean-dskim.com` 본도메인 전환도 동일 방식(Cloudflare Tunnel Public Hostname 추가) 적용 예정 |
 
-**Phase 1 진행률: 약 40% (로컬 준비·서버 점검 완료, 실제 배포 미완)**
+**Phase 1 진행률: 100% 완료 (2026-07-14)** — `staging.hyean-dskim.com`이 Render를 거치지 않고 Ubuntu 서버에서 직접 서빙됨. Phase 2(Dify Cloud → 로컬 Dify 이전)로 진행 가능.
 
 #### Phase 1 원격 진행 가능 여부
 - **SSH만 있으면** `~/hyean-portal` + `systemctl --user` 로 sudo 없이 대부분 진행 가능
@@ -122,17 +122,17 @@ systemctl --user enable hyean-portal   # 사용자 서비스
 
 ---
 
-## 4. Ubuntu 서버 인프라 현황 (2026-07-11 점검)
+## 4. Ubuntu 서버 인프라 현황 (2026-07-14 갱신)
 
 | 서비스 | 포트 | 외부 URL | 상태 |
 |---|---|---|---|
 | ChromaDB | 8000 | (내부 전용) | ✅ |
 | Dify | 8090 | dify.hyean-dskim.com | ✅ |
 | MinIO | 9000/9001 | s3.hyean-dskim.com | ✅ |
-| NPM | 80/443/81 | 192.168.0.224:81 (내부) | ✅ |
+| NPM | 80/443/81 | 192.168.0.224:81 (내부) | ✅ (Phase 1 경로에서는 미사용) |
 | n8n | 5678 | n8n.hyean-dskim.com | ✅ |
 | Nextcloud | 8080 | nextcloud.hyean-dskim.com | ✅ |
-| **Flask Portal** | 5000 | (미구축) | ❌ |
+| **Flask Portal** | 5000 | staging.hyean-dskim.com (Cloudflare Tunnel 직결) | ✅ |
 
 - **SSH**: `dskim@ssh.hyean-dskim.com` (Cloudflare Access + `~/.ssh/id_server`)
 - **sudo**: passwordless sudo **미설정** → `/opt` 배포 시 비밀번호 필요
