@@ -90,35 +90,48 @@
 systemctl --user enable hyean-portal   # 사용자 서비스
 ```
 
-### Phase 2 — Dify Cloud → 로컬 Dify 이전
+### Phase 2 — Dify Cloud → 로컬 Dify 이전 ✅ 완료 (2026-07-14)
 > **참고**: Docker + Dify(`dify.hyean-dskim.com`)는 **이미 Ubuntu에 구축 완료**. 신규 설치가 아닌 설정 이전.
 
 | # | 작업 | 상태 |
 |---|---|---|
-| 2-1 | Dify Cloud 앱 DSL Export | ☐ |
-| 2-2 | 로컬 Dify Import + OpenAI Provider 설정 | ☐ |
-| 2-3 | External Tool URL → `http://172.17.0.1:5000/api/dify/retrieval` | ☐ |
-| 2-4 | 로컬 Dify API Key 발급 → `.env` `DIFY_API_KEY` | ☐ |
-| 2-5 | `app.py` Dify URL 환경변수화 (`DIFY_API_BASE_URL`) | ☐ |
+| 2-1 | Dify Cloud 앱 DSL Export | ✅ |
+| 2-2 | 로컬 Dify Import + LLM Provider 설정 (OpenAI 대신 **Gemini**로 확인) | ✅ |
+| 2-3 | External Tool(Hyean RAG Retrieval API) 재등록 → `http://172.17.0.1:5000/api/dify/retrieval` | ✅ — Custom Tool은 워크스페이스 단위라 DSL Import로 자동 이관 안 됨, 로컬 Dify에 재등록 필요했음 |
+| 2-4 | 로컬 Dify API Key 발급 → `.env` `DIFY_API_KEY` | ✅ |
+| 2-5 | `app.py` Dify URL 환경변수화 (`DIFY_API_BASE_URL`) | ✅ |
 
-### Phase 3 — 내부망 직결 + ngrok 제거
+**트러블슈팅 기록**: Gunicorn이 `127.0.0.1`에만 바인딩되어 있어 Dify Docker 컨테이너(`172.17.0.1`)가 접근 불가 → `0.0.0.0:5000`으로 변경. 서버에 배포된 `app.py`가 로컬 수정사항(2-5)을 반영 못 해 옛 Cloud URL로 요청이 가서 401 발생 → git commit/push 후 서버 `git pull`로 동기화하여 해결. `curl`로 `/api/faq/ask` 스트리밍 응답 및 access log의 `172.20.0.5`(Dify 컨테이너) → `/api/dify/retrieval` 호출까지 실증 확인.
+
+### Phase 3 — 내부망 직결 + ngrok 제거 (진행 중, 순서 조정)
 | # | 작업 | 상태 |
 |---|---|---|
-| 3-1 | `CHROMA_SERVER_HOST=localhost` 확인 | ☐ |
-| 3-2 | FAQ End-to-End 검증 (staging) | ☐ |
-| 3-3 | ngrok / Windows Flask 중지 | ☐ |
-| 3-4 | 24시간 soak test | ☐ |
+| 3-1 | `CHROMA_SERVER_HOST=localhost` 확인 | ✅ — ChromaDB heartbeat 정상, 실제 시드 문서(K-GAAP 제7장 등) 검색 확인 |
+| 3-2 | FAQ End-to-End 검증 (staging) | ✅ — Agent → Custom Tool → Flask → ChromaDB 전체 체인 access log로 교차 검증 |
+| 3-4 | 24시간 soak test | 🕐 진행 중 — 클라우드 스케줄(`hyean-portal-soak-test`, 매시간)로 자동화, 기준 시각 2026-07-14 21:06:20 KST, 종료 2026-07-15 21:06:20 KST |
+| 3-3 | ngrok / Windows Flask 중지 | ⏸ **Phase 4 이후로 순서 변경**. 이유: 현재 프로덕션(`hyean-dskim.com`, Dify Cloud)이 이 ngrok 터널에 의존 중이라 지금 끄면 실서비스 챗봇이 즉시 중단됨 |
 
 ### Phase 4 — DNS 전환 (Render → Ubuntu)
-| # | 작업 | 상태 |
-|---|---|---|
-| 4-1 | Go/No-Go 체크리스트 통과 | ☐ |
-| 4-2 | NPM `hyean-dskim.com` → `:5000` 프록시 | ☐ |
-| 4-3 | Cloudflare DNS 전환 | ☐ |
-| 4-4 | Render Suspend (48h 롤백 대기) | ☐ |
-| 4-5 | Render Delete + Dify Cloud/ngrok 정리 | ☐ |
+> **2026-07-14 재점검 결과**: `hyean-dskim.com`과 `staging.hyean-dskim.com`의 `nslookup` 결과가 **완전히 동일한 Cloudflare 엣지 IP**(`104.21.33.129`, `172.67.145.48` 등)로 나옴 — 즉 운영 도메인도 이미 Cloudflare 프록시(오렌지 클라우드)를 거치고 있음. 실제 목적지(Render vs Ubuntu)는 클라이언트 DNS 캐시가 아니라 **Cloudflare 엣지 내부 라우팅 설정**이 결정하므로, 기존에 가정했던 "TTL 300초 기다려야 하는 전통적 DNS 전파" 방식이 아니다. NPM도 필요 없이 staging과 동일하게 **Cloudflare Tunnel Public Hostname 전환**만으로 처리 가능할 것으로 재평가됨.
 
-**예상 다운타임**: DNS 전환 시 5~15분 (TTL 300초 기준)
+| # | 작업 | 상태 | 비고 |
+|---|---|---|---|
+| 4-0a | Render 환경변수 전체 목록 백업 (`FLASK_SECRET_KEY` 포함) | ✅ | 2026-07-14. Render는 "My Workspace → landing_page" 서비스(`srv-d89moagjo6nc73e0fae0`)에서 확인. 개별 Environment Variables(`FLASK_SECRET_KEY`, `SUPABASE_KEY`, `SUPABASE_URL`) + Secret File(로컬 `.env`와 동일 내용) 둘 다 존재. `OPENAI_API_KEY`/`COHERE_API_KEY`는 Render에 없었음 — 구조상 정상(옛 아키텍처에서 `/api/dify/retrieval`은 Render가 아닌 Windows PC+ngrok에서 실행됐기 때문에 Render가 쓸 일이 없었음). 서버 `.env`에는 이미 확보되어 있고 실제 ChromaDB 검색 테스트로 정상 작동 확인됨. 유일한 의도된 차이는 `CHROMA_SERVER_HOST`(Render: Tailscale IP `100.74.25.71` vs 서버: `localhost`) |
+| 4-0b | `FLASK_SECRET_KEY` 서버 `.env`에 Render 값과 동일하게 반영 | ✅ | 2026-07-14. `hyean-partners-secret-secure-key-90210`로 서버 `.env` 갱신 및 재기동 완료 — 전환 시 기존 로그인 세션 유지됨 |
+| 4-1 | Go/No-Go 체크리스트 통과 (아래 참조) | ☐ | |
+| 4-2 | ~~NPM 프록시~~ → **Cloudflare Tunnel Public Hostname 추가** (`hyean-dskim.com` → `http://localhost:5000`) | ☐ | 기존 Render용 DNS 레코드 먼저 제거/교체 필요 |
+| 4-3 | Cloudflare 라우팅 전환 확인 | ☐ | 오렌지 클라우드 특성상 즉시 반영 예상 (기존 5~15분 다운타임 추정치보다 짧을 가능성) |
+| 4-4 | Render Suspend (48h 롤백 대기) | ☐ | 문제 시 4-2에서 바꾼 라우팅만 되돌리면 즉시 롤백 |
+| 4-5 | Render Delete + Dify Cloud/ngrok 정리 (3-3 포함) | ☐ | |
+
+#### Go/No-Go 체크리스트 (4-1)
+- [ ] 3-4 soak test 24시간 무중단·무에러 통과 (자동 진행 중, 종료 예정: 2026-07-15 21:06 KST)
+- [x] Render 환경변수 백업 완료 및 서버 `.env`와 diff 확인
+- [x] `FLASK_SECRET_KEY` 처리 방침 결정 → 동일화 완료
+- [ ] 저트래픽 시간대(주말 새벽 2~4시 등) 확보
+- [ ] 롤백 절차(Cloudflare 라우팅 원복) 사전 리허설
+
+> **참고**: Render가 GitHub `main` 브랜치 Auto-Deploy를 사용 중이라, 오늘 push한 커밋(`5664a47`)이 Render에도 이미 자동 배포됨. `DIFY_API_BASE_URL` 미설정 시 기존 Cloud URL로 폴백하도록 설계해서 Render 쪽 동작에는 영향 없음(의도된 안전한 하위호환).
 
 ---
 
