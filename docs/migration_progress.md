@@ -1,8 +1,14 @@
 # Ubuntu 단일 노드 마이그레이션 진행 현황 (Migration Progress)
 
-> **최종 업데이트**: 2026-07-11  
+> **최종 업데이트**: 2026-07-14  
 > **전략**: Blue-Green (Render 운영 유지 → Ubuntu staging 검증 → DNS 전환)  
 > **목표**: Flask + Dify + ChromaDB를 Ubuntu 홈서버(`192.168.0.224`) 한 곳으로 통합하고, Cloudflare Tunnel로 외부 노출
+
+## 🔜 다음 세션에서 할 일 (우선순위 순)
+1. **soak test 결과 확인** — `hyean-portal-soak-test` 클라우드 스케줄이 2026-07-15 21:06 KST경 자동 종료되며 최종 판정을 알림으로 전달함. 이상 없으면 Go/No-Go 첫 항목 통과.
+2. **저트래픽 시간대 확정 + 롤백 리허설** (Go/No-Go 남은 2개 항목) → 이 둘까지 끝나면 **Phase 4 실행(4-2~4-5) 가능**
+3. **Phase 4 실행**: `hyean-dskim.com`을 Cloudflare Tunnel Public Hostname으로 전환(staging과 동일 방식, NPM 불필요) → Render Suspend(48h 대기) → 문제없으면 Render Delete + **3-3(ngrok/Windows Flask 중지)**까지 정리
+4. Phase 4 완료 후: [audit_master.md](./audit_master.md)의 Track A 기능 로드맵(계정과목 표준매핑, 감사조서 DB 저장·PDF 출력, DART RAG 실가동, 감사보고서 초안 자동생성, 교차검증 워크플로)으로 이어서 진행
 
 ---
 
@@ -54,12 +60,12 @@
 ## 3. Phase별 실행 계획 및 진행 상태
 
 ### Phase 0 — 사전 준비
-| # | 작업 | 상태 |
-|---|---|---|
-| 0-1 | ChromaDB / Supabase / Dify Cloud DSL 백업 | ☐ |
-| 0-2 | Render 환경변수 목록 확보 | ☐ |
-| 0-3 | DNS TTL 300초 사전 축소 | ☐ |
-| 0-4 | `staging.hyean-dskim.com` 서브도메인 준비 | ☐ |
+| # | 작업 | 상태 | 비고 |
+|---|---|---|---|
+| 0-1 | ChromaDB / Supabase / Dify Cloud DSL 백업 | ✅ | Dify DSL은 2-1에서 Export 완료. ChromaDB/Supabase는 기존 데이터 그대로 유지(별도 마이그레이션 아님)라 백업 불필요로 재평가 |
+| 0-2 | Render 환경변수 목록 확보 | ✅ | 4-0a에서 수행 (아래 Phase 4 참조) |
+| 0-3 | DNS TTL 300초 사전 축소 | ⏸ **불필요로 재평가** | Cloudflare 프록시 구조라 전통적 TTL 전파 대기가 필요 없음 (Phase 4 설명 참조) |
+| 0-4 | `staging.hyean-dskim.com` 서브도메인 준비 | ✅ | 1-11에서 Cloudflare Tunnel Public Hostname으로 완료 |
 
 ### Phase 1 — Ubuntu Flask 앱 구동
 | # | 작업 | 상태 | 비고 |
@@ -201,11 +207,11 @@ MINIO_SECRET_KEY=
 
 ## 7. 다운타임 최소화 전략
 
-1. **Blue-Green**: `staging.hyean-dskim.com`으로 먼저 검증, Render는 Phase 4까지 유지
-2. **DNS TTL 300초**: 전환·롤백 각 5분 이내
-3. **`FLASK_SECRET_KEY` 동일 유지**: DNS 전환 후 재로그인 불필요
-4. **Render 48h Suspend**: 즉시 롤백 가능
-5. **저트래픽 시간대 전환**: 주말 새벽 2~4시 권장
+1. **Blue-Green**: `staging.hyean-dskim.com`으로 먼저 검증, Render는 Phase 4까지 유지 — ✅ 검증 완료
+2. ~~DNS TTL 300초~~ → **Cloudflare Tunnel Public Hostname 전환**: 오렌지 클라우드 프록시 구조라 전통적 TTL 전파 대기 없이 즉시 반영 예상 (2026-07-14 재평가)
+3. **`FLASK_SECRET_KEY` 동일 유지**: ✅ Render 값(`hyean-partners-secret-secure-key-90210`)으로 서버 `.env` 동일화 완료 — 전환 후 재로그인 불필요
+4. **Render 48h Suspend**: 즉시 롤백 가능 (Phase 4 실행 시 적용 예정)
+5. **저트래픽 시간대 전환**: 주말 새벽 2~4시 권장 (Phase 4 실행 시 확정 필요)
 
 ---
 

@@ -33,6 +33,15 @@ un_parser.bat를 구성했습니다.
    - 기준서 폴더명 및 파일 분류 메타데이터의 한글 의존성(인코딩 에러)을 해결하기 위해 K-IFRS, K-GAAP, SME-GAAP, NPO-GAAP, SPC-GAAP, K-GAAS 등 영문 약자로 구조를 개편했습니다.
    - 사용자 편의를 위해 UI(company.html) 드롭다운은 한글로 표기하되, 서버 전달 시 영문으로 매핑되도록 처리했습니다.
 
+## 최근 업데이트 (2026-07-14) - Ubuntu 단일 노드 마이그레이션 Phase 1~3 완료, Phase 4 사전 준비
+> 상세 내역·트러블슈팅·다음 할 일: [migration_progress.md](./migration_progress.md) 참조 (이 항목은 요약)
+
+1. **Phase 1 (Ubuntu Flask 배포) 완료**: `~/hyean-portal`에 소스 배포, Python 3.14 `ensurepip` 미탑재 이슈 우회, `sentence-transformers`의 GPU torch 대신 CPU 전용 torch로 전환 설치. Gunicorn + systemd 사용자 서비스(`hyean-portal-user`, linger 적용) 등록. `staging.hyean-dskim.com`을 NPM이 아닌 **Cloudflare Tunnel Public Hostname**으로 직결 노출.
+2. **Phase 2 (Dify Cloud → 로컬 Dify) 완료**: 로컬 Dify(`dify.hyean-dskim.com`)로 앱 DSL Import, LLM Provider를 **Gemini**로 확인. 워크스페이스 단위인 Custom Tool("Hyean RAG Retrieval API")을 로컬에 재등록하고 `172.17.0.1:5000`(Docker 브리지)으로 연결. `app.py`의 Dify URL을 `DIFY_API_BASE_URL` 환경변수로 분리.
+3. **Phase 3 (내부망 직결) 진행 중**: `CHROMA_SERVER_HOST=localhost` 직결 및 실데이터 검색 확인, FAQ Agent→Tool→ChromaDB 전체 체인 검증 완료. **24시간 soak test는 클라우드 스케줄(`hyean-portal-soak-test`)로 자동화**하여 매시간 헬스체크 후 2026-07-15 21:06 KST경 자동 종료. ngrok 중지(3-3)는 현재 프로덕션이 여전히 의존 중이라 **Phase 4 이후로 순서 조정**.
+4. **Phase 4 사전 준비**: `hyean-dskim.com`과 `staging.hyean-dskim.com`이 동일 Cloudflare 엣지로 응답함을 확인 — 기존에 가정한 "DNS TTL 300초 대기" 방식이 아니라 **Cloudflare Tunnel Public Hostname 전환만으로 즉시 처리 가능**하다는 사실을 재발견. Render 환경변수를 백업·대조하고 `FLASK_SECRET_KEY`를 Render 값과 동일화하여 전환 후 세션 연속성 확보.
+5. **다음 세션 할 일**: soak test 결과 확인 → Go/No-Go 잔여 2개 항목(저트래픽 시간대, 롤백 리허설) → Phase 4 실행 → 이후 [audit_master.md](./audit_master.md)의 감사 자동화 기능 로드맵으로 이어서 진행.
+
 ## 최근 업데이트 (2026-07-11) - Ubuntu 단일 노드 마이그레이션 Phase 1 착수
 1. **마이그레이션 계획 수립 (Blue-Green 전략)**
    - Render + Windows ngrok + Dify Cloud + Ubuntu ChromaDB 분산 구조의 단점 분석 및 4단계 이전 로드맵 확정.

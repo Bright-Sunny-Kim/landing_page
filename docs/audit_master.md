@@ -1,9 +1,18 @@
 # AI 자동화 회계감사 프로젝트 마스터 가이드 (Audit Master Guide)
 
-## 최근 업데이트 (2026-07-11) - Ubuntu 단일 노드 마이그레이션 계획 반영
-- AI 감사 자동화 파이프라인(Flask + n8n + Dify + ChromaDB)의 **분산 구조 통합 계획** 수립.
-- Phase 1~4 Blue-Green 마이그레이션 로드맵 및 진행 현황: [migration_progress.md](./migration_progress.md)
-- Phase 2~3 완료 시 Dify External Tool → localhost Flask → ChromaDB 직결, ngrok 제거 예정.
+## 최근 업데이트 (2026-07-14) - Ubuntu 단일 노드 마이그레이션 Phase 1~3 완료
+- AI 감사 자동화 파이프라인(Flask + Dify + ChromaDB)의 인프라 통합(**Phase 1~2 완료, Phase 3 진행 중**). 상세: [migration_progress.md](./migration_progress.md)
+- FAQ RAG 체인(Agent → Custom Tool → Flask `/api/dify/retrieval` → ChromaDB)이 `staging.hyean-dskim.com`에서 ngrok 없이 로컬 직결로 정상 작동함을 실증 확인. Dify LLM은 OpenAI가 아닌 **Gemini**로 확인됨.
+- soak test 통과 후 Phase 4(DNS 전환) 진행 예정. **인프라 통합이 끝나야 아래 "향후 과제"의 기능 개발에 안정적으로 착수 가능.**
+
+### 📋 향후 과제 (인프라 통합 이후 착수)
+아래는 2026-07-14 세션에서 재확인한, 이 문서 3장 "[단계 1] 고도화 세부 로드맵"과 별개로 감사조서/보고서 자동화 전체를 완성하기 위해 필요한 항목들이다. 현재 `/master/audit-analyze` API([audit_engine.py](../audit_engine.py))는 프로토타입 수준으로, T/B 업로드→변동성분석→K-GAAP RAG 매칭→3단계 감사조서 마크다운 생성까지는 동작하나 아래가 빠져 있다:
+1. **계정과목 표준매핑 테이블**: 회사마다 다른 비표준 계정명을 표준 코드로 자동 변환하는 Supabase 테이블 신설 (`parse_tb_file`이 현재는 키워드 매칭에만 의존)
+2. **감사조서 영속화**: 현재 `working_paper_md`는 매번 재계산·휘발성 — `audit_working_papers` 테이블에 회사/연도/버전으로 저장
+3. **PDF/Word 내보내기**: `doc_quote.html` 등 기존 `window.print()` A4 템플릿 패턴을 재사용해 조서 인쇄 템플릿 제작
+4. **DART 유사기업 감사보고서 RAG 실가동**: `scripts/dart_crawler.py`를 n8n 스케줄러로 정기 실행해 `dart_audit_reports`/`dart_report_chunks`에 실데이터 적재 (현재 스키마·스크립트만 존재, 미가동 추정)
+5. **감사보고서 초안 자동생성**: 조서 + DART 유사문구를 결합해 의견문단/주석 초안을 만드는 `/master/audit-report-draft` 라우트 신설
+6. **교차검증 + 승인 워크플로**: 두 번째 LLM 패스(Dify reviewer)로 K-GAAS 체크리스트 대조, 마스터 승인 시 확정 처리
 
 ## 최근 업데이트 (2026-07-04) - 서면조회서 발급 시스템 전면 개편
 1. **PDF 렌더링 방식 전면 교체 (안정성 확보)**

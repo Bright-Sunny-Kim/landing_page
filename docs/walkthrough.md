@@ -17,18 +17,18 @@
    - 인사말("안녕", "고마워")이나 비속어("시발", "미친") 등 회계와 무관한 일상어/금칙어가 입력되었을 때, Dify API를 호출하지 않고 백엔드 서버에서 0.01초 만에 즉시 답변을 스트리밍 반환하도록 방어 로직을 `app.py`에 구축했습니다.
    - 이를 통해 불필요한 LLM 비용 낭비를 막고 서버 자원을 최적화했습니다.
 
-## 🔜 넥스트 스텝 (2026-07-11 업데이트)
+## 🔜 넥스트 스텝 (2026-07-14 업데이트)
 
 ### Ubuntu 단일 노드 마이그레이션 (진행 중)
 상세 계획·진행률: **[migration_progress.md](./migration_progress.md)**
 
 | Phase | 내용 | 상태 |
 |---|---|---|
-| **1** | Ubuntu Flask(Gunicorn) 배포, staging 검증 | 🔄 약 40% (로컬 준비 완료, 서버 배포 대기) |
-| **2** | Dify Cloud → 로컬 Dify(`dify.hyean-dskim.com`) 이전 | ☐ |
-| **3** | localhost ChromaDB 직결, ngrok 제거 | ☐ |
-| **4** | `hyean-dskim.com` DNS Render → Ubuntu 전환 | ☐ |
+| **1** | Ubuntu Flask(Gunicorn) 배포, staging 검증 | ✅ 완료 |
+| **2** | Dify Cloud → 로컬 Dify(`dify.hyean-dskim.com`) 이전 | ✅ 완료 (LLM은 Gemini로 확인) |
+| **3** | localhost ChromaDB 직결, ngrok 제거 | 🔄 직결·FAQ 검증 완료, soak test 자동 진행 중, ngrok 제거는 Phase 4 이후로 순서 조정 |
+| **4** | `hyean-dskim.com` DNS Render → Ubuntu 전환 | 🔄 사전 준비 완료(환경변수 대조, `FLASK_SECRET_KEY` 동일화), soak test 결과 대기 중 |
 
-- **전략**: Blue-Green — Render 운영 유지, `staging.hyean-dskim.com`으로 Ubuntu 먼저 검증.
-- **Phase 1 잔여**: Ubuntu에 소스 배포, venv, `.env`, Gunicorn, systemd, NPM staging 프록시.
-- **원격 진행**: SSH(`ssh.hyean-dskim.com`)만으로 Phase 1 대부분 가능 (`~/hyean-portal` + sudo 없는 경로).
+- **전략**: Blue-Green — Render 운영 유지, `staging.hyean-dskim.com`으로 Ubuntu 먼저 검증. ✅ 검증 완료(`curl https://staging.hyean-dskim.com` HTTP 200, 실제 앱 응답 확인)
+- **DNS 전환 방식 재평가**: 운영 도메인도 이미 Cloudflare 프록시를 거치고 있어, 기존 예상(TTL 300초/5~15분 다운타임)과 달리 Cloudflare Tunnel Public Hostname 전환만으로 즉시 처리 가능할 전망.
+- **다음 세션**: soak test(`hyean-portal-soak-test` 클라우드 스케줄, ~2026-07-15 21:06 KST 종료) 결과 확인 → Phase 4 실행 → [audit_master.md](./audit_master.md)의 감사 자동화 기능 로드맵으로 진행.
