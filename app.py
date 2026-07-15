@@ -279,7 +279,16 @@ def login():
             existing_corp = supabase.table('users').select('company').eq('corporate_number', corporate_number).execute()
             if existing_corp.data:
                 company = existing_corp.data[0]['company']
-                
+            else:
+                # 완전히 새로운 법인번호인 경우 companies 마스터 테이블에도 동기화 (audit_working_papers FK 대비)
+                try:
+                    supabase.table('companies').insert({
+                        'corporate_number': corporate_number,
+                        'company_name': company
+                    }).execute()
+                except Exception as company_sync_err:
+                    print(f"companies sync error: {company_sync_err}")
+
             hashed = generate_password_hash(password)
             supabase.table('users').insert({
                 'email': email,
@@ -348,7 +357,16 @@ def login_social():
                 existing_corp = supabase.table('users').select('company').eq('corporate_number', corporate_number).execute()
                 if existing_corp.data:
                     company = existing_corp.data[0]['company']
-                    
+                else:
+                    # 완전히 새로운 법인번호인 경우 companies 마스터 테이블에도 동기화 (audit_working_papers FK 대비)
+                    try:
+                        supabase.table('companies').insert({
+                            'corporate_number': corporate_number,
+                            'company_name': company
+                        }).execute()
+                    except Exception as company_sync_err:
+                        print(f"companies sync error: {company_sync_err}")
+
                 oauth_pwd = f"OAUTH:{provider}"
                 supabase.table('users').insert({
                     'email': email,
@@ -906,6 +924,163 @@ def audit_analyze(company_name):
     except Exception as e:
         print(f"Audit analysis api error: {e}")
         return jsonify({'error': f'종합 분석 수행 중 에러 발생: {str(e)}'}), 500
+
+
+def _resolve_company_id(company_name):
+    """company_name -> companies.id 매핑. 등록되지 않은 회사면 None."""
+    user_res = supabase.table('users').select('corporate_number').eq('company', company_name).limit(1).execute()
+    if not user_res.data or not user_res.data[0].get('corporate_number'):
+        return None
+    corp_no = user_res.data[0]['corporate_number']
+    comp_res = supabase.table('companies').select('id').eq('corporate_number', corp_no).execute()
+    if comp_res.data:
+        return comp_res.data[0]['id']
+    # self-heal: 백필 이전 데이터 등 예외 상황 대비
+    insert_res = supabase.table('companies').insert({'corporate_number': corp_no, 'company_name': company_name}).execute()
+    return insert_res.data[0]['id']
+
+
+@app.route('/master/audit-working-paper/<string:company_name>/save', methods=['POST'])
+def audit_working_paper_save(company_name):
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
+    try:
+        payload = request.get_json(force=True) or {}
+        fiscal_year = payload.get('fiscal_year')
+        analysis_result_json = payload.get('analysis_result_json')
+        working_paper_md = payload.get('working_paper_md')
+
+        if not fiscal_year or not analysis_result_json or not working_paper_md:
+            return jsonify({'error': 'fiscal_year, analysis_result_json, working_paper_md는 필수입니다.'}), 400
+
+        company_id = _resolve_company_id(company_name)
+        if company_id is None:
+            return jsonify({'error': '등록된 회사 정보를 찾을 수 없습니다.'}), 404
+
+        version_res = supabase.table('audit_working_papers').select('version') \
+            .eq('company_id', company_id).eq('fiscal_year', fiscal_year) \
+            .order('version', desc=True).limit(1).execute()
+        next_version = (version_res.data[0]['version'] + 1) if version_res.data else 1
+
+        insert_res = supabase.table('audit_working_papers').insert({
+            'company_id': company_id,
+            'company_name': company_name,
+            'fiscal_year': fiscal_year,
+            'version': next_version,
+            'status': 'draft',
+            'analysis_result_json': analysis_result_json,
+            'working_paper_md': working_paper_md,
+            'created_by': session['email']
+        }).execute()
+
+        return jsonify({'success': True, 'paper': insert_res.data[0]})
+
+    except Exception as e:
+        print(f"Audit working paper save error: {e}")
+        return jsonify({'error': f'감사조서 저장 중 에러 발생: {str(e)}'}), 500
+
+
+@app.route('/master/audit-working-paper/<string:company_name>', methods=['GET'])
+def audit_working_paper_list(company_name):
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
+    try:
+        company_id = _resolve_company_id(company_name)
+        if company_id is None:
+            return jsonify({'error': '등록된 회사 정보를 찾을 수 없습니다.'}), 404
+
+        res = supabase.table('audit_working_papers') \
+            .select('id, fiscal_year, version, status, created_at, reviewed_at, approved_at') \
+            .eq('company_id', company_id) \
+            .order('fiscal_year', desc=True).order('version', desc=True).execute()
+
+        return jsonify({'success': True, 'papers': res.data})
+
+    except Exception as e:
+        print(f"Audit working paper list error: {e}")
+        return jsonify({'error': f'감사조서 이력 조회 중 에러 발생: {str(e)}'}), 500
+
+
+@app.route('/master/audit-working-paper/detail/<int:paper_id>', methods=['GET'])
+def audit_working_paper_detail(paper_id):
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
+    try:
+        res = supabase.table('audit_working_papers').select('*').eq('id', paper_id).execute()
+        if not res.data:
+            return jsonify({'error': '해당 감사조서를 찾을 수 없습니다.'}), 404
+
+        return jsonify({'success': True, 'paper': res.data[0]})
+
+    except Exception as e:
+        print(f"Audit working paper detail error: {e}")
+        return jsonify({'error': f'감사조서 상세 조회 중 에러 발생: {str(e)}'}), 500
+
+
+AUDIT_WP_STATUS_TRANSITIONS = {
+    'draft': 'reviewed',
+    'reviewed': 'approved'
+}
+
+
+@app.route('/master/audit-working-paper/<int:paper_id>/status', methods=['POST'])
+def audit_working_paper_status(paper_id):
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
+    try:
+        data = request.get_json(force=True) or {}
+        new_status = data.get('new_status')
+        memo = data.get('memo')
+
+        paper_res = supabase.table('audit_working_papers').select('status').eq('id', paper_id).execute()
+        if not paper_res.data:
+            return jsonify({'error': '해당 감사조서를 찾을 수 없습니다.'}), 404
+
+        current_status = paper_res.data[0]['status']
+        if AUDIT_WP_STATUS_TRANSITIONS.get(current_status) != new_status:
+            return jsonify({'error': f"'{current_status}' 상태에서 '{new_status}'(으)로 전이할 수 없습니다."}), 400
+
+        now_str = datetime.datetime.now().isoformat()
+        update_data = {'status': new_status}
+        if new_status == 'reviewed':
+            update_data['reviewed_at'] = now_str
+            update_data['reviewed_by'] = session['email']
+        elif new_status == 'approved':
+            update_data['approved_at'] = now_str
+            update_data['approved_by'] = session['email']
+
+        supabase.table('audit_working_papers').update(update_data).eq('id', paper_id).execute()
+
+        supabase.table('audit_working_paper_logs').insert({
+            'paper_id': paper_id,
+            'status_from': current_status,
+            'status_to': new_status,
+            'changed_by': session['email'],
+            'memo': memo
+        }).execute()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        print(f"Audit working paper status update error: {e}")
+        return jsonify({'error': f'감사조서 상태 변경 중 에러 발생: {str(e)}'}), 500
+
 
 @app.route('/logout')
 def logout():

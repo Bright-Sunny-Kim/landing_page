@@ -306,9 +306,16 @@
                             <h2 class="section-title" style="font-size: 1.5rem; display: flex; align-items: center; gap: 0.6rem;">
                                 <span style="font-size: 1.8rem;">📊</span> AI 감사 위험 변동성 분석 & 조서 초안
                             </h2>
-                            <button id="btn-download-wp" class="btn-download" style="background: #10b981; border: none; cursor: pointer; padding: 0.5rem 1rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
-                                📥 감사 조서 (.md) 다운로드
-                            </button>
+                            <div style="display: inline-flex; align-items: center; gap: 0.6rem;">
+                                <label for="audit-wp-fiscal-year" style="color: var(--text-secondary); font-size: 0.85rem;">회계연도</label>
+                                <input type="number" id="audit-wp-fiscal-year" style="width: 5.5rem; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.3); color: var(--text-primary);">
+                                <button id="btn-save-wp" class="btn-download" style="background: #6366f1; border: none; cursor: pointer; padding: 0.5rem 1rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                    💾 조서 저장
+                                </button>
+                                <button id="btn-download-wp" class="btn-download" style="background: #10b981; border: none; cursor: pointer; padding: 0.5rem 1rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;">
+                                    📥 감사 조서 (.md) 다운로드
+                                </button>
+                            </div>
                         </div>
                         
                         <!-- 중요성 기준 요약 정보 -->
@@ -381,6 +388,16 @@
                                 <!-- 동적 삽입 -->
                             </div>
                         </div>
+
+                        <!-- 저장된 감사조서 버전 이력 -->
+                        <div class="glass-card" id="audit-wp-history" style="background: rgba(15,15,15,0.6); padding: 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-top: 2rem;">
+                            <h3 style="color: var(--text-primary); margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.7rem;">
+                                <span>🗂️</span> 저장된 감사조서 버전 이력
+                            </h3>
+                            <div id="audit-wp-history-body" style="color: var(--text-secondary); font-size: 0.9rem;">
+                                아직 저장된 조서 버전이 없습니다.
+                            </div>
+                        </div>
                     </section>
                     {% endif %}
                 </section>
@@ -426,6 +443,7 @@
             const compAuditBtn = document.getElementById('btn-comprehensive-audit');
             const auditReportSection = document.getElementById('audit-report-section');
             let generatedWorkingPaperMd = ""; // 다운로드용 글로벌 변수
+            let lastAnalysisResult = null; // 저장 API 전송용 최근 분석 결과 전체
             let clientCompanyName = "{{ company_info.company }}";
             
             if (compAuditBtn) {
@@ -528,6 +546,7 @@
                             
                             // 5. 감사조서 마크다운 주입
                             generatedWorkingPaperMd = result.working_paper_md;
+                            lastAnalysisResult = result;
                             document.getElementById('audit-working-paper-content').innerText = result.working_paper_md;
                             
                             // 섹션 표출 및 스크롤
@@ -583,6 +602,140 @@
                     document.body.removeChild(link);
                 });
             }
+
+            // 회계연도 입력 기본값 (당해 연도)
+            const fiscalYearInput = document.getElementById('audit-wp-fiscal-year');
+            if (fiscalYearInput && !fiscalYearInput.value) {
+                fiscalYearInput.value = new Date().getFullYear();
+            }
+
+            const STATUS_LABELS = { draft: '초안(Draft)', reviewed: '검토완료(Reviewed)', approved: '승인완료(Approved)' };
+            const NEXT_STATUS = { draft: 'reviewed', reviewed: 'approved' };
+            const NEXT_STATUS_LABEL = { draft: '검토완료로 표시', reviewed: '승인 처리' };
+
+            async function loadAuditWpHistory() {
+                const historyBody = document.getElementById('audit-wp-history-body');
+                if (!historyBody) return;
+                try {
+                    const response = await fetch(`/master/audit-working-paper/${encodeURIComponent(clientCompanyName)}`);
+                    const result = await response.json();
+                    if (!result.success || !result.papers || result.papers.length === 0) {
+                        historyBody.innerHTML = '아직 저장된 조서 버전이 없습니다.';
+                        return;
+                    }
+
+                    const table = document.createElement('table');
+                    table.className = 'partners-table';
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>회계연도</th>
+                                <th>버전</th>
+                                <th>상태</th>
+                                <th>저장일시</th>
+                                <th>처리</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    `;
+                    const tbody = table.querySelector('tbody');
+
+                    result.papers.forEach(paper => {
+                        const tr = document.createElement('tr');
+                        const nextStatus = NEXT_STATUS[paper.status];
+                        const actionCell = nextStatus
+                            ? `<button class="btn-download audit-wp-status-btn" data-paper-id="${paper.id}" data-next-status="${nextStatus}" style="padding: 0.3rem 0.7rem; font-size: 0.8rem;">${NEXT_STATUS_LABEL[paper.status]}</button>`
+                            : '<span style="color:#4ade80;">완료</span>';
+                        tr.innerHTML = `
+                            <td>${paper.fiscal_year}</td>
+                            <td>v${paper.version}</td>
+                            <td>${STATUS_LABELS[paper.status] || paper.status}</td>
+                            <td class="col-date">${(paper.created_at || '').slice(0,16).replace('T',' ')}</td>
+                            <td>${actionCell}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    historyBody.innerHTML = '';
+                    historyBody.appendChild(table);
+
+                    historyBody.querySelectorAll('.audit-wp-status-btn').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            const target = e.currentTarget;
+                            const paperId = target.getAttribute('data-paper-id');
+                            const nextStatus = target.getAttribute('data-next-status');
+                            target.disabled = true;
+                            try {
+                                const res = await fetch(`/master/audit-working-paper/${paperId}/status`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ new_status: nextStatus })
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    loadAuditWpHistory();
+                                } else {
+                                    alert('상태 변경 실패: ' + data.error);
+                                    target.disabled = false;
+                                }
+                            } catch (err) {
+                                alert('상태 변경 요청 중 오류가 발생했습니다.');
+                                target.disabled = false;
+                            }
+                        });
+                    });
+                } catch (err) {
+                    historyBody.innerHTML = '조서 이력을 불러오는 중 오류가 발생했습니다.';
+                    console.error(err);
+                }
+            }
+
+            // 조서 저장 버튼 핸들러
+            const saveWpBtn = document.getElementById('btn-save-wp');
+            if (saveWpBtn) {
+                saveWpBtn.addEventListener('click', async () => {
+                    if (!lastAnalysisResult) {
+                        alert("먼저 '회사 종합 AI 감사 조서 생성'을 실행해 분석 결과를 만들어주세요.");
+                        return;
+                    }
+                    const fiscalYear = parseInt(fiscalYearInput.value, 10);
+                    if (!fiscalYear) {
+                        alert("회계연도를 입력해주세요.");
+                        return;
+                    }
+
+                    saveWpBtn.disabled = true;
+                    saveWpBtn.innerHTML = `<span>⏳</span> 저장 중...`;
+                    try {
+                        const response = await fetch(`/master/audit-working-paper/${encodeURIComponent(clientCompanyName)}/save`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                fiscal_year: fiscalYear,
+                                analysis_result_json: lastAnalysisResult,
+                                working_paper_md: lastAnalysisResult.working_paper_md
+                            })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            saveWpBtn.innerHTML = `<span>✅</span> 저장 완료 (v${result.paper.version})`;
+                            loadAuditWpHistory();
+                        } else {
+                            alert('조서 저장 실패: ' + result.error);
+                        }
+                    } catch (err) {
+                        alert('조서 저장 요청 중 오류가 발생했습니다.');
+                        console.error(err);
+                    } finally {
+                        saveWpBtn.disabled = false;
+                        setTimeout(() => {
+                            saveWpBtn.innerHTML = `<span>💾</span> 조서 저장`;
+                        }, 2000);
+                    }
+                });
+            }
+
+            loadAuditWpHistory();
             {% endif %}
         });
     </script>

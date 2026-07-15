@@ -238,13 +238,13 @@
                         <div class="progress-tracker-header">
                             <span class="progress-tracker-title">📍 진도표 — 우선순위 실행 현황</span>
                             <div class="progress-tracker-chips">
-                                <span class="progress-chip chip-done">✅ 완료 0</span>
+                                <span class="progress-chip chip-done">✅ 완료 1</span>
                                 <span class="progress-chip chip-partial">🔶 진행중 2</span>
-                                <span class="progress-chip chip-backlog">⏸ 미착수 4</span>
+                                <span class="progress-chip chip-backlog">⏸ 미착수 3</span>
                             </div>
                         </div>
                         <div class="progress-tracker-track">
-                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P0</span></div>
+                            <div class="progress-step" data-status="done"><span class="progress-dot"></span><span class="progress-label">P0</span></div>
                             <div class="progress-connector"></div>
                             <div class="progress-step" data-status="partial"><span class="progress-dot"></span><span class="progress-label">P1</span></div>
                             <div class="progress-connector"></div>
@@ -264,14 +264,14 @@
                         <div class="step-card">
                             <div class="step-num">P0</div>
                             <div class="step-badges-row">
-                                <span class="node-status-badge status-backlog">⏸ 미착수</span>
+                                <span class="node-status-badge status-active">✅ 완료</span>
                                 <span class="node-ref-tag">참고: Step 04</span>
                                 <span class="node-ref-tag">참고: Step 05·06</span>
                             </div>
                             <h3 class="step-title">감사조서/분석 결과 영속화</h3>
                             <ul class="step-list">
-                                <li><strong>선행 조건:</strong> 감사조서 결과가 매번 재계산되는 휘발성 데이터라, 다음 단계로 넘길 산출물 저장소가 없으면 이후 단계는 물리적으로 시작 불가</li>
-                                <li><strong>목표:</strong> 회사/연도/버전 및 승인 상태(초안→검토→승인)를 갖는 영속 저장소 구축</li>
+                                <li><strong>구현 완료:</strong> <code>companies</code>(회사 마스터) + <code>audit_working_papers</code>(회사/연도/버전 + 초안→검토→승인 상태) + <code>audit_working_paper_logs</code>(이력) 테이블 설계 및 조서 저장/조회/상태전이 API·UI 구현</li>
+                                <li><strong>검증 완료:</strong> DB 마이그레이션 실행 + 마스터 화면에서 분석→저장(버전 자동 증가)→상태전이 end-to-end 클릭 테스트 통과</li>
                             </ul>
                         </div>
 
@@ -461,13 +461,13 @@
                         <div class="progress-tracker-header">
                             <span class="progress-tracker-title">📍 진도표 — 우선순위 실행 현황</span>
                             <div class="progress-tracker-chips">
-                                <span class="progress-chip chip-done">✅ 완료 0</span>
+                                <span class="progress-chip chip-done">✅ 완료 1</span>
                                 <span class="progress-chip chip-partial">🔶 진행중 2</span>
-                                <span class="progress-chip chip-backlog">⏸ 미착수 4</span>
+                                <span class="progress-chip chip-backlog">⏸ 미착수 3</span>
                             </div>
                         </div>
                         <div class="progress-tracker-track">
-                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P0</span></div>
+                            <div class="progress-step" data-status="done"><span class="progress-dot"></span><span class="progress-label">P0</span></div>
                             <div class="progress-connector"></div>
                             <div class="progress-step" data-status="partial"><span class="progress-dot"></span><span class="progress-label">P1</span></div>
                             <div class="progress-connector"></div>
@@ -485,7 +485,7 @@
                     <div class="pipeline-console-container">
 
                         <!-- P0 -->
-                        <div class="pipeline-node-card backlog-node" id="node-p0">
+                        <div class="pipeline-node-card testing-node" id="node-p0">
                             <div class="node-header" onclick="toggleNodeDetails('p0')">
                                 <div class="node-title-group">
                                     <span class="node-step-num">P0</span>
@@ -494,15 +494,17 @@
                                     <span class="node-ref-tag">참고: Step 05</span>
                                     <span class="node-ref-tag">참고: Step 06</span>
                                 </div>
-                                <div class="node-status-badge status-backlog">⏸ 미착수</div>
+                                <div class="node-status-badge status-active">✅ 완료</div>
                             </div>
                             <div class="node-details" id="details-p0" style="display: none;">
                                 <div class="node-details-inner">
-                                    <p class="node-desc">현재 <code>working_paper_md</code>(Step 04 산출물)는 저장되지 않고 매번 재계산되는 휘발성 데이터입니다. <code>audit_working_papers</code> 테이블(회사/연도/버전 + <code>draft→reviewed→approved</code> 상태)이 없으면 Step 05·06은 이어붙일 결과물 자체가 없어 물리적으로 시작할 수 없습니다 — 전체 로드맵의 선행 조건입니다.</p>
-                                    <p class="node-status-label label-todo">🔶 남은 작업</p>
+                                    <p class="node-desc">기존에 저장되지 않던 <code>working_paper_md</code>(Step 04 산출물)를 <code>audit_working_papers</code> 테이블(회사/연도/버전 + <code>draft→reviewed→approved</code> 상태)에 영속화하는 API·UI 구현을 완료했습니다. FK 정합성을 위해 <code>companies</code> 마스터 테이블(자연키: 사업자등록번호)을 신설하고 <code>audit_working_papers.company_id</code>가 이를 참조합니다.</p>
+                                    <p class="node-status-label label-done">✅ 구현 및 검증 완료</p>
                                     <ul class="node-todo-list">
-                                        <li><code>audit_working_papers</code> 테이블 신설 (회사/연도/버전 + 상태 필드)</li>
-                                        <li><code>/master/audit-analyze</code>가 결과를 이 테이블에 저장하도록 수정</li>
+                                        <li><code>companies</code>/<code>audit_working_papers</code>/<code>audit_working_paper_logs</code> 테이블 설계 (<code>database/audit_working_papers_schema.sql</code>) 및 DB 마이그레이션 실행 완료</li>
+                                        <li>조서 저장(<code>POST /master/audit-working-paper/&lt;company&gt;/save</code>) — 마스터가 명시적으로 저장 버튼을 눌러야 새 버전 생성</li>
+                                        <li>버전 이력 조회 및 상태전이(<code>draft→reviewed→approved</code>) API + <code>master_detail.html</code> UI 연결</li>
+                                        <li>마스터 화면에서 분석→저장(버전 자동 증가)→상태전이 end-to-end 클릭 검증 통과</li>
                                     </ul>
                                 </div>
                             </div>
