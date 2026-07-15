@@ -1659,6 +1659,14 @@ textarea:focus {
     line-height: 1.4;
 }
 
+.step-badges-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: -8px 0 14px 0;
+}
+
 .step-list {
     list-style: none;
     margin: 0;
@@ -1861,6 +1869,118 @@ textarea:focus {
     margin: 0 auto;
 }
 
+/* Small reference tags (Step 0X) shown on priority-first node headers — muted, non-primary */
+.node-ref-tag {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+}
+
+/* Progress tracker (진도표): P0~P5 execution status at a glance */
+.progress-tracker {
+    padding: 18px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    margin-bottom: 24px;
+}
+
+.progress-tracker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.progress-tracker-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.progress-tracker-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.progress-tracker-track {
+    display: flex;
+    align-items: flex-start;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.progress-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    box-sizing: border-box;
+}
+
+.progress-step[data-status="done"] .progress-dot {
+    background: #10b981;
+    border-color: #10b981;
+}
+
+.progress-step[data-status="partial"] .progress-dot {
+    background: linear-gradient(90deg, #f59e0b 50%, transparent 50%);
+    border-color: #f59e0b;
+}
+
+.progress-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.progress-connector {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 7px 4px 0 4px;
+}
+
+/* Pipeline overall progress summary chips */
+.progress-chip {
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+}
+
+.progress-chip.chip-done {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.progress-chip.chip-partial {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.progress-chip.chip-backlog {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+}
+
 /* Node Cards */
 .pipeline-node-card {
     width: 100%;
@@ -1961,6 +2081,33 @@ textarea:focus {
     color: var(--text-secondary);
     line-height: 1.6;
     margin: 0;
+}
+
+/* Implemented / Remaining work lists inside node details */
+.node-status-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+}
+
+.node-status-label.label-done {
+    color: #10b981;
+}
+
+.node-status-label.label-todo {
+    color: #f59e0b;
+}
+
+.node-todo-list {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.node-todo-list li {
+    margin-bottom: 4px;
 }
 
 /* Form inputs for Nodes */

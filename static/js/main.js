@@ -636,10 +636,10 @@ window.runPingTest = (stepId) => {
         
         setTimeout(() => {
             indicator.className = 'test-result-indicator';
-            if (stepId === 'step1') {
+            if (stepId === 'p1') {
                 indicator.textContent = '✓ 연결 성공 (n8n Webhook OK - HTTP 200)';
                 indicator.style.color = '#10b981';
-            } else if (stepId === 'step2') {
+            } else if (stepId === 'p3') {
                 indicator.textContent = '✓ 인증 성공 (Dify API Key Active)';
                 indicator.style.color = '#10b981';
             } else {

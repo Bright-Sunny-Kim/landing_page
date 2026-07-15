@@ -228,73 +228,124 @@
                     <div class="divider-glow"></div>
                     
                     <div class="welcome-badge">Audit Pipeline</div>
-                    <h2 class="audit-section-title">AI 회계감사 자동화 6단계 세부 실행 절차</h2>
+                    <h2 class="audit-section-title">AI 회계감사 자동화 우선순위 로드맵 (P0 → P5)</h2>
                     <p class="audit-section-subtitle">
-                        프론트엔드, 자동화 엔진(n8n), AI 에이전트(Dify), 데이터베이스(Supabase)를 유기적으로 연결하여 감사업무 전반을 자동화하는 내부 실행 파이프라인 프로세스입니다.
+                        프론트엔드, 자동화 엔진(n8n), AI 에이전트(Dify), 데이터베이스(Supabase)를 유기적으로 연결하여 감사업무 전반을 자동화하는 내부 실행 파이프라인입니다. 기존 6단계(Step) 순번은 각 카드의 참고 태그로 표시되며, <strong>실제 착수 순서는 P0~P5</strong>를 따릅니다.
                     </p>
 
-                    <!-- 6단계 그리드 -->
+                    <!-- 진도표 -->
+                    <div class="progress-tracker" style="text-align: left; max-width: 900px; margin-left: auto; margin-right: auto; margin-bottom: 48px;">
+                        <div class="progress-tracker-header">
+                            <span class="progress-tracker-title">📍 진도표 — 우선순위 실행 현황</span>
+                            <div class="progress-tracker-chips">
+                                <span class="progress-chip chip-done">✅ 완료 0</span>
+                                <span class="progress-chip chip-partial">🔶 진행중 2</span>
+                                <span class="progress-chip chip-backlog">⏸ 미착수 4</span>
+                            </div>
+                        </div>
+                        <div class="progress-tracker-track">
+                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P0</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="partial"><span class="progress-dot"></span><span class="progress-label">P1</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P2</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="partial"><span class="progress-dot"></span><span class="progress-label">P3</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P4</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P5</span></div>
+                        </div>
+                    </div>
+
+                    <!-- P0~P5 그리드 (착수 순서 기준) -->
                     <div class="step-grid">
-                        <!-- 1단계 -->
+                        <!-- P0 -->
                         <div class="step-card">
-                            <div class="step-num">01</div>
-                            <h3 class="step-title">고객 제시 데이터로부터 재무제표 작성</h3>
+                            <div class="step-num">P0</div>
+                            <div class="step-badges-row">
+                                <span class="node-status-badge status-backlog">⏸ 미착수</span>
+                                <span class="node-ref-tag">참고: Step 04</span>
+                                <span class="node-ref-tag">참고: Step 05·06</span>
+                            </div>
+                            <h3 class="step-title">감사조서/분석 결과 영속화</h3>
                             <ul class="step-list">
-                                <li><strong>자료 업로드:</strong> 파트너가 hyean-dskim.com 포털을 통해 결산 자료(T/B 원장, 명세서 등)를 업로드하면 Supabase Storage에 원본 저장</li>
-                                <li><strong>데이터 가공:</strong> 업로드 완료 시 n8n Webhook이 트리거되어 Python 노드로 데이터 정제 및 표준 계정과목 코드 재배열</li>
-                                <li><strong>재무제표 작성:</strong> BS 및 IS 산식을 자동 적용하여 표준 재무제표 자동 작성</li>
-                                <li><strong>차이 내역 검토:</strong> 작성된 표준 재무제표와 고객 제시 재무제표 간 차이 분석 후 Dify API로 원인 분석 보고서 생성 및 수정 조치</li>
+                                <li><strong>선행 조건:</strong> 감사조서 결과가 매번 재계산되는 휘발성 데이터라, 다음 단계로 넘길 산출물 저장소가 없으면 이후 단계는 물리적으로 시작 불가</li>
+                                <li><strong>목표:</strong> 회사/연도/버전 및 승인 상태(초안→검토→승인)를 갖는 영속 저장소 구축</li>
                             </ul>
                         </div>
 
-                        <!-- 2단계 -->
+                        <!-- P1 -->
                         <div class="step-card">
-                            <div class="step-num">02</div>
-                            <h3 class="step-title">회계기준(K-GAAP) 및 감사기준(K-GAAS) RAG 구축</h3>
+                            <div class="step-num">P1</div>
+                            <div class="step-badges-row">
+                                <span class="node-status-badge status-testing">🔶 부분 구현</span>
+                                <span class="node-ref-tag">참고: Step 01</span>
+                                <span class="node-ref-tag">참고: Step 04</span>
+                            </div>
+                            <h3 class="step-title">T/B 파싱 로직 통합 및 표준 재무제표 빌드</h3>
                             <ul class="step-list">
-                                <li><strong>문서 아카이빙:</strong> K-GAAP 및 K-GAAS 원문 PDF/Text 파일을 Nextcloud 개인 드라이브에 안전하게 보관</li>
-                                <li><strong>지식 베이스 구축:</strong> Dify 지식(Knowledge) 모듈을 통해 해당 기준서를 임베딩 및 Vectorization하여 AI가 기준서를 직접 참조할 수 있는 기반 마련</li>
+                                <li><strong>자료 업로드:</strong> 파트너가 hyean-dskim.com 포털을 통해 결산 자료(T/B 원장 등)를 업로드하면 Supabase Storage에 원본 저장</li>
+                                <li><strong>데이터 정제:</strong> Flask가 T/B를 파싱·병합하고 변동성 분석까지 직접 수행 (n8n Webhook 연동은 예정)</li>
+                                <li><strong>표준화 목표:</strong> 표준 BS/IS 자동 빌더 및 대차평형 검증, 고객 제시 재무제표와의 Delta 비교 알고리즘 구축</li>
                             </ul>
                         </div>
 
-                        <!-- 3단계 -->
+                        <!-- P2 -->
                         <div class="step-card">
-                            <div class="step-num">03</div>
-                            <h3 class="step-title">DART 감사보고서 DB 구축 (RAG)</h3>
+                            <div class="step-num">P2</div>
+                            <div class="step-badges-row">
+                                <span class="node-status-badge status-backlog">⏸ 미착수</span>
+                                <span class="node-ref-tag">참고: Step 01</span>
+                                <span class="node-ref-tag">참고: Step 04</span>
+                            </div>
+                            <h3 class="step-title">계정과목 표준매핑 (부분 자동화)</h3>
                             <ul class="step-list">
-                                <li><strong>데이터 수집:</strong> n8n의 스케줄러(Cron) 노드를 통해 dart.fss.or.kr (OpenDART API)를 주기적으로 호출하여 동종 업계 감사보고서 다운로드</li>
-                                <li><strong>벡터 저장:</strong> 본문을 청크화한 뒤 Supabase pgvector 확장을 사용하여 임베딩 벡터값과 함께 DB에 저장, 보고서 초안 모범 문구의 검색 기틀 마련</li>
+                                <li><strong>매핑 테이블:</strong> 회사마다 다른 계정명을 표준 코드로 자동 변환하는 매핑 테이블 구축 예정</li>
+                                <li><strong>설계 원칙:</strong> 완성형 매핑이 아니라, 매칭 실패 시 마스터가 수동 지정 → 다음부터 자동 반영되는 구조로 설계</li>
                             </ul>
                         </div>
 
-                        <!-- 4단계 -->
+                        <!-- P3 -->
                         <div class="step-card">
-                            <div class="step-num">04</div>
-                            <h3 class="step-title">항목별 감사조서 및 감사절차 작성</h3>
+                            <div class="step-num">P3</div>
+                            <div class="step-badges-row">
+                                <span class="node-status-badge status-testing">🔶 진행 중</span>
+                                <span class="node-ref-tag">참고: Step 02</span>
+                                <span class="node-ref-tag">참고: Step 03</span>
+                            </div>
+                            <h3 class="step-title">회계·DART RAG 지식 베이스 (상시 유지보수)</h3>
                             <ul class="step-list">
-                                <li><strong>분석 트리거:</strong> 마스터 계정에서 Flask /master/audit-analyze/&lt;company_name&gt; 호출로 분석 가동</li>
-                                <li><strong>절차 매핑:</strong> Outlier 혹은 변동성이 높은 주요 계정에 대해 Dify 내 K-GAAP/GAAS RAG를 질의하여 필수 감사 절차 자동 추출</li>
-                                <li><strong>조서 합성:</strong> AI 에이전트가 '감사 목표 - 수행 절차 - 감사 결과 및 결론'의 3단계 마크다운 감사조서 반환</li>
+                                <li><strong>문서 아카이빙(완료):</strong> K-GAAP/K-GAAS 원문을 임베딩하여 AI가 직접 참조할 수 있는 지식 베이스 구축 완료</li>
+                                <li><strong>DART 수집(예정):</strong> OpenDART API 정기 호출로 동종 업계 감사보고서를 벡터 저장 — 정기 실행 연결만 남음</li>
                             </ul>
                         </div>
 
-                        <!-- 5단계 -->
+                        <!-- P4 -->
                         <div class="step-card">
-                            <div class="step-num">05</div>
-                            <h3 class="step-title">감사보고서 초안 작성</h3>
+                            <div class="step-num">P4</div>
+                            <div class="step-badges-row">
+                                <span class="node-status-badge status-backlog">⏸ 미착수</span>
+                                <span class="node-ref-tag">참고: Step 05</span>
+                            </div>
+                            <h3 class="step-title">감사보고서 초안 자동 생성</h3>
                             <ul class="step-list">
-                                <li><strong>초안 생성:</strong> 작성된 항목별 감사조서 결과와 Supabase 벡터 검색을 통한 DART 유사 보고서 문구를 AI 프롬프트 컨텍스트로 결합</li>
-                                <li><strong>보고서 도출:</strong> Dify 메인 에이전트가 회계 기준 및 과거 사례를 참고하여 최종 감사보고서 초안 자동 작성</li>
+                                <li><strong>착수 조건:</strong> P0(영속화) 완료 전에는 조서 결과를 안정적으로 읽어올 수 없어 착수 무의미</li>
+                                <li><strong>초안 생성:</strong> 항목별 감사조서와 DART 유사 보고서 문구를 결합해 AI가 최종 초안 자동 작성</li>
                             </ul>
                         </div>
 
-                        <!-- 6단계 -->
+                        <!-- P5 -->
                         <div class="step-card">
-                            <div class="step-num">06</div>
-                            <h3 class="step-title">감사보고서 교차 검증 (Verification)</h3>
+                            <div class="step-num">P5</div>
+                            <div class="step-badges-row">
+                                <span class="node-status-badge status-backlog">⏸ 미착수</span>
+                                <span class="node-ref-tag">참고: Step 06</span>
+                            </div>
+                            <h3 class="step-title">감사보고서 교차 검증</h3>
                             <ul class="step-list">
-                                <li><strong>규정 준수 확인:</strong> 완성된 감사보고서 초안을 K-GAAS 규정에 대조하여 필수 기재 사항 누락 및 오류를 Dify 내 Reviewer 에이전트가 교차 검증</li>
-                                <li><strong>최종 피드백:</strong> 검증 성공 시 마스터 대시보드 상태를 '완료'로 자동 업데이트하며, 수정 사항 발생 시 피드백 리스트 반환</li>
+                                <li><strong>평가 방법론 우선:</strong> "AI가 AI를 검토"하는 로직은 정답 세트 없이는 판단 기준이 없어, 실제 감사보고서 샘플의 기대 결과를 먼저 정의</li>
+                                <li><strong>검증 워크플로:</strong> K-GAAS 규정 대조 후 Reviewer 에이전트가 교차 검증, 마스터 승인 시 확정 처리</li>
                             </ul>
                         </div>
                     </div>
@@ -402,109 +453,95 @@
                 <!-- 서브 탭 2: AI 자동화 파이프라인 관리 -->
                 <div class="sub-tab-content" id="subtab-pipeline-view" style="display: none;">
                     <p class="subtab-description">
-                        마스터 1인 관리 전용 AI 파이프라인 제어 콘솔입니다. 각 노드를 클릭하여 설정 및 Webhook 상태를 업데이트하고 연동 테스트를 진행할 수 있습니다.
+                        마스터 1인 관리 전용 AI 파이프라인 제어 콘솔입니다. <strong>실제 착수 순서(P0~P5)를 기준으로 구성</strong>했으며, 6단계(Step) 번호는 각 카드에 참고 태그로만 표시됩니다. 카드를 클릭하면 현재 구현 상태와 남은 작업을 확인하고, 설정 및 연동 테스트를 진행할 수 있습니다. (상세 근거: <code>docs/audit_master.md</code> 2장)
                     </p>
 
-                    <!-- 파이프라인 플로우 수직/그리드 타임라인 -->
-                    <div class="pipeline-console-container">
-                        
-                        <!-- 1단계 노드 -->
-                        <div class="pipeline-node-card active-node" id="node-step1">
-                            <div class="node-header" onclick="toggleNodeDetails('step1')">
-                                <div class="node-title-group">
-                                    <span class="node-step-num">Step 01</span>
-                                    <h3 class="node-step-title">고객 데이터 기반 재무제표 작성</h3>
-                                </div>
-                                <div class="node-status-badge status-active">연동 완료</div>
+                    <!-- 진도표: P0~P5 착수 현황 한눈에 보기 -->
+                    <div class="progress-tracker">
+                        <div class="progress-tracker-header">
+                            <span class="progress-tracker-title">📍 진도표 — 우선순위 실행 현황</span>
+                            <div class="progress-tracker-chips">
+                                <span class="progress-chip chip-done">✅ 완료 0</span>
+                                <span class="progress-chip chip-partial">🔶 진행중 2</span>
+                                <span class="progress-chip chip-backlog">⏸ 미착수 4</span>
                             </div>
-                            <div class="node-details" id="details-step1" style="display: none;">
+                        </div>
+                        <div class="progress-tracker-track">
+                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P0</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="partial"><span class="progress-dot"></span><span class="progress-label">P1</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P2</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="partial"><span class="progress-dot"></span><span class="progress-label">P3</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P4</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog"><span class="progress-dot"></span><span class="progress-label">P5</span></div>
+                        </div>
+                    </div>
+
+                    <!-- 우선순위 콘솔 (P0 → P5, 착수 순서 기준) -->
+                    <div class="pipeline-console-container">
+
+                        <!-- P0 -->
+                        <div class="pipeline-node-card backlog-node" id="node-p0">
+                            <div class="node-header" onclick="toggleNodeDetails('p0')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">P0</span>
+                                    <h3 class="node-step-title">감사조서/분석 결과 영속화</h3>
+                                    <span class="node-ref-tag">참고: Step 04</span>
+                                    <span class="node-ref-tag">참고: Step 05</span>
+                                    <span class="node-ref-tag">참고: Step 06</span>
+                                </div>
+                                <div class="node-status-badge status-backlog">⏸ 미착수</div>
+                            </div>
+                            <div class="node-details" id="details-p0" style="display: none;">
                                 <div class="node-details-inner">
-                                    <p class="node-desc">고객이 자료 업로드 시 n8n Webhook을 통해 파이썬 연산 노드로 T/B 데이터를 정제 및 파싱하여 표준 재무제표(BS/IS)를 빌드합니다.</p>
+                                    <p class="node-desc">현재 <code>working_paper_md</code>(Step 04 산출물)는 저장되지 않고 매번 재계산되는 휘발성 데이터입니다. <code>audit_working_papers</code> 테이블(회사/연도/버전 + <code>draft→reviewed→approved</code> 상태)이 없으면 Step 05·06은 이어붙일 결과물 자체가 없어 물리적으로 시작할 수 없습니다 — 전체 로드맵의 선행 조건입니다.</p>
+                                    <p class="node-status-label label-todo">🔶 남은 작업</p>
+                                    <ul class="node-todo-list">
+                                        <li><code>audit_working_papers</code> 테이블 신설 (회사/연도/버전 + 상태 필드)</li>
+                                        <li><code>/master/audit-analyze</code>가 결과를 이 테이블에 저장하도록 수정</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-arrow">↓</div>
+
+                        <!-- P1 -->
+                        <div class="pipeline-node-card testing-node" id="node-p1">
+                            <div class="node-header" onclick="toggleNodeDetails('p1')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">P1</span>
+                                    <h3 class="node-step-title">T/B 파싱 로직 통합 (BS/IS 빌더 · 대차평형 · Delta 비교)</h3>
+                                    <span class="node-ref-tag">참고: Step 01</span>
+                                    <span class="node-ref-tag">참고: Step 04</span>
+                                </div>
+                                <div class="node-status-badge status-testing">🔶 부분 구현</div>
+                            </div>
+                            <div class="node-details" id="details-p1" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">Step 01·04가 각자 <code>parse_tb_file</code>을 직접 호출해 T/B를 파싱하고 있어, 하나를 고치면 다른 하나가 깨지는 이중 유지보수 상태입니다. <code>audit_engine.py</code>가 파싱·병합(<code>merge_multiple_tb_dfs</code>)과 변동성 분석(<code>run_variance_analysis</code>)까지는 처리 중입니다.</p>
+                                    <p class="node-status-label label-todo">🔶 남은 작업</p>
+                                    <ul class="node-todo-list">
+                                        <li>P0 저장소에 표준화 데이터를 남기고 Step 04가 재파싱 대신 이를 읽도록 통합</li>
+                                        <li>표준 재무상태표(BS)/손익계산서(IS) 자동 빌더 + 대차평형 검증</li>
+                                        <li>고객 제시 재무제표와의 Delta 비교 알고리즘, Dify 기반 차이 원인 분석 보고서 생성</li>
+                                        <li>n8n Webhook 트리거 연동 (원래 설계대로, 현재는 Flask 직접 호출)</li>
+                                    </ul>
                                     <div class="node-form-group">
-                                        <label>n8n Webhook Endpoint URL</label>
+                                        <label>n8n Webhook Endpoint URL (연동 예정)</label>
                                         <input type="text" value="https://n8n.hyean-dskim.com/webhook/submit-tb" placeholder="Webhook URL을 입력하세요">
                                     </div>
-                                    <div class="node-actions-row">
-                                        <button class="btn-node-test" onclick="runPingTest('step1')">연결 테스트 (Ping)</button>
-                                        <span class="test-result-indicator" id="ping-res-step1"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pipeline-arrow">↓</div>
-
-                        <!-- 2단계 노드 -->
-                        <div class="pipeline-node-card testing-node" id="node-step2">
-                            <div class="node-header" onclick="toggleNodeDetails('step2')">
-                                <div class="node-title-group">
-                                    <span class="node-step-num">Step 02</span>
-                                    <h3 class="node-step-title">K-GAAP 및 K-GAAS RAG 구축</h3>
-                                </div>
-                                <div class="node-status-badge status-testing">테스트 중</div>
-                            </div>
-                            <div class="node-details" id="details-step2" style="display: none;">
-                                <div class="node-details-inner">
-                                    <p class="node-desc">K-GAAP/GAAS 기준서 PDF/Text 원문을 Nextcloud 보관소에 적재하고 Dify의 지식(Knowledge) 모듈을 이용해 벡터 임베딩을 구성합니다.</p>
-                                    <div class="node-form-group">
-                                        <label>Dify Knowledge Base API Key</label>
-                                        <input type="password" value="dify-kb-key-sample-12345" placeholder="Dify API Key 입력">
-                                    </div>
-                                    <div class="node-actions-row">
-                                        <button class="btn-node-test" onclick="runPingTest('step2')">연결 테스트 (Ping)</button>
-                                        <span class="test-result-indicator" id="ping-res-step2"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pipeline-arrow">↓</div>
-
-                        <!-- 3단계 노드 -->
-                        <div class="pipeline-node-card backlog-node" id="node-step3">
-                            <div class="node-header" onclick="toggleNodeDetails('step3')">
-                                <div class="node-title-group">
-                                    <span class="node-step-num">Step 03</span>
-                                    <h3 class="node-step-title">DART 감사보고서 DB 구축 (RAG)</h3>
-                                </div>
-                                <div class="node-status-badge status-backlog">준비 중</div>
-                            </div>
-                            <div class="node-details" id="details-step3" style="display: none;">
-                                <div class="node-details-inner">
-                                    <p class="node-desc">n8n 스케줄러(Cron)를 통해 dart.fss.or.kr API를 주기적으로 호출하여 수집한 감사보고서 본문 청크를 Supabase pgvector에 동기화합니다.</p>
-                                    <div class="node-form-group">
-                                        <label>OpenDART API 인증키 (User Key)</label>
-                                        <input type="password" value="" placeholder="DART API Key 입력">
-                                    </div>
-                                    <div class="node-actions-row">
-                                        <button class="btn-node-test" onclick="runPingTest('step3')">연결 테스트 (Ping)</button>
-                                        <span class="test-result-indicator" id="ping-res-step3"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pipeline-arrow">↓</div>
-
-                        <!-- 4단계 노드 -->
-                        <div class="pipeline-node-card backlog-node" id="node-step4">
-                            <div class="node-header" onclick="toggleNodeDetails('step4')">
-                                <div class="node-title-group">
-                                    <span class="node-step-num">Step 04</span>
-                                    <h3 class="node-step-title">항목별 감사조서 및 감사절차 작성</h3>
-                                </div>
-                                <div class="node-status-badge status-backlog">준비 중</div>
-                            </div>
-                            <div class="node-details" id="details-step4" style="display: none;">
-                                <div class="node-details-inner">
-                                    <p class="node-desc">시산표 상 Outlier 항목에 대하여 Dify 내 K-GAAP/GAAS 지식 베이스를 질의하고 3단계 구조의 감사조서 마크다운 문서를 합성합니다.</p>
                                     <div class="node-form-group">
                                         <label>Dify Agent Endpoint (Working Paper App)</label>
                                         <input type="text" value="" placeholder="Dify Agent API URL 입력">
                                     </div>
                                     <div class="node-actions-row">
-                                        <button class="btn-node-test" onclick="runPingTest('step4')">연결 테스트 (Ping)</button>
-                                        <span class="test-result-indicator" id="ping-res-step4"></span>
+                                        <button class="btn-node-test" onclick="runPingTest('p1')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-p1"></span>
                                     </div>
                                 </div>
                             </div>
@@ -512,25 +549,91 @@
 
                         <div class="pipeline-arrow">↓</div>
 
-                        <!-- 5단계 노드 -->
-                        <div class="pipeline-node-card backlog-node" id="node-step5">
-                            <div class="node-header" onclick="toggleNodeDetails('step5')">
+                        <!-- P2 -->
+                        <div class="pipeline-node-card backlog-node" id="node-p2">
+                            <div class="node-header" onclick="toggleNodeDetails('p2')">
                                 <div class="node-title-group">
-                                    <span class="node-step-num">Step 05</span>
-                                    <h3 class="node-step-title">감사보고서 초안 작성</h3>
+                                    <span class="node-step-num">P2</span>
+                                    <h3 class="node-step-title">계정과목 표준매핑 (부분 자동화 + 수동 오버라이드)</h3>
+                                    <span class="node-ref-tag">참고: Step 01</span>
+                                    <span class="node-ref-tag">참고: Step 04</span>
                                 </div>
-                                <div class="node-status-badge status-backlog">준비 중</div>
+                                <div class="node-status-badge status-backlog">⏸ 미착수</div>
                             </div>
-                            <div class="node-details" id="details-step5" style="display: none;">
+                            <div class="node-details" id="details-p2" style="display: none;">
                                 <div class="node-details-inner">
-                                    <p class="node-desc">합성 완료된 감사조서와 유사 DART 공시 정보 데이터를 결합하여 Dify 메인 에이전트가 주석을 포함한 전문적인 감사보고서 초안을 도출합니다.</p>
+                                    <p class="node-desc"><code>parse_tb_file</code>은 현재 컬럼명 키워드 매칭(<code>'계정'</code>, <code>'당기'</code> 등)에만 의존하고, 매칭 실패 시 모의 데이터로 Fallback합니다. 회사마다 계정명이 달라 이 상태로는 확장이 어렵습니다.</p>
+                                    <p class="node-status-label label-todo">🔶 남은 작업</p>
+                                    <ul class="node-todo-list">
+                                        <li>계정과목 표준매핑 테이블 신설 (Supabase)</li>
+                                        <li>완성형 매핑이 아니라, 매칭 실패 시 마스터가 수동 지정 → 다음부터 자동 반영되는 부분 자동화 구조로 설계</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-arrow">↓</div>
+
+                        <!-- P3 -->
+                        <div class="pipeline-node-card testing-node" id="node-p3">
+                            <div class="node-header" onclick="toggleNodeDetails('p3')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">P3</span>
+                                    <h3 class="node-step-title">RAG 지식 베이스 유지보수 (상시 트랙, 병행 가능)</h3>
+                                    <span class="node-ref-tag">참고: Step 02</span>
+                                    <span class="node-ref-tag">참고: Step 03</span>
+                                </div>
+                                <div class="node-status-badge status-testing">🔶 진행 중 (Step 02 완료 · Step 03 미가동)</div>
+                            </div>
+                            <div class="node-details" id="details-p3" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">Step 02(K-GAAP/GAAS RAG)는 <code>process_local_pdfs.py</code>로 Supabase <code>document_chunks</code>에 적재 완료되어 AI FAQ가 실시간 사용 중입니다. 반면 Step 03(DART RAG)은 <code>dart_audit_reports</code>/<code>dart_report_chunks</code> 스키마와 크롤러 스크립트만 있고 정기 실행이 연결되지 않아 실데이터가 없습니다. 순번상 3번째 단계라서 여기서 진행하는 게 아니라 P0~P2와 병행 가능한 독립 서비스입니다.</p>
+                                    <p class="node-status-label label-todo">🔶 남은 작업</p>
+                                    <ul class="node-todo-list">
+                                        <li>DART 크롤러(<code>scripts/dart_crawler.py</code>)를 n8n 또는 cron으로 정기 실행 연결 → 실데이터 적재 개시</li>
+                                    </ul>
+                                    <div class="node-form-group">
+                                        <label>Dify Knowledge Base API Key</label>
+                                        <input type="password" value="dify-kb-key-sample-12345" placeholder="Dify API Key 입력">
+                                    </div>
+                                    <div class="node-form-group">
+                                        <label>OpenDART API 인증키 (User Key)</label>
+                                        <input type="password" value="" placeholder="DART API Key 입력">
+                                    </div>
+                                    <div class="node-actions-row">
+                                        <button class="btn-node-test" onclick="runPingTest('p3')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-p3"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pipeline-arrow">↓</div>
+
+                        <!-- P4 -->
+                        <div class="pipeline-node-card backlog-node" id="node-p4">
+                            <div class="node-header" onclick="toggleNodeDetails('p4')">
+                                <div class="node-title-group">
+                                    <span class="node-step-num">P4</span>
+                                    <h3 class="node-step-title">감사보고서 초안 생성 라우트 신설</h3>
+                                    <span class="node-ref-tag">참고: Step 05</span>
+                                </div>
+                                <div class="node-status-badge status-backlog">⏸ 미착수</div>
+                            </div>
+                            <div class="node-details" id="details-p4" style="display: none;">
+                                <div class="node-details-inner">
+                                    <p class="node-desc">P0(영속화) 완료 전에는 조서 결과를 안정적으로 읽어올 방법이 없어 착수 자체가 무의미합니다.</p>
+                                    <p class="node-status-label label-todo">🔶 남은 작업</p>
+                                    <ul class="node-todo-list">
+                                        <li>감사조서(Step 04) + DART 유사문구(Step 03)를 결합해 의견문단/주석 초안을 만드는 <code>/master/audit-report-draft</code> 라우트 신설</li>
+                                    </ul>
                                     <div class="node-form-group">
                                         <label>Dify 메인 Generator API Key</label>
                                         <input type="password" value="" placeholder="API Key 입력">
                                     </div>
                                     <div class="node-actions-row">
-                                        <button class="btn-node-test" onclick="runPingTest('step5')">연결 테스트 (Ping)</button>
-                                        <span class="test-result-indicator" id="ping-res-step5"></span>
+                                        <button class="btn-node-test" onclick="runPingTest('p4')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-p4"></span>
                                     </div>
                                 </div>
                             </div>
@@ -538,25 +641,32 @@
 
                         <div class="pipeline-arrow">↓</div>
 
-                        <!-- 6단계 노드 -->
-                        <div class="pipeline-node-card backlog-node" id="node-step6">
-                            <div class="node-header" onclick="toggleNodeDetails('step6')">
+                        <!-- P5 -->
+                        <div class="pipeline-node-card backlog-node" id="node-p5">
+                            <div class="node-header" onclick="toggleNodeDetails('p5')">
                                 <div class="node-title-group">
-                                    <span class="node-step-num">Step 06</span>
-                                    <h3 class="node-step-title">작성된 감사보고서 교차 검증 (Verification)</h3>
+                                    <span class="node-step-num">P5</span>
+                                    <h3 class="node-step-title">교차검증 워크플로 (평가 방법론 정의 우선)</h3>
+                                    <span class="node-ref-tag">참고: Step 06</span>
                                 </div>
-                                <div class="node-status-badge status-backlog">준비 중</div>
+                                <div class="node-status-badge status-backlog">⏸ 미착수</div>
                             </div>
-                            <div class="node-details" id="details-step6" style="display: none;">
+                            <div class="node-details" id="details-p5" style="display: none;">
                                 <div class="node-details-inner">
-                                    <p class="node-desc">완성된 초안을 K-GAAS 규정에 대조하여 Dify 내의 Reviewer 에이전트가 교차 검증을 수행하고 최종 결산 피드백을 전달합니다.</p>
+                                    <p class="node-desc">"AI가 AI를 검토"하는 로직은 정답 세트(ground truth) 없이는 판단 기준이 없어 무기한 막힐 위험이 가장 큰 항목입니다.</p>
+                                    <p class="node-status-label label-todo">🔶 남은 작업</p>
+                                    <ul class="node-todo-list">
+                                        <li>실제 감사보고서 샘플에 대한 기대 결과를 먼저 정의 (평가 방법론)</li>
+                                        <li>두 번째 LLM 패스(Dify reviewer)로 K-GAAS 체크리스트 대조 → 논리적 오류 검증</li>
+                                        <li>마스터 승인 시 확정 처리하는 워크플로 구축</li>
+                                    </ul>
                                     <div class="node-form-group">
                                         <label>Dify Reviewer Agent API Key</label>
                                         <input type="password" value="" placeholder="API Key 입력">
                                     </div>
                                     <div class="node-actions-row">
-                                        <button class="btn-node-test" onclick="runPingTest('step6')">연결 테스트 (Ping)</button>
-                                        <span class="test-result-indicator" id="ping-res-step6"></span>
+                                        <button class="btn-node-test" onclick="runPingTest('p5')">연결 테스트 (Ping)</button>
+                                        <span class="test-result-indicator" id="ping-res-p5"></span>
                                     </div>
                                 </div>
                             </div>
