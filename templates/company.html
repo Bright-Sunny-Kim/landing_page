@@ -139,6 +139,7 @@
                     <button type="button" class="sub-tab-btn" data-subtab="sub-written" onclick="switchSubTab('sub-written')">📂 서면제출자료</button>
                     <button type="button" class="sub-tab-btn" data-subtab="sub-ext-finance" onclick="switchSubTab('sub-ext-finance')">🏦 외부조회 (금융기관)</button>
                     <button type="button" class="sub-tab-btn" data-subtab="sub-ext-partner" onclick="switchSubTab('sub-ext-partner')">🏢 외부조회 (거래처)</button>
+                    <button type="button" class="sub-tab-btn" data-subtab="sub-analysis" onclick="switchSubTab('sub-analysis'); loadCompanyAnalysisReport();">📊 분석보고서</button>
                 </div>
 
 
@@ -621,7 +622,7 @@
                                     <td class="doc-info">
                                         <span class="doc-icon">📈</span>
                                         <div class="doc-text-wrapper">
-                                            <span class="doc-name">시산표</span>
+                                            <span class="doc-name">합계잔액시산표</span>
                                             <span class="doc-hint">Trial Balance</span>
                                         </div>
                                     </td>
@@ -648,6 +649,120 @@
                                         <div class="mini-upload-box" id="box_tb_prior">
                                             <input type="file" id="tb_prior" name="tb_prior" class="mini-file-input" multiple>
                                             <label for="tb_prior" class="mini-upload-label" id="label-tb_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 1-1. 재무상태표 -->
+                                <tr class="doc-row doc-common">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">🧮</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">재무상태표</span>
+                                            <span class="doc-hint">Balance Sheet (과목별)</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="bs_current_status" value="제출" checked onchange="toggleUploadBox('bs_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="bs_current_status" value="미제출" onchange="toggleUploadBox('bs_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="bs_current_status" value="해당사항없음" onchange="toggleUploadBox('bs_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_bs_current">
+                                            <input type="file" id="bs_current" name="bs_current" class="mini-file-input" multiple>
+                                            <label for="bs_current" class="mini-upload-label" id="label-bs_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="bs_prior_status" value="제출" checked onchange="toggleUploadBox('bs_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="bs_prior_status" value="미제출" onchange="toggleUploadBox('bs_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="bs_prior_status" value="해당사항없음" onchange="toggleUploadBox('bs_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_bs_prior">
+                                            <input type="file" id="bs_prior" name="bs_prior" class="mini-file-input" multiple>
+                                            <label for="bs_prior" class="mini-upload-label" id="label-bs_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 1-2. 손익계산서 -->
+                                <tr class="doc-row doc-common">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">📊</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">손익계산서</span>
+                                            <span class="doc-hint">Income Statement (과목별)</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="is_current_status" value="제출" checked onchange="toggleUploadBox('is_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="is_current_status" value="미제출" onchange="toggleUploadBox('is_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="is_current_status" value="해당사항없음" onchange="toggleUploadBox('is_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_is_current">
+                                            <input type="file" id="is_current" name="is_current" class="mini-file-input" multiple>
+                                            <label for="is_current" class="mini-upload-label" id="label-is_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="is_prior_status" value="제출" checked onchange="toggleUploadBox('is_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="is_prior_status" value="미제출" onchange="toggleUploadBox('is_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="is_prior_status" value="해당사항없음" onchange="toggleUploadBox('is_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_is_prior">
+                                            <input type="file" id="is_prior" name="is_prior" class="mini-file-input" multiple>
+                                            <label for="is_prior" class="mini-upload-label" id="label-is_prior">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <!-- 1-3. 분개장 -->
+                                <tr class="doc-row doc-common">
+                                    <td class="doc-info">
+                                        <span class="doc-icon">📔</span>
+                                        <div class="doc-text-wrapper">
+                                            <span class="doc-name">분개장</span>
+                                            <span class="doc-hint">Journal Entries</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="je_current_status" value="제출" checked onchange="toggleUploadBox('je_current', this.value)"> 제출</label>
+                                            <label><input type="radio" name="je_current_status" value="미제출" onchange="toggleUploadBox('je_current', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="je_current_status" value="해당사항없음" onchange="toggleUploadBox('je_current', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_je_current">
+                                            <input type="file" id="je_current" name="je_current" class="mini-file-input" multiple>
+                                            <label for="je_current" class="mini-upload-label" id="label-je_current">
+                                                <span class="upload-icon">↑</span>
+                                                <span class="file-text">파일 선택</span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="status-options" style="margin-bottom: 8px; font-size: 0.85rem; display: flex; gap: 8px; justify-content: center;">
+                                            <label><input type="radio" name="je_prior_status" value="제출" checked onchange="toggleUploadBox('je_prior', this.value)"> 제출</label>
+                                            <label><input type="radio" name="je_prior_status" value="미제출" onchange="toggleUploadBox('je_prior', this.value)"> 미제출</label>
+                                            <label><input type="radio" name="je_prior_status" value="해당사항없음" onchange="toggleUploadBox('je_prior', this.value)"> 해당없음</label>
+                                        </div>
+                                        <div class="mini-upload-box" id="box_je_prior">
+                                            <input type="file" id="je_prior" name="je_prior" class="mini-file-input" multiple>
+                                            <label for="je_prior" class="mini-upload-label" id="label-je_prior">
                                                 <span class="upload-icon">↑</span>
                                                 <span class="file-text">파일 선택</span>
                                             </label>
@@ -1526,6 +1641,87 @@
                         </div>
                     </div>
 
+                    <!-- 4. 분석보고서 탭 (업로드된 합계잔액시산표/재무상태표/손익계산서를 자동 분석) -->
+                    <div id="sub-analysis" class="sub-tab-pane" style="display: none; text-align: left;">
+                        <div id="ca-status" style="padding: 2rem; text-align: center; color: var(--text-secondary); background: rgba(20,20,20,0.3); border-radius: 12px;">
+                            분석 준비 중...
+                        </div>
+
+                        <div id="ca-report-body" style="display: none;">
+                            <p class="checklist-desc">업로드하신 합계잔액시산표/재무상태표/손익계산서를 바탕으로 AI가 자동 산출한 변동성 분석 및 감사 위험 검토 결과입니다.</p>
+
+                            <div class="info-grid" style="margin-top: 1rem; margin-bottom: 2rem; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2);">
+                                <div class="info-item">
+                                    <h3>추정 자산총계</h3>
+                                    <p id="ca-assets" style="color: var(--text-primary); font-family: 'Outfit', sans-serif;">-</p>
+                                </div>
+                                <div class="info-item">
+                                    <h3>추정 매출액</h3>
+                                    <p id="ca-sales" style="color: var(--text-primary); font-family: 'Outfit', sans-serif;">-</p>
+                                </div>
+                                <div class="info-item" style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem;">
+                                    <h3>수행중요성금액</h3>
+                                    <p id="ca-materiality" style="color: #ef4444; font-family: 'Outfit', sans-serif; font-weight: 700;">-</p>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+                                <div class="glass-card" style="background: rgba(20,20,20,0.45); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.15);">
+                                    <h3 style="color: #f87171; margin-bottom: 1.2rem; font-size: 1.1rem; font-weight: 600;">🚨 식별된 감사 위험</h3>
+                                    <div id="ca-risks-container" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                                </div>
+                                <div class="glass-card" style="background: rgba(20,20,20,0.45); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.2);">
+                                    <h3 style="color: #a78bfa; margin-bottom: 1.2rem; font-size: 1.1rem; font-weight: 600;">📖 관련 회계기준 (K-GAAP)</h3>
+                                    <div id="ca-standards-container" style="display: flex; flex-direction: column; gap: 1rem; max-height: 350px; overflow-y: auto; padding-right: 0.3rem;"></div>
+                                </div>
+                            </div>
+
+                            <div class="glass-card" style="background: rgba(20,20,20,0.3); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 2.5rem;">
+                                <h3 style="color: var(--text-primary); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">📊 계정 변동성 분석 (전기 대비 이상 항목)</h3>
+                                <div class="table-container">
+                                    <table class="partners-table" style="font-size: 0.9rem;">
+                                        <thead>
+                                            <tr>
+                                                <th>계정과목</th>
+                                                <th style="text-align: right;">전기 잔액</th>
+                                                <th style="text-align: right;">당기 잔액</th>
+                                                <th style="text-align: right;">변동액</th>
+                                                <th style="text-align: right;">변동률</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ca-variance-table-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="glass-card" id="ca-reconciliation-section" style="display: none; background: rgba(20,20,20,0.3); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 2.5rem;">
+                                <h3 style="color: var(--text-primary); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">🧮 시산표 ↔ 재무상태표 대사</h3>
+                                <div id="ca-balance-check" style="margin-bottom: 1.2rem;"></div>
+                                <div class="table-container">
+                                    <table class="partners-table" style="font-size: 0.9rem;">
+                                        <thead>
+                                            <tr>
+                                                <th>계정과목</th>
+                                                <th style="text-align: right;">재무제표 금액</th>
+                                                <th style="text-align: right;">시산표 잔액</th>
+                                                <th>상태</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="ca-reconciliation-table-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="glass-card" style="background: rgba(15,15,15,0.6); padding: 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.7rem;">
+                                    <h3 style="color: var(--text-primary); font-size: 1.25rem; font-weight: 600; margin: 0;">📝 감사 조서 초안</h3>
+                                    <button type="button" id="ca-btn-download-wp" class="btn-download" style="background: #10b981; border: none; cursor: pointer; padding: 0.5rem 1rem; font-weight: 600;">📥 (.md) 다운로드</button>
+                                </div>
+                                <div id="ca-working-paper-content" style="background: rgba(5,5,5,0.75); color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.95rem; line-height: 1.65; padding: 2rem; border-radius: 10px; overflow-x: auto; white-space: pre-wrap; max-height: 600px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05);"></div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div> <!-- end sub-tab-contents -->
 
                 <div class="form-group-block" style="margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px;">
@@ -1783,6 +1979,147 @@
     
     <!-- Script JS -->
     <script src="/static/js/main.js"></script>
+
+    <!-- 분석보고서 탭: 업로드 자료 자동 분석 -->
+    <script>
+        (function () {
+            const clientCompanyName = "{{ company_name }}";
+            let analysisLoaded = false;
+            let generatedWorkingPaperMd = "";
+
+            window.loadCompanyAnalysisReport = async function () {
+                if (analysisLoaded) return; // 이미 로드했으면 탭 재클릭 시 재요청하지 않음
+                const statusEl = document.getElementById('ca-status');
+                const bodyEl = document.getElementById('ca-report-body');
+                if (!statusEl || !bodyEl) return;
+
+                statusEl.style.display = 'block';
+                bodyEl.style.display = 'none';
+                statusEl.innerText = '⏳ 업로드하신 자료를 분석하는 중입니다...';
+
+                try {
+                    const response = await fetch(`/company/audit-analysis/${encodeURIComponent(clientCompanyName)}`);
+                    const result = await response.json();
+
+                    if (!result.success) {
+                        statusEl.innerText = result.error || '아직 분석할 자료가 없습니다. 서면제출자료 탭에서 합계잔액시산표(또는 재무상태표/손익계산서)를 업로드해 주세요.';
+                        return;
+                    }
+
+                    analysisLoaded = true;
+                    statusEl.style.display = 'none';
+                    bodyEl.style.display = 'block';
+
+                    document.getElementById('ca-assets').innerText = result.total_assets.toLocaleString() + ' 원';
+                    document.getElementById('ca-sales').innerText = result.total_sales.toLocaleString() + ' 원';
+                    document.getElementById('ca-materiality').innerText = result.performance_materiality.toLocaleString() + ' 원';
+
+                    const risksContainer = document.getElementById('ca-risks-container');
+                    risksContainer.innerHTML = '';
+                    (result.risk_signals || []).forEach(sig => {
+                        const card = document.createElement('div');
+                        card.style.cssText = 'background:rgba(239,68,68,0.08); border-left:4px solid #ef4444; padding:1rem; border-radius:0 8px 8px 0;';
+                        card.innerHTML = `
+                            <h4 style="color:#f87171; font-weight:600; margin-bottom:0.3rem;">[위험] ${sig.Category}</h4>
+                            <p style="font-size:0.9rem; color:#f3f4f6; margin-bottom:0.5rem; line-height:1.45;">${sig.Description}</p>
+                            <span style="font-size:0.8rem; background:rgba(255,255,255,0.08); padding:0.2rem 0.5rem; border-radius:4px; color:#d1d5db;">대상: ${sig.TargetAccount}</span>
+                        `;
+                        risksContainer.appendChild(card);
+                    });
+
+                    const standardsContainer = document.getElementById('ca-standards-container');
+                    standardsContainer.innerHTML = '';
+                    (result.matched_standards || []).forEach(std => {
+                        const card = document.createElement('div');
+                        card.style.cssText = 'background:rgba(99,102,241,0.08); border-left:4px solid #6366f1; padding:1rem; border-radius:0 8px 8px 0; margin-bottom:0.5rem;';
+                        card.innerHTML = `
+                            <h4 style="color:#a78bfa; font-weight:600; margin-bottom:0.3rem;">${std.standard_no} ${std.paragraph_no}</h4>
+                            <h5 style="color:#c084fc; font-size:0.85rem; margin-bottom:0.4rem; font-weight:500;">${std.title}</h5>
+                            <p style="font-size:0.82rem; color:#d1d5db; line-height:1.45; font-style:italic;">"${std.content}"</p>
+                        `;
+                        standardsContainer.appendChild(card);
+                    });
+
+                    const tableBody = document.getElementById('ca-variance-table-body');
+                    tableBody.innerHTML = '';
+                    if (result.outliers && result.outliers.length > 0) {
+                        result.outliers.forEach(row => {
+                            const tr = document.createElement('tr');
+                            const valSign = row.Variance >= 0 ? '+' : '';
+                            const valColor = row.Variance >= 0 ? '#f87171' : '#60a5fa';
+                            tr.innerHTML = `
+                                <td style="font-weight:500; color:#fff;">${row.Account}</td>
+                                <td style="text-align:right;">${row.Prior.toLocaleString()}</td>
+                                <td style="text-align:right;">${row.Current.toLocaleString()}</td>
+                                <td style="text-align:right; color:${valColor}; font-weight:500;">${valSign}${row.Variance.toLocaleString()}</td>
+                                <td style="text-align:right; color:${valColor}; font-weight:500;">${valSign}${row.VariancePct.toFixed(1)}%</td>
+                            `;
+                            tableBody.appendChild(tr);
+                        });
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-secondary);">중요성금액을 초과하는 이상 항목이 감지되지 않았습니다.</td></tr>';
+                    }
+
+                    const reconSection = document.getElementById('ca-reconciliation-section');
+                    const std = result.standard_statements;
+                    if (std && std.balance_check) {
+                        reconSection.style.display = 'block';
+                        const bc = std.balance_check;
+                        const balanceCheckEl = document.getElementById('ca-balance-check');
+                        balanceCheckEl.innerHTML = bc.Balanced
+                            ? `<span style="color:#4ade80; font-weight:600; font-size:0.85rem; background:rgba(74,222,128,0.1); padding:0.3rem 0.7rem; border-radius:6px;">✅ 대차평형 일치</span>`
+                            : `<span style="color:#f87171; font-weight:600; font-size:0.85rem; background:rgba(239,68,68,0.1); padding:0.3rem 0.7rem; border-radius:6px;">⚠️ 대차평형 불일치 (차이 ${(bc.Diff || 0).toLocaleString()} 원)</span>`;
+
+                        const reconBody = document.getElementById('ca-reconciliation-table-body');
+                        reconBody.innerHTML = '';
+                        const reconRows = std.bs_reconciliation || [];
+                        if (reconRows.length > 0) {
+                            reconRows.forEach(r => {
+                                const tr = document.createElement('tr');
+                                const statusColor = r.Matched ? '#4ade80' : '#f87171';
+                                const statusLabel = r.Matched ? '✅ 일치' : `⚠️ ${r.Reason || '불일치'}`;
+                                tr.innerHTML = `
+                                    <td style="font-weight:500; color:#fff;">${r.Account}</td>
+                                    <td style="text-align:right;">${r.StatementAmount != null ? r.StatementAmount.toLocaleString() : '-'}</td>
+                                    <td style="text-align:right;">${r.TBAmount != null ? Math.abs(r.TBAmount).toLocaleString() : '-'}</td>
+                                    <td><span style="color:${statusColor}; font-weight:600; font-size:0.8rem;">${statusLabel}</span></td>
+                                `;
+                                reconBody.appendChild(tr);
+                            });
+                        }
+                    } else {
+                        reconSection.style.display = 'none';
+                    }
+
+                    generatedWorkingPaperMd = result.working_paper_md || '';
+                    document.getElementById('ca-working-paper-content').innerText = generatedWorkingPaperMd;
+                } catch (err) {
+                    statusEl.innerText = '분석 결과를 불러오는 중 오류가 발생했습니다.';
+                    console.error(err);
+                }
+            };
+
+            const downloadBtn = document.getElementById('ca-btn-download-wp');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', () => {
+                    if (!generatedWorkingPaperMd) {
+                        alert('다운로드할 감사 조서 초안이 없습니다.');
+                        return;
+                    }
+                    const blob = new Blob([generatedWorkingPaperMd], { type: 'text/markdown;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    const dateStr = new Date().toISOString().slice(0, 10);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `분석보고서_${clientCompanyName}_${dateStr}.md`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            }
+        })();
+    </script>
 
     <!-- 전자조회 지원 금융기관 팝업 모달 -->
     <div id="online-banks-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">

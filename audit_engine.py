@@ -1,6 +1,8 @@
 import os
 import io
+import re
 import json
+from collections import deque
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -357,6 +359,244 @@ def run_variance_analysis(df_tb, performance_materiality=50000000.0):
     }
 
 # ==========================================
+# 3-1. 실제 재무제표 양식 기반 파서 (P1)
+# 회계프로그램이 내보내는 합계잔액시산표 / 재무상태표(과목별) / 손익계산서(과목별)의
+# 실제 원본 구조를 그대로 파싱한다. parse_tb_file의 컬럼명 키워드 매칭은 회사마다
+# 양식이 크게 다를 때의 폴백으로 그대로 유지하고, 이 모듈은 그 위에 얹는 별도 경로다.
+# ==========================================
+_BRACKET_CHARS = "◀▶◁▷"
+_ROMAN_PREFIXES = ("Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ")
+
+
+def classify_source_file(filename):
+    """파일명 키워드로 합계잔액시산표/재무상태표/손익계산서를 구분. 태깅 UI가 없어 파일명에 의존."""
+    name = filename or ""
+    if "시산표" in name:
+        return "trial_balance"
+    if "재무상태표" in name:
+        return "balance_sheet"
+    if "손익계산서" in name:
+        return "income_statement"
+    return "unknown"
+
+
+def _normalize_account_name(raw):
+    """계정과목 셀 특유의 글자간격 공백(가운데정렬용)과 ◀▶ 소계 괄호기호를 제거."""
+    s = str(raw).replace("　", " ")
+    is_subtotal = any(c in s for c in _BRACKET_CHARS)
+    for c in _BRACKET_CHARS:
+        s = s.replace(c, "")
+    return s.replace(" ", "").strip(), is_subtotal
+
+
+def _to_amount(v):
+    """콤마 포함 금액 문자열/NaN을 float 또는 None으로 정규화."""
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return None
+    s = str(v).replace(",", "").strip()
+    if s in ("", "nan"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def _read_tabular(file_content, filename):
+    if filename.endswith(".csv"):
+        try:
+            return pd.read_csv(io.BytesIO(file_content), encoding="utf-8", header=None)
+        except Exception:
+            return pd.read_csv(io.BytesIO(file_content), encoding="cp949", header=None)
+    elif filename.endswith(".xlsx"):
+        return pd.read_excel(io.BytesIO(file_content), header=None, engine="openpyxl")
+    elif filename.endswith(".xls"):
+        # 구 바이너리 .xls는 openpyxl이 아니라 xlrd 엔진이 필요 (레거시 parse_tb_file은 이 구분이 없어 .xls에서 실패할 수 있음)
+        return pd.read_excel(io.BytesIO(file_content), header=None, engine="xlrd")
+    raise ValueError("지원하지 않는 파일 형식입니다. (CSV, Excel 파일만 지원)")
+
+
+def parse_trial_balance_structured(file_content, filename):
+    """
+    합계잔액시산표(차변잔액/차변합계/계정과목/대변합계/대변잔액 5컬럼) 구조를 그대로 파싱.
+    형식이 다르면 ValueError를 던져서 호출부가 기존 parse_tb_file(키워드 매칭)로 폴백하게 한다.
+    """
+    df = _read_tabular(file_content, filename)
+
+    header_row, account_col = None, None
+    for i in range(min(5, len(df))):
+        row_vals = [_normalize_account_name(x)[0] for x in df.iloc[i].tolist()]
+        if "계정과목" in row_vals:
+            header_row = i
+            account_col = row_vals.index("계정과목")
+            break
+    if header_row is None:
+        raise ValueError("합계잔액시산표 헤더(계정과목)를 찾을 수 없습니다.")
+
+    dr_bal_col, dr_sum_col = account_col - 2, account_col - 1
+    cr_sum_col, cr_bal_col = account_col + 1, account_col + 2
+    if dr_bal_col < 0 or cr_bal_col >= len(df.columns):
+        raise ValueError("합계잔액시산표 컬럼 배치가 예상(차변잔액/차변합계/계정과목/대변합계/대변잔액)과 다릅니다.")
+
+    # "계정과목" 컬럼명은 분개장 등 다른 장부에도 등장하므로, 시산표 특유의 2단 헤더(잔액/합계 소제목 행)가
+    # 실제로 있는지까지 확인해야 오분류를 막을 수 있음 (분개장을 시산표로 잘못 파싱한 사례로 확인됨)
+    subheader_text = "".join(_normalize_account_name(x)[0] for x in df.iloc[header_row + 1].tolist())
+    if "잔액" not in subheader_text and "합계" not in subheader_text:
+        raise ValueError("시산표 특유의 잔액/합계 2단 헤더가 확인되지 않아 다른 장부일 가능성이 높습니다.")
+
+    records = []
+    for i in range(header_row + 2, len(df)):
+        raw_acc = df.iat[i, account_col]
+        if pd.isna(raw_acc):
+            continue
+        acc, is_subtotal = _normalize_account_name(raw_acc)
+        if not acc or acc == "합계":
+            continue
+        dr_bal = _to_amount(df.iat[i, dr_bal_col])
+        cr_bal = _to_amount(df.iat[i, cr_bal_col])
+        records.append({
+            "Account": acc,
+            "IsSubtotal": is_subtotal,
+            "DebitBalance": dr_bal,
+            "CreditBalance": cr_bal,
+            "DebitTurnover": _to_amount(df.iat[i, dr_sum_col]),
+            "CreditTurnover": _to_amount(df.iat[i, cr_sum_col]),
+            "NetBalance": (dr_bal or 0.0) - (cr_bal or 0.0),
+        })
+
+    result = pd.DataFrame(records)
+    if result.empty:
+        raise ValueError("파싱된 시산표 데이터가 없습니다.")
+    return result
+
+
+def _detect_statement_layout(df):
+    """재무상태표(5컬럼: 당기 상세/소계 + 전기 상세/소계) vs 손익계산서(7컬럼: 위 구성 + 비율(%) 컬럼)를 헤더로 구분."""
+    row1_text = "".join(str(x) for x in df.iloc[1].tolist())
+    if "비율" in row1_text:
+        return {"account": 0, "cur_detail": 1, "cur_sub": 2, "prior_detail": 4, "prior_sub": 5}
+    return {"account": 0, "cur_detail": 1, "cur_sub": 2, "prior_detail": 3, "prior_sub": 4}
+
+
+def _row_kind(acc_text, cur_val, prior_val):
+    t = acc_text.strip()
+    if not t or t == "nan":
+        return "blank"
+    if t in ("자산", "부채", "자본"):
+        return "group"
+    if t.startswith(_ROMAN_PREFIXES):
+        return "subtotal"
+    if re.match(r"^\(\d+\)", t):
+        return "subtotal"
+    if "총계" in t:
+        return "total"
+    if cur_val is None and prior_val is None:
+        return "annotation"
+    return "leaf"
+
+
+def parse_financial_statement(file_content, filename):
+    """
+    회사 회계프로그램이 이미 대차 일치까지 맞춰 내보낸 재무상태표(과목별)/손익계산서(과목별)를 파싱.
+    각 행을 leaf(개별 계정)/subtotal(Ⅰ,Ⅱ../(1),(2).. 소계)/total(총계)/group/annotation으로 분류해
+    시산표 대사는 leaf 행만, 대차평형 검증은 total 행만 사용한다.
+    """
+    df = _read_tabular(file_content, filename)
+    layout = _detect_statement_layout(df)
+
+    records = []
+    for i in range(2, len(df)):
+        raw_acc = df.iat[i, layout["account"]]
+        acc = _normalize_account_name(raw_acc)[0] if pd.notna(raw_acc) else ""
+        cur = _to_amount(df.iat[i, layout["cur_detail"]])
+        if cur is None:
+            cur = _to_amount(df.iat[i, layout["cur_sub"]])
+        prior = _to_amount(df.iat[i, layout["prior_detail"]])
+        if prior is None:
+            prior = _to_amount(df.iat[i, layout["prior_sub"]])
+        kind = _row_kind(acc, cur, prior)
+        if kind == "blank":
+            continue
+        records.append({"Account": acc, "Current": cur, "Prior": prior, "RowKind": kind})
+
+    result = pd.DataFrame(records)
+    if result.empty:
+        raise ValueError("파싱된 재무제표 데이터가 없습니다.")
+    return result
+
+
+def check_balance(bs_df, tolerance=1.0):
+    """재무상태표의 자산총계 = 부채총계 + 자본총계 대차평형 검증."""
+    totals = {r["Account"]: r["Current"] for _, r in bs_df[bs_df["RowKind"] == "total"].iterrows()}
+    assets = totals.get("자산총계")
+    liabilities = totals.get("부채총계")
+    equity = totals.get("자본총계")
+    diff, balanced = None, None
+    if assets is not None and liabilities is not None and equity is not None:
+        diff = round(assets - (liabilities + equity), 2)
+        balanced = abs(diff) <= tolerance
+    return {
+        "TotalAssets": assets,
+        "TotalLiabilities": liabilities,
+        "TotalEquity": equity,
+        "TotalLiabilitiesAndEquity": totals.get("부채및자본총계"),
+        "Balanced": balanced,
+        "Diff": diff,
+    }
+
+
+def reconcile_tb_to_statement(tb_df, stmt_df, tolerance=1.0):
+    """
+    시산표 잔액(NetBalance)과 재무상태표 표시금액(leaf 행)을 계정별로 대사.
+    대손충당금/감가상각누계액처럼 동일 계정명이 여러 자산에 걸쳐 반복되는 경우 이름만으로 합산하면
+    서로 다른 자산의 충당금이 뒤섞여 오탐이 발생한다 (실제 원본 파일로 확인됨). 시산표와 재무제표가
+    같은 계정과목 나열 순서를 쓴다는 전제 하에, 동일 이름은 등장 순서대로 큐에서 하나씩 꺼내 짝짓는다.
+    """
+    tb_queues = {}
+    for _, row in tb_df[~tb_df["IsSubtotal"]].iterrows():
+        tb_queues.setdefault(row["Account"], deque()).append(row["NetBalance"])
+
+    results = []
+    for _, row in stmt_df[stmt_df["RowKind"] == "leaf"].iterrows():
+        acc, stmt_amount = row["Account"], row["Current"]
+        queue = tb_queues.get(acc)
+        if not queue:
+            results.append({
+                "Account": acc, "StatementAmount": stmt_amount, "TBAmount": None,
+                "Diff": None, "Matched": False, "Reason": "시산표에서 해당 계정을 찾을 수 없음",
+            })
+            continue
+        tb_amount = queue.popleft()
+        diff = None if stmt_amount is None else round(stmt_amount - abs(tb_amount), 2)
+        matched = diff is not None and abs(diff) <= tolerance
+        results.append({
+            "Account": acc, "StatementAmount": stmt_amount, "TBAmount": tb_amount,
+            "Diff": diff, "Matched": matched, "Reason": "" if matched else "금액 불일치",
+        })
+    return results
+
+
+def financial_statement_to_variance_input(bs_df, is_df):
+    """재무상태표+손익계산서의 leaf 행을 합쳐 run_variance_analysis가 기대하는 Account/Current/Prior 형태로 변환."""
+    leaf = pd.concat([bs_df[bs_df["RowKind"] == "leaf"], is_df[is_df["RowKind"] == "leaf"]], ignore_index=True)
+    return leaf[["Account", "Current", "Prior"]].fillna(0.0)
+
+
+def build_standard_statements(tb_df, bs_df=None, is_df=None):
+    """
+    대차평형 검증 + 시산표-재무상태표 계정별 대사 결과를 조서 저장(analysis_result_json)에 실을 수 있게 묶어 반환.
+    손익계산서 계정은 기말에 '손익' 계정으로 마감되어 시산표상 잔액(NetBalance)이 0으로 찍히므로
+    (실제 원본 파일로 확인됨 - 회전(turnover) 컬럼도 마감분개가 섞여 신뢰할 수 없는 경우가 있었음),
+    잔액 기준 대사는 재무상태표(영구계정)에만 적용하고 손익계산서는 이번 단계에서는 대사하지 않는다.
+    """
+    result = {"balance_check": None, "bs_reconciliation": [], "is_reconciliation": [],
+              "is_reconciliation_note": "손익계산서 계정은 기말 마감으로 시산표 잔액이 0이 되어 잔액 기준 대사가 불가능함 (P2/추후 별도 방식 필요)"}
+    if bs_df is not None and not bs_df.empty:
+        result["balance_check"] = check_balance(bs_df)
+        result["bs_reconciliation"] = reconcile_tb_to_statement(tb_df, bs_df)
+    return result
+
+# ==========================================
 # 4. K-GAAP RAG 검색 모듈 (로컬 및 DB pgvector 대응)
 # ==========================================
 EMBEDDING_MODEL = None
@@ -502,6 +742,32 @@ def retrieve_k_gaap(query, limit=2, supabase_client=None):
 # ==========================================
 # 5. 감사 조서(Working Paper) 마크다운 생성기
 # ==========================================
+# 위험 카테고리별 권장 감사절차. run_variance_analysis의 risk_signals Category 값과 매핑되며,
+# 매핑에 없는 카테고리(계정 변동성 검토/수익 인식 등 범용 신호)는 _DEFAULT_RISK_PROCEDURES를 사용.
+_RISK_PROCEDURES = {
+    "매출채권 및 대손충당금": [
+        "대상 채권의 연령분석표(Aging Schedule)를 입수하여 회수가능성 및 과거 대손경험률 대비 설정률의 합리성을 검토함.",
+        "기말 이후 수금 내역(Subsequent Collection)을 확인하여 채권의 실재성과 회수가능성을 우회 검증함.",
+        "필요 시 경영진에 대손충당금 추가 설정 요구 분개안(Adjustment Journal Entry)을 제시함.",
+    ],
+    "재고자산 평가": [
+        "재고자산 실사(Physical Inventory Count)에 입회하여 수량 및 상태(진부화·손상 여부)를 확인함.",
+        "품목별 순실현가능가치(NRV)와 장부금액을 비교하여 저가법 평가손실 반영의 적정성을 검토함.",
+        "장기체화재고 명세를 입수하여 재고자산평가충당금 설정의 합리성을 평가함.",
+    ],
+    "유형자산 감가상각 및 손상": [
+        "당기 취득 유형자산의 계약서·세금계산서를 입수하여 취득원가의 실재성을 검증함.",
+        "자산별 내용연수·상각방법 적용의 일관성을 전기와 대사하고, 상각 개시 시점의 적정성을 확인함.",
+        "손상 징후(시장가치 급락, 유휴화 등) 여부를 질문 및 문서 검토로 확인하여 손상차손 인식 필요성을 평가함.",
+    ],
+}
+_DEFAULT_RISK_PROCEDURES = [
+    "대상 계정 과목의 세부 명세서를 피감사인으로부터 입수하여 거래의 실재성 및 발생사실을 대사함.",
+    "관련 원천증빙(계약서·세금계산서·통장거래내역 등)을 표본 추출하여 금액의 정확성을 검증함.",
+    "필요 시 경영진에 회계처리 근거 소명 및 수정 분개안(Adjustment Journal Entry)을 요청함.",
+]
+
+
 def generate_working_paper(company_name, analysis_results, matched_standards):
     """
     변동성 분석 결과 및 관련 K-GAAP 기준서를 조합하여 극도로 전문적인 감사 조서 생성.
@@ -580,19 +846,24 @@ def generate_working_paper(company_name, analysis_results, matched_standards):
             
         wp.append(f"- **대응 회계 기준**: **{ref_para}** 의무 준수 필요.")
         wp.append(f"- **추천 감사 절차**:")
-        wp.append(f"  1) 대상 계정 과목의 세부 명세서를 피감사인으로부터 입수하여 실재 채권/채무/자산의 내역을 대사함.")
-        wp.append(f"  2) 기말 이후 수금 내역 및 기중에 발생한 주요 대손 발생 이력을 추적하여 경영진 추정치의 타당성을 우회 검증함.")
-        wp.append(f"  3) 필요 시 경영진에 추가적인 적정 대손설정 및 평가 손실 반영 요구 분개안(Adjustment Journal Entry) 제시.")
+        procedures = _RISK_PROCEDURES.get(sig['Category'], _DEFAULT_RISK_PROCEDURES)
+        for step_idx, step in enumerate(procedures, 1):
+            wp.append(f"  {step_idx}) {step}")
 
     wp.append("\n### (2) 종합 결론 (Overall Conclusion)")
     wp.append("본 감사인은 상기 변동성 분석 결과 및 RAG 기반 회계기준 매칭 결과를 종합하여 평가한 결과, 다음과 같은 결론에 도달하였습니다.")
-    
-    # 보수적 결론 생성
+
+    # 실제 식별된 위험 카테고리를 반영한 결론 생성 (카테고리와 무관한 고정 문구 사용 금지)
     wp.append("```")
-    wp.append("수행한 분석적 검토 절차 결과, 중요성 금액을 상회하는 계정 과목의 변동성과 회계 기준 미준수 가능성이 포착되었습니다.")
-    wp.append("특히 매출채권 및 대손충당금의 설정 수준이 과거 경험률 또는 당기 위험 변동폭에 부합하지 않아, 일반기업회계기준 제6장 문단 6.17에 명시된 '합리적이고 객관적인 기준'에 어긋날 여지가 큽니다.")
-    wp.append("따라서, 실질적인 위험 왜곡표시를 차단하기 위해 추가적인 감사 실증절차(외부 조회서 발송, 대송경험률 재계산, 재고자산 실사 참관 및 저가법 평가 확인)를 수반할 것을 지시합니다.")
-    wp.append("본 조서에서 제안된 감사 조치 사항들이 최종 보고서 작성 시점까지 해소되지 않을 시, 이는 감사 의견 형성에 중대한 영향을 미칠 수 있습니다.")
+    if risk_signals:
+        categories_text = ", ".join(sorted(set(sig['Category'] for sig in risk_signals)))
+        wp.append("수행한 분석적 검토 절차 결과, 중요성 금액을 상회하는 계정 과목의 변동성과 회계 기준 미준수 가능성이 포착되었습니다.")
+        wp.append(f"특히 {categories_text} 항목에서 상기 '위험 상세' 및 '대응 회계 기준'에 명시된 요건에 부합하지 않을 여지가 확인되어 추가 검토가 필요합니다.")
+        wp.append("따라서, 실질적인 위험 왜곡표시를 차단하기 위해 상기 각 위험 항목별 추천 감사 절차를 반드시 수반할 것을 지시합니다.")
+        wp.append("본 조서에서 제안된 감사 조치 사항들이 최종 보고서 작성 시점까지 해소되지 않을 시, 이는 감사 의견 형성에 중대한 영향을 미칠 수 있습니다.")
+    else:
+        wp.append("수행한 분석적 검토 절차 결과, 수행중요성금액을 상회하는 특기할 위험 항목은 식별되지 않았습니다.")
+        wp.append("다만 본 분석은 시산표 수준의 분석적 절차에 한정되므로, 표본추출에 의한 상세 실증절차 및 확인서 절차는 별도로 계획·수행되어야 합니다.")
     wp.append("```")
     
     wp.append("\n**조서 검토 및 서명**:")

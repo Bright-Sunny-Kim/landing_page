@@ -379,6 +379,29 @@
                             </div>
                         </div>
 
+                        <!-- 시산표-재무제표 대사 결과 (P1: 회사 제시 재무상태표/손익계산서가 있을 때만 표출) -->
+                        <div class="glass-card" id="audit-reconciliation-section" style="display: none; background: rgba(20,20,20,0.3); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 2.5rem;">
+                            <h3 style="color: var(--text-primary); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">🧮 시산표 ↔ 재무상태표 대사 (대차평형 검증 + Delta 비교)</h3>
+                            <div id="audit-balance-check" style="margin-bottom: 1.2rem;"><!-- 동적 삽입 --></div>
+                            <div class="table-container">
+                                <table class="partners-table" style="font-size: 0.9rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>계정과목</th>
+                                            <th style="text-align: right;">재무제표 금액</th>
+                                            <th style="text-align: right;">시산표 잔액</th>
+                                            <th style="text-align: right;">차이</th>
+                                            <th>상태</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="audit-reconciliation-table-body">
+                                        <!-- 동적 삽입 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p id="audit-is-reconciliation-note" style="margin-top: 1rem; font-size: 0.82rem; color: var(--text-secondary);"></p>
+                        </div>
+
                         <!-- 조서 에디터/렌더러 -->
                         <div class="glass-card" style="background: rgba(15,15,15,0.6); padding: 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
                             <h3 style="color: var(--text-primary); margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.7rem;">
@@ -543,7 +566,52 @@
                             } else {
                                 tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-secondary);">수행중요성금액을 초과하는 이상 항목(Outlier)이 감지되지 않았습니다.</td></tr>';
                             }
-                            
+
+                            // 4-1. 시산표-재무제표 대사 결과 렌더링 (회사가 재무상태표/손익계산서 원본까지 올린 경우에만 존재)
+                            const reconSection = document.getElementById('audit-reconciliation-section');
+                            const std = result.standard_statements;
+                            if (std && std.balance_check) {
+                                reconSection.style.display = 'block';
+
+                                const bc = std.balance_check;
+                                const balanceCheckEl = document.getElementById('audit-balance-check');
+                                if (bc.Balanced) {
+                                    balanceCheckEl.innerHTML = `
+                                        <span style="color:#4ade80; font-weight:600; font-size:0.85rem; background:rgba(74,222,128,0.1); padding:0.3rem 0.7rem; border-radius:6px; border:1px solid rgba(74,222,128,0.25);">✅ 대차평형 일치</span>
+                                        <span style="color:var(--text-secondary); font-size:0.85rem; margin-left:0.8rem;">자산총계 ${bc.TotalAssets.toLocaleString()} 원 = 부채총계 ${bc.TotalLiabilities.toLocaleString()} 원 + 자본총계 ${bc.TotalEquity.toLocaleString()} 원</span>
+                                    `;
+                                } else {
+                                    balanceCheckEl.innerHTML = `
+                                        <span style="color:#f87171; font-weight:600; font-size:0.85rem; background:rgba(239,68,68,0.1); padding:0.3rem 0.7rem; border-radius:6px; border:1px solid rgba(239,68,68,0.25);">⚠️ 대차평형 불일치 (차이 ${(bc.Diff || 0).toLocaleString()} 원)</span>
+                                    `;
+                                }
+
+                                const reconBody = document.getElementById('audit-reconciliation-table-body');
+                                reconBody.innerHTML = '';
+                                const reconRows = std.bs_reconciliation || [];
+                                if (reconRows.length > 0) {
+                                    reconRows.forEach(r => {
+                                        const tr = document.createElement('tr');
+                                        const statusColor = r.Matched ? '#4ade80' : '#f87171';
+                                        const statusLabel = r.Matched ? '✅ 일치' : `⚠️ ${r.Reason || '불일치'}`;
+                                        tr.innerHTML = `
+                                            <td style="font-weight:500; color:#fff;">${r.Account}</td>
+                                            <td style="text-align:right;">${r.StatementAmount != null ? r.StatementAmount.toLocaleString() : '-'}</td>
+                                            <td style="text-align:right;">${r.TBAmount != null ? Math.abs(r.TBAmount).toLocaleString() : '-'}</td>
+                                            <td style="text-align:right;">${r.Diff != null ? r.Diff.toLocaleString() : '-'}</td>
+                                            <td><span style="color:${statusColor}; font-weight:600; font-size:0.8rem;">${statusLabel}</span></td>
+                                        `;
+                                        reconBody.appendChild(tr);
+                                    });
+                                } else {
+                                    reconBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-secondary);">대사할 재무상태표 계정이 없습니다.</td></tr>';
+                                }
+
+                                document.getElementById('audit-is-reconciliation-note').innerText = std.is_reconciliation_note || '';
+                            } else {
+                                reconSection.style.display = 'none';
+                            }
+
                             // 5. 감사조서 마크다운 주입
                             generatedWorkingPaperMd = result.working_paper_md;
                             lastAnalysisResult = result;

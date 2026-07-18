@@ -130,9 +130,10 @@ un_parser.bat를 구성했습니다.
 - `POST /update-status` : 개별 요청 건의 처리 상태(`대기중`, `처리중`, `완료`)를 비동기(AJAX)로 업데이트.
 
 ### 📊 AI 감사 자동화 API
-- `POST /master/audit-analyze/<string:company_name>` : **회사 종합 AI 감사 위험 분석 API**.
-  - 해당 피감사인이 올린 모든 시산표(T/B) 데이터프레임을 다운로드 및 순차 파싱하여 일괄 병합합니다.
+- `POST /master/audit-analyze/<string:company_name>` / `GET /company/audit-analysis/<string:company_name>` (2026-07-18 추가) : **회사 종합 AI 감사 위험 분석 API**. 두 라우트 모두 공통 함수 `_run_audit_analysis()`(`app.py`)를 공유.
+  - 해당 피감사인이 올린 파일을 파일명(합계잔액시산표/재무상태표/손익계산서)으로 구분해 실제 회계프로그램 양식 그대로 파싱(`audit_engine.py`의 `parse_trial_balance_structured`/`parse_financial_statement`) → 대차평형 검증 + 시산표-재무제표 계정별 대사(`build_standard_statements`) 수행. 분류 안 되는 파일은 기존 키워드매칭 `parse_tb_file`로 폴백.
   - 종합 변동성(Vertical/Horizontal) 분석을 가동하여 Outlier 계정을 식별하고 K-GAAP RAG 비교 매칭을 통해 완성도 높은 3단계('감사 목표 - 수행 절차 - 감사 결과 및 결론') 구조의 감사 조서 마크다운 문서를 합성합니다.
+  - `/master/...`는 실데이터가 없으면 모의데이터로 폴백하지만(내부 테스트용), `/company/...`(고객사 자체 열람, `company.html` "분석보고서" 탭)는 그렇게 하지 않고 자료 부족 시 안내만 반환 — DB에 저장하지 않는 읽기 전용 조회. 상세는 `docs/audit_master.md` 참조.
 
 ---
 

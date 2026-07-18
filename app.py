@@ -3,6 +3,7 @@ import os
 import re
 import time
 import logging
+import pandas as pd
 from datetime import timedelta
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify
 
@@ -17,7 +18,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from openai import OpenAI
-from audit_engine import parse_tb_file, run_variance_analysis, retrieve_k_gaap, generate_working_paper
+from audit_engine import (
+    parse_tb_file, run_variance_analysis, retrieve_k_gaap, generate_working_paper,
+    classify_source_file, parse_trial_balance_structured, parse_financial_statement,
+    financial_statement_to_variance_input, build_standard_statements,
+)
 
 def get_safe_path_name(name):
     # 경로 위험 문자를 제거하되, 한글/영문/숫자 문자는 보존
@@ -406,8 +411,14 @@ def company_page(company_name):
     success = request.args.get('success', 'false') == 'true'
     
     document_labels = {
-        'tb_current': '시산표(당연도)',
-        'tb_prior': '시산표(전년도)',
+        'tb_current': '합계잔액시산표(당연도)',
+        'tb_prior': '합계잔액시산표(전년도)',
+        'bs_current': '재무상태표(당연도)',
+        'bs_prior': '재무상태표(전년도)',
+        'is_current': '손익계산서(당연도)',
+        'is_prior': '손익계산서(전년도)',
+        'je_current': '분개장(당연도)',
+        'je_prior': '분개장(전년도)',
         'gl_current': '계정별원장(당연도)',
         'gl_prior': '계정별원장(전년도)',
         'fa_current': '유형자산명세서(당연도)',
@@ -651,8 +662,14 @@ def submit_request():
     
 
     document_labels = {
-        'tb_current': '시산표(당연도)',
-        'tb_prior': '시산표(전년도)',
+        'tb_current': '합계잔액시산표(당연도)',
+        'tb_prior': '합계잔액시산표(전년도)',
+        'bs_current': '재무상태표(당연도)',
+        'bs_prior': '재무상태표(전년도)',
+        'is_current': '손익계산서(당연도)',
+        'is_prior': '손익계산서(전년도)',
+        'je_current': '분개장(당연도)',
+        'je_prior': '분개장(전년도)',
         'gl_current': '계정별원장(당연도)',
         'gl_prior': '계정별원장(전년도)',
         'fa_current': '유형자산명세서(당연도)',
@@ -831,99 +848,165 @@ def submit_request():
  
     return redirect(url_for('company_page', company_name=session['company'], success='true'))
 
+def _run_audit_analysis(company_name, allow_simulated_fallback=True):
+    """
+    회사가 업로드한 파일들을 모아 T/B·재무제표를 파싱하고 변동성분석+K-GAAP매칭+조서초안까지 생성.
+    master용 라우트와 company용 라우트가 이 로직을 공유한다.
+    반환: (payload_dict, http_status).
+    allow_simulated_fallback=False면 실제 파싱 가능한 파일이 하나도 없을 때 모의데이터로 채우지 않고
+    success:False로 응답한다 (고객사 화면에 가짜 숫자를 보여줄 수 없으므로, 마스터 내부 테스트용 폴백과는 구분).
+    """
+    if not supabase:
+        return {'error': 'Supabase not configured'}, 500
+
+    # 1. 해당 회사가 올린 모든 파일 메타데이터 조회
+    file_res = supabase.table('company_files').select('*').eq('company_name', company_name).order('created_at', desc=True).execute()
+    if not file_res.data:
+        if allow_simulated_fallback:
+            return {'error': '해당 회사가 업로드한 파일이 없습니다.'}, 404
+        return {'success': False, 'error_code': 'NO_FILES', 'error': '아직 업로드한 자료가 없습니다.'}, 200
+
+    files_list = file_res.data
+    df_list = []           # 레거시 경로용 (Account/Current/Prior) - BS/IS 실물 파일이 없을 때만 사용
+    parsed_filenames = []
+    tb_frames = []          # 구조 기반으로 파싱된 합계잔액시산표
+    bs_df, is_df = None, None
+
+    # 2. 모든 파일 바이너리를 다운로드하고, 파일명으로 시산표/재무상태표/손익계산서를 구분해 파싱
+    for f_info in files_list:
+        file_url = f_info.get('file_url')
+        file_name = f_info.get('file_name', 'simulated.csv')
+
+        file_bytes = None
+        if file_url:
+            try:
+                if file_url.startswith('http'):
+                    # It's a MinIO URL, download via requests
+                    import requests
+                    res = requests.get(file_url)
+                    if res.status_code == 200:
+                        file_bytes = res.content
+                    else:
+                        raise Exception(f"Failed to fetch from MinIO, status: {res.status_code}")
+                else:
+                    file_bytes = supabase.storage.from_('company-uploads').download(file_url)
+
+                file_kind = classify_source_file(file_name)
+                if file_kind == 'balance_sheet' and bs_df is None:
+                    bs_df = parse_financial_statement(file_bytes, file_name)
+                elif file_kind == 'income_statement' and is_df is None:
+                    is_df = parse_financial_statement(file_bytes, file_name)
+                elif file_kind == 'trial_balance':
+                    tb_frames.append(parse_trial_balance_structured(file_bytes, file_name))
+                else:
+                    # 파일명으로 구분이 안 되는 경우: 구조 기반 시산표 파싱을 우선 시도하고,
+                    # 형식이 안 맞으면 기존 컬럼명 키워드 매칭 파서로 폴백 (기존 프로토타입 유지)
+                    try:
+                        tb_frames.append(parse_trial_balance_structured(file_bytes, file_name))
+                    except Exception:
+                        df_list.append(parse_tb_file(file_bytes, file_name))
+                parsed_filenames.append(file_name)
+            except Exception as download_err:
+                print(f"Storage download failed for {file_url}: {download_err}. Skipping this file.")
+
+    tb_df = None
+    if tb_frames:
+        tb_df = pd.concat(tb_frames, ignore_index=True) if len(tb_frames) > 1 else tb_frames[0]
+
+    standard_statements = None
+    if bs_df is not None and is_df is not None:
+        # 회사가 제시한 재무상태표/손익계산서가 모두 있으면, 그 실제 당기/전기 비교금액으로 증감분석을 수행하고
+        # 시산표가 있으면 계정별 대사(대차평형 검증 + Delta 비교)까지 함께 수행
+        df_integrated = financial_statement_to_variance_input(bs_df, is_df)
+        if tb_df is not None:
+            standard_statements = build_standard_statements(tb_df, bs_df, is_df)
+    else:
+        # 폴백: 회사 제시 BS/IS가 없는 기존 프로토타입 경로 (시산표만 있거나 형식이 다른 경우)
+        if tb_df is not None and not df_list:
+            df_list.append(
+                tb_df.rename(columns={'NetBalance': 'Current'})[['Account', 'Current']].assign(Prior=0.0)
+            )
+        if not df_list:
+            if not allow_simulated_fallback:
+                return {
+                    'success': False, 'error_code': 'NO_DATA',
+                    'error': '분석 가능한 재무 데이터를 아직 인식하지 못했습니다. 합계잔액시산표(또는 재무상태표/손익계산서)를 업로드해주세요.',
+                }, 200
+            df_tb = parse_tb_file(None, "fallback_simulated.csv")
+            df_list.append(df_tb)
+            parsed_filenames.append("Fallback Simulated T/B")
+
+        from audit_engine import merge_multiple_tb_dfs
+        df_integrated = merge_multiple_tb_dfs(df_list)
+
+    # 4. 중요성 기준 및 변동성 분석 수행
+    analysis_res = run_variance_analysis(df_integrated, performance_materiality=50000000.0)
+
+    # 5. K-GAAP RAG 기준서 매칭 (리스크 신호 검색)
+    combined_standards = []
+    seen_para = set()
+
+    for sig in analysis_res["RiskSignals"]:
+        query = sig["K_GAAP_Query"]
+        matched = retrieve_k_gaap(query, limit=2, supabase_client=supabase)
+        for m in matched:
+            para_key = f"{m.get('standard_no')}_{m.get('paragraph_no')}"
+            if para_key not in seen_para:
+                seen_para.add(para_key)
+                combined_standards.append(m)
+
+    if not combined_standards:
+        combined_standards = retrieve_k_gaap("기본 기준", limit=2, supabase_client=supabase)
+
+    # 6. 종합 감사조서(Working Paper) 마크다운 생성
+    working_paper_md = generate_working_paper(company_name, analysis_res, combined_standards)
+
+    # 7. 분석 결과를 구조화된 dict로 반환
+    return {
+        'success': True,
+        'company_name': company_name,
+        'analyzed_files': parsed_filenames,
+        'performance_materiality': analysis_res['PerformanceMateriality'],
+        'total_assets': analysis_res['TotalAssets'],
+        'total_sales': analysis_res['TotalSales'],
+        'outliers': analysis_res['Outliers'],
+        'risk_signals': analysis_res['RiskSignals'],
+        'matched_standards': combined_standards,
+        'working_paper_md': working_paper_md,
+        'standard_statements': standard_statements
+    }, 200
+
+
 @app.route('/master/audit-analyze/<string:company_name>', methods=['POST'])
 def audit_analyze(company_name):
     if 'email' not in session or session['email'] != MASTER_EMAIL:
         return jsonify({'error': 'Unauthorized'}), 401
-        
-    if not supabase:
-        return jsonify({'error': 'Supabase not configured'}), 500
-        
     try:
-        # 1. 해당 회사가 올린 모든 파일 메타데이터 조회
-        file_res = supabase.table('company_files').select('*').eq('company_name', company_name).order('created_at', desc=True).execute()
-        if not file_res.data:
-            return jsonify({'error': '해당 회사가 업로드한 파일이 없습니다.'}), 404
-            
-        files_list = file_res.data
-        df_list = []
-        parsed_filenames = []
-        
-        # 2. 모든 파일 바이너리를 다운로드 및 순차 파싱
-        for f_info in files_list:
-            file_url = f_info.get('file_url')
-            file_name = f_info.get('file_name', 'simulated.csv')
-            
-            file_bytes = None
-            if file_url:
-                try:
-                    if file_url.startswith('http'):
-                        # It's a MinIO URL, download via requests
-                        import requests
-                        res = requests.get(file_url)
-                        if res.status_code == 200:
-                            file_bytes = res.content
-                        else:
-                            raise Exception(f"Failed to fetch from MinIO, status: {res.status_code}")
-                    else:
-                        file_bytes = supabase.storage.from_('company-uploads').download(file_url)
-                    
-                    # 성공적으로 다운로드 한 경우에만 파싱
-                    df_tb = parse_tb_file(file_bytes, file_name)
-                    df_list.append(df_tb)
-                    parsed_filenames.append(file_name)
-                except Exception as download_err:
-                    print(f"Storage download failed for {file_url}: {download_err}. Skipping this file.")
-                    
-        # 만약 실제 다운로드되어 파싱된 파일이 없을 경우 Fallback으로 모의 데이터 세팅
-        if not df_list:
-            df_tb = parse_tb_file(None, "fallback_simulated.csv")
-            df_list.append(df_tb)
-            parsed_filenames.append("Fallback Simulated T/B")
-            
-        # 3. 다중 T/B 데이터프레임 병합 및 취합
-        from audit_engine import merge_multiple_tb_dfs
-        df_integrated = merge_multiple_tb_dfs(df_list)
-        
-        # 4. 중요성 기준 및 변동성 분석 수행
-        analysis_res = run_variance_analysis(df_integrated, performance_materiality=50000000.0)
-        
-        # 5. K-GAAP RAG 기준서 매칭 (리스크 신호 검색)
-        combined_standards = []
-        seen_para = set()
-        
-        for sig in analysis_res["RiskSignals"]:
-            query = sig["K_GAAP_Query"]
-            matched = retrieve_k_gaap(query, limit=2, supabase_client=supabase)
-            for m in matched:
-                para_key = f"{m.get('standard_no')}_{m.get('paragraph_no')}"
-                if para_key not in seen_para:
-                    seen_para.add(para_key)
-                    combined_standards.append(m)
-                    
-        if not combined_standards:
-            combined_standards = retrieve_k_gaap("기본 기준", limit=2, supabase_client=supabase)
-            
-        # 6. 종합 감사조서(Working Paper) 마크다운 생성
-        working_paper_md = generate_working_paper(company_name, analysis_res, combined_standards)
-        
-        # 7. 분석 결과를 구조화된 JSON으로 반환
-        return jsonify({
-            'success': True,
-            'company_name': company_name,
-            'analyzed_files': parsed_filenames,
-            'performance_materiality': analysis_res['PerformanceMateriality'],
-            'total_assets': analysis_res['TotalAssets'],
-            'total_sales': analysis_res['TotalSales'],
-            'outliers': analysis_res['Outliers'],
-            'risk_signals': analysis_res['RiskSignals'],
-            'matched_standards': combined_standards,
-            'working_paper_md': working_paper_md
-        })
-        
+        payload, status = _run_audit_analysis(company_name, allow_simulated_fallback=True)
+        return jsonify(payload), status
     except Exception as e:
         print(f"Audit analysis api error: {e}")
         return jsonify({'error': f'종합 분석 수행 중 에러 발생: {str(e)}'}), 500
+
+
+@app.route('/company/audit-analysis/<string:company_name>', methods=['GET'])
+def company_audit_analysis(company_name):
+    """
+    고객사 자체 열람용 분석 조회 (읽기 전용, DB에 저장하지 않음).
+    company.html의 '분석보고서' 탭이 파일 업로드 후 자동으로 호출한다.
+    마스터의 /master/audit-analyze와 달리 실데이터가 없을 때 모의데이터로 채우지 않고
+    success:False를 반환한다 - 고객사 화면에 가짜 숫자를 보여줄 수 없기 때문.
+    """
+    if 'email' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    if session['email'] != MASTER_EMAIL and session.get('company') != company_name:
+        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        payload, status = _run_audit_analysis(company_name, allow_simulated_fallback=False)
+        return jsonify(payload), status
+    except Exception as e:
+        print(f"Company audit analysis api error: {e}")
+        return jsonify({'error': f'분석 수행 중 오류가 발생했습니다: {str(e)}'}), 500
 
 
 def _resolve_company_id(company_name):
