@@ -3,6 +3,8 @@ import os
 import re
 import time
 import logging
+import hashlib
+import hmac
 import pandas as pd
 from datetime import timedelta
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify
@@ -50,6 +52,34 @@ def add_header(response):
 
 # 마스터 관리자 이메일 상수 정의
 MASTER_EMAIL = 'cpaeastsun@gmail.com'
+
+# PBKDF2 avoids OpenSSL/scrypt runtime failures on constrained production hosts
+# and remains readable by older Werkzeug releases during rolling deployments.
+PASSWORD_HASH_METHOD = 'pbkdf2:sha256:600000'
+
+
+def _generate_password_hash(password):
+    return generate_password_hash(password, method=PASSWORD_HASH_METHOD)
+
+
+def _check_password_hash_compatible(stored_hash, password):
+    """Verify Werkzeug hashes, including scrypt on older Werkzeug versions."""
+    try:
+        return check_password_hash(stored_hash, password)
+    except (TypeError, ValueError):
+        pass
+
+    try:
+        method, salt, expected = stored_hash.split('$', 2)
+        if not method.startswith('scrypt:'):
+            return False
+        n, r, p = (int(value) for value in method.split(':')[1:])
+        actual = hashlib.scrypt(
+            password.encode('utf-8'), salt=salt.encode('utf-8'), n=n, r=r, p=p
+        ).hex()
+        return hmac.compare_digest(actual, expected)
+    except (AttributeError, TypeError, ValueError):
+        return False
 
 # 환경 변수 로드 (.env)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -138,8 +168,8 @@ def check_email():
                 if user:
                     has_password = bool(user.get('password'))
                     return jsonify({'exists': True, 'has_password': has_password})
-            except Exception as e:
-                print(f"Master check-email database error: {e}")
+            except Exception:
+                logger.exception('Master check-email database query failed')
         return jsonify({'exists': True, 'has_password': False})
         
     if not supabase:
@@ -151,9 +181,9 @@ def check_email():
             user = response.data[0]
             has_password = bool(user.get('password'))
             return jsonify({'exists': True, 'has_password': has_password})
-    except Exception as e:
-        print(f"Check email error: {e}")
-        return jsonify({'exists': False, 'error': str(e)})
+    except Exception:
+        logger.exception('Check-email database query failed')
+        return jsonify({'exists': False, 'error': 'database_unavailable'}), 503
         
     return jsonify({'exists': False})
 
@@ -188,7 +218,7 @@ def login():
                     # 비밀번호 해시 형태 확인
                     is_hashed = any(user_password.startswith(p) for p in ['pbkdf2:', 'scrypt:', 'argon2:', 'sha256:'])
                     if is_hashed:
-                        if not check_password_hash(user_password, password):
+                        if not _check_password_hash_compatible(user_password, password):
                             return redirect(url_for('login_page', error='invalid_password'))
                     else:
                         # 평문 비밀번호 검증 (예: '0000')
@@ -196,15 +226,15 @@ def login():
                             return redirect(url_for('login_page', error='invalid_password'))
                         # 로그인 성공 시 보안을 위해 해시로 자동 마이그레이션
                         try:
-                            hashed = generate_password_hash(password)
+                            hashed = _generate_password_hash(password)
                             supabase.table('users').update({'password': hashed}).eq('email', email).execute()
-                        except Exception as migration_err:
-                            print(f"Failed to migrate master password to hash: {migration_err}")
+                        except Exception:
+                            logger.exception('Failed to migrate master password hash')
                 else:
                     # 마스터 비밀번호 등록이 없는 경우 첫 로그인 시 자동 생성
                     if not password:
                         return redirect(url_for('login_page', error='missing_password'))
-                    hashed = generate_password_hash(password)
+                    hashed = _generate_password_hash(password)
                     supabase.table('users').update({'password': hashed}).eq('email', email).execute()
                 
                 session['email'] = user['email']
@@ -215,7 +245,7 @@ def login():
                 # 최초 가동 등으로 DB에 마스터 계정이 없을 시 자동 등록
                 if not password:
                     return redirect(url_for('login_page', error='missing_password'))
-                hashed = generate_password_hash(password)
+                hashed = _generate_password_hash(password)
                 supabase.table('users').insert({
                     'email': MASTER_EMAIL, 
                     'company': '회계법인 혜안', 
@@ -247,7 +277,7 @@ def login():
                 # 비밀번호 해시 형태 확인
                 is_hashed = any(user_password.startswith(p) for p in ['pbkdf2:', 'scrypt:', 'argon2:', 'sha256:'])
                 if is_hashed:
-                    if not check_password_hash(user_password, password):
+                    if not _check_password_hash_compatible(user_password, password):
                         return redirect(url_for('login_page', error='invalid_password'))
                 else:
                     # 평문 비밀번호 검증 (예: 사용자가 DB에 직접 텍스트로 넣은 경우)
@@ -255,15 +285,15 @@ def login():
                         return redirect(url_for('login_page', error='invalid_password'))
                     # 성공 시 해시 자동 마이그레이션
                     try:
-                        hashed = generate_password_hash(password)
+                        hashed = _generate_password_hash(password)
                         supabase.table('users').update({'password': hashed}).eq('email', email).execute()
-                    except Exception as migration_err:
-                        print(f"Failed to migrate user password to hash: {migration_err}")
+                    except Exception:
+                        logger.exception('Failed to migrate user password hash')
             else:
                 # 기존 회원 중 비밀번호가 아직 없는 유저: 이번에 입력한 비밀번호로 최초 등록(마이그레이션)
                 if not password:
                     return redirect(url_for('login_page', error='missing_password'))
-                hashed = generate_password_hash(password)
+                hashed = _generate_password_hash(password)
                 supabase.table('users').update({'password': hashed}).eq('email', email).execute()
                 
             session['email'] = user['email']
@@ -291,10 +321,10 @@ def login():
                         'corporate_number': corporate_number,
                         'company_name': company
                     }).execute()
-                except Exception as company_sync_err:
-                    print(f"companies sync error: {company_sync_err}")
+                except Exception:
+                    logger.exception('Failed to synchronize company during login')
 
-            hashed = generate_password_hash(password)
+            hashed = _generate_password_hash(password)
             supabase.table('users').insert({
                 'email': email,
                 'corporate_number': corporate_number,
@@ -309,8 +339,8 @@ def login():
             session['username'] = username
             session['task_type'] = task_type
             
-    except Exception as e:
-        print(f"Database error during login: {e}")
+    except Exception:
+        logger.exception('Login processing failed for email=%s', email)
         return redirect(url_for('login_page', error='db_error'))
         
     return redirect(url_for('company_page', company_name=session['company']))
