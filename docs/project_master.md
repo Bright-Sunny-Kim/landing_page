@@ -1,4 +1,15 @@
+## 최근 업데이트 (2026-07-22) - Notion Todo DB 세무 일정 Calendar 연동
 
+- **기존 구조 분석**: 마스터 포털의 `세무 일정 캘린더` 메뉴는 `master.html`에 사이드바 항목만 있고, `main.js`가 준비 중 Mock 화면을 동적으로 생성하는 상태였음.
+- **서버 측 Notion 연동**: `app.py`에 마스터 세션 전용 `GET /api/master/calendar` API를 추가. 조회 기간을 `YYYY-MM-DD`로 검증하고 Notion DB를 날짜 범위로 필터링하며, 100건 단위 페이지네이션을 끝까지 처리함.
+- **속성 매핑**: `일정과할일`, `날짜`, `상태`, `세부내역`, `Description`, `중요`, `긴급`, `Must-DO`를 프론트엔드용 일정 객체로 정규화. `title`, `rich_text`, `status/select`, `checkbox` 타입 차이를 방어적으로 처리함.
+- **Calendar UI 구현**: 월간 6주 캘린더, 이전 달·다음 달·오늘·새로고침, 일별 최대 4건 요약, 추가 일정 목록, 상세 패널과 Notion 원문 링크를 구현. 중요·긴급·Must-DO 배지와 모바일 가로 스크롤/상세 패널 재배치를 기존 글래스 디자인에 맞춰 적용함.
+- **보안**: Notion 토큰은 프론트엔드에 전달하지 않고 서버 환경변수 `NOTION_ACCESS_TOKEN`에서만 읽음. DB ID는 `NOTION_TODO_DATABASE_ID`로 재정의 가능하며 실제 `.env`는 Git 추적 대상에서 제외됨.
+- **배포 설정**: Ubuntu 사용자 서비스의 실제 이름은 `hyean-portal-user.service`이며 `/home/dskim/hyean-portal/.env`를 읽음. 환경변수 변경 후 `systemctl --user restart hyean-portal-user.service`로 재시작해야 새 토큰이 반영됨.
+- **트러블슈팅**: `401 unauthorized / API token is invalid`를 실측하여 DB 권한 문제가 아니라 잘못된 Installation access token 문제임을 확인. Notion Internal connection의 Installation access token 재발급과 DB의 `Add connections` 공유가 필요함.
+- **검증**: `python -m py_compile app.py audit_engine.py`, `node --check static/js/main.js` 통과. 모킹으로 속성 매핑·요청 타임아웃을 검증하고, API 미인증 `401`과 잘못된 날짜 `400` 응답을 확인함. 실제 Notion 조회는 운영 토큰 재설정 및 DB 공유 후 최종 확인 필요.
+
+---
 ## 최근 아키텍처 및 파이프라인 업데이트 (2026-06-25)
 
 ## 추가 업데이트 (2026-06-26)

@@ -1,5 +1,17 @@
 # 작업 요약 (Walkthrough)
 
+## 2026-07-22 Notion 세무 일정 캘린더
+
+마스터 포털의 준비 중 화면이었던 `세무 일정 캘린더`를 Notion Todo DB 기반의 실제 월간 캘린더로 전환했습니다.
+
+- Flask 서버가 환경변수의 Notion Installation access token으로 Todo DB를 조회하므로 토큰이 브라우저 코드나 응답에 노출되지 않습니다.
+- 일정 제목·날짜·상태·분류·상세 내용과 중요·긴급·Must-DO 속성을 월간 캘린더 및 상세 패널에 표시합니다.
+- 월 이동, 오늘 이동, 새로고침, 다건 일정 목록, Notion 원문 링크와 모바일 반응형 레이아웃을 지원합니다.
+- 배포 환경은 `NOTION_ACCESS_TOKEN`, `NOTION_TODO_DATABASE_ID`를 설정하고 실행 중인 Gunicorn 서비스를 재시작해야 합니다.
+- Ubuntu 사용자 서비스 이름은 `hyean-portal-user.service`이며 재시작 명령은 `systemctl --user restart hyean-portal-user.service`입니다.
+- `API token is invalid` 오류는 Installation access token을 다시 발급하고 Todo DB에서 해당 connection을 공유한 뒤 해결해야 합니다.
+
+검증은 Python/JavaScript 구문 검사와 모킹 기반 API 인증·입력·속성 매핑 테스트로 완료했습니다.
 성공적으로 RAG(검색 증강 생성) 파이프라인의 핵심 백엔드 구성을 완료했습니다. 
 
 ## 🎯 주요 달성 성과

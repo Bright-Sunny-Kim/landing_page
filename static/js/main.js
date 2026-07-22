@@ -498,6 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // 타 대시보드 숨기기
                         const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
                         if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
+                        const calendarDashboardView = document.getElementById('calendar-dashboard-view');
+                        if (calendarDashboardView) calendarDashboardView.style.display = 'none';
                         
                         // 홈 보이기
                         homeDashboardView.style.display = 'block';
@@ -505,7 +507,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
-                // 2. 시스템 통계 및 리포트 (analytics) 분기 처리
+                // 2. Notion 세무 일정 캘린더
+                if (menu === 'calendar') {
+                    e.preventDefault();
+                    sidebarMenuItems.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    if (homeDashboardView) homeDashboardView.style.display = 'none';
+                    if (detailDashboardView) detailDashboardView.style.display = 'none';
+                    const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
+                    if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
+                    const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+                    activeMocks.forEach(m => m.remove());
+                    const calendarDashboardView = document.getElementById('calendar-dashboard-view');
+                    if (calendarDashboardView) {
+                        calendarDashboardView.style.display = 'block';
+                        window.loadNotionCalendar?.();
+                    }
+                    return;
+                }
+
+                // 3. 시스템 통계 및 리포트 (analytics) 분기 처리
                 if (menu === 'analytics') {
                     e.preventDefault();
                     
@@ -514,6 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (homeDashboardView) homeDashboardView.style.display = 'none';
                     if (detailDashboardView) detailDashboardView.style.display = 'none';
+                    const calendarDashboardView = document.getElementById('calendar-dashboard-view');
+                    if (calendarDashboardView) calendarDashboardView.style.display = 'none';
                     
                     // 기존 Mock 뷰들 다 제거
                     const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
@@ -539,6 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (detailDashboardView) detailDashboardView.style.display = 'none';
                 const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
                 if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
+                const calendarDashboardView = document.getElementById('calendar-dashboard-view');
+                if (calendarDashboardView) calendarDashboardView.style.display = 'none';
                 
                 // 기존에 열려있던 다른 Mock 뷰 제거
                 const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
@@ -1729,4 +1754,172 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.printBillingDoc = function(docId, type) {
     window.open('/print/docs/' + type + '?id=' + docId, '_blank');
-};
+};
+
+// ==========================================
+// Notion Todo Calendar
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const calendarView = document.getElementById('calendar-dashboard-view');
+    const calendarGrid = document.getElementById('calendar-grid');
+    if (!calendarView || !calendarGrid) return;
+
+    const monthTitle = document.getElementById('calendar-month-title');
+    const statusBox = document.getElementById('calendar-status');
+    const detailPanel = document.getElementById('calendar-detail');
+    const today = new Date();
+    let visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    let events = [];
+    let lastRangeKey = '';
+    let isLoading = false;
+
+    const escapeHtml = (value) => String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+
+    const toDateKey = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const eventDateKey = (value) => value ? value.slice(0, 10) : '';
+
+    const getCalendarRange = () => {
+        const monthStart = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
+        const gridStart = new Date(monthStart);
+        gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+        const gridEnd = new Date(gridStart);
+        gridEnd.setDate(gridEnd.getDate() + 42);
+        return { gridStart, gridEnd };
+    };
+
+    const eventFlags = (event) => {
+        const flags = [];
+        if (event.urgent) flags.push('<span class="calendar-event-flag urgent">긴급</span>');
+        if (event.important) flags.push('<span class="calendar-event-flag important">중요</span>');
+        if (event.must_do) flags.push('<span class="calendar-event-flag must-do">필수</span>');
+        return flags.join('');
+    };
+
+    const showDetail = (event) => {
+        const start = event.start ? new Date(event.start).toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: event.start.includes('T') ? 'short' : undefined }) : '-';
+        const end = event.end ? new Date(event.end).toLocaleString('ko-KR', { dateStyle: 'long', timeStyle: event.end.includes('T') ? 'short' : undefined }) : '';
+        detailPanel.innerHTML = `
+            <div class="calendar-detail-head">
+                <span class="calendar-detail-kicker">${escapeHtml(event.category || '일정')}</span>
+                <h3>${escapeHtml(event.title)}</h3>
+            </div>
+            <div class="calendar-detail-flags">${eventFlags(event) || '<span class="calendar-event-flag neutral">일반</span>'}</div>
+            <dl class="calendar-detail-list">
+                <div><dt>날짜</dt><dd>${escapeHtml(start)}${end ? ` ~ ${escapeHtml(end)}` : ''}</dd></div>
+                <div><dt>상태</dt><dd>${escapeHtml(event.status || '미지정')}</dd></div>
+                <div><dt>분류</dt><dd>${escapeHtml(event.category || '미지정')}</dd></div>
+                <div><dt>상세 내용</dt><dd class="calendar-description">${escapeHtml(event.description || '등록된 상세 내용이 없습니다.')}</dd></div>
+            </dl>
+            ${event.url ? `<a class="calendar-notion-link" href="${escapeHtml(event.url)}" target="_blank" rel="noopener noreferrer">Notion에서 열기 ↗</a>` : ''}
+        `;
+    };
+
+    const renderCalendar = () => {
+        monthTitle.textContent = `${visibleMonth.getFullYear()}년 ${visibleMonth.getMonth() + 1}월`;
+        const { gridStart } = getCalendarRange();
+        const todayKey = toDateKey(today);
+        const cells = [];
+
+        for (let index = 0; index < 42; index += 1) {
+            const cellDate = new Date(gridStart);
+            cellDate.setDate(gridStart.getDate() + index);
+            const dateKey = toDateKey(cellDate);
+            const dayEvents = events.filter(event => eventDateKey(event.start) === dateKey);
+            const isOutside = cellDate.getMonth() !== visibleMonth.getMonth();
+            const eventButtons = dayEvents.slice(0, 4).map((event) => {
+                const eventIndex = events.indexOf(event);
+                const priorityClass = event.urgent ? 'urgent' : event.must_do ? 'must-do' : event.important ? 'important' : '';
+                return `<button type="button" class="calendar-event ${priorityClass}" data-event-index="${eventIndex}" title="${escapeHtml(event.title)}">${eventFlags(event)}<span>${escapeHtml(event.title)}</span></button>`;
+            }).join('');
+            const more = dayEvents.length > 4 ? `<button type="button" class="calendar-more" data-date="${dateKey}">+${dayEvents.length - 4}개 더보기</button>` : '';
+            cells.push(`
+                <div class="calendar-day${isOutside ? ' outside' : ''}${dateKey === todayKey ? ' today' : ''}" data-date="${dateKey}">
+                    <span class="calendar-day-number">${cellDate.getDate()}</span>
+                    <div class="calendar-events">${eventButtons}${more}</div>
+                </div>
+            `);
+        }
+        calendarGrid.innerHTML = cells.join('');
+    };
+
+    const loadCalendar = async (force = false) => {
+        if (isLoading) return;
+        const { gridStart, gridEnd } = getCalendarRange();
+        const rangeKey = `${toDateKey(gridStart)}:${toDateKey(gridEnd)}`;
+        if (!force && rangeKey === lastRangeKey) {
+            renderCalendar();
+            return;
+        }
+
+        isLoading = true;
+        statusBox.className = 'calendar-status loading';
+        statusBox.textContent = 'Notion 일정을 불러오는 중입니다…';
+        try {
+            const response = await fetch(`/api/master/calendar?start=${toDateKey(gridStart)}&end=${toDateKey(gridEnd)}`);
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || '일정을 불러오지 못했습니다.');
+            events = Array.isArray(result.events) ? result.events : [];
+            lastRangeKey = rangeKey;
+            statusBox.className = 'calendar-status success';
+            statusBox.textContent = events.length ? `${events.length}개의 일정을 동기화했습니다.` : '이 기간에 등록된 일정이 없습니다.';
+            renderCalendar();
+        } catch (error) {
+            events = [];
+            statusBox.className = 'calendar-status error';
+            statusBox.textContent = error.message;
+            renderCalendar();
+        } finally {
+            isLoading = false;
+        }
+    };
+
+    window.loadNotionCalendar = () => loadCalendar(false);
+
+    calendarGrid.addEventListener('click', (event) => {
+        const eventButton = event.target.closest('[data-event-index]');
+        if (eventButton) {
+            showDetail(events[Number(eventButton.dataset.eventIndex)]);
+            return;
+        }
+        const moreButton = event.target.closest('[data-date]');
+        if (moreButton) {
+            const dayEvents = events.filter(item => eventDateKey(item.start) === moreButton.dataset.date);
+            detailPanel.innerHTML = `<div class="calendar-detail-head"><span class="calendar-detail-kicker">일정 목록</span><h3>${escapeHtml(moreButton.dataset.date)}</h3></div><div class="calendar-day-list">${dayEvents.map(item => `<button type="button" data-detail-id="${escapeHtml(item.id)}">${eventFlags(item)}<span>${escapeHtml(item.title)}</span></button>`).join('')}</div>`;
+        }
+    });
+
+    detailPanel.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-detail-id]');
+        if (button) showDetail(events.find(item => item.id === button.dataset.detailId));
+    });
+
+    document.getElementById('calendar-prev').addEventListener('click', () => {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1);
+        loadCalendar();
+    });
+    document.getElementById('calendar-next').addEventListener('click', () => {
+        visibleMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1);
+        loadCalendar();
+    });
+    document.getElementById('calendar-today').addEventListener('click', () => {
+        visibleMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        loadCalendar();
+    });
+    document.getElementById('calendar-refresh').addEventListener('click', () => loadCalendar(true));
+
+    renderCalendar();
+    if (window.location.hash === '#calendar') {
+        document.querySelector('.master-menu-item[data-menu="calendar"]')?.click();
+    }
+});

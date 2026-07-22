@@ -3,6 +3,7 @@ import os
 import re
 import time
 import logging
+import requests
 import pandas as pd
 from datetime import timedelta
 from flask import Flask, request, render_template, redirect, url_for, session, jsonify
@@ -50,6 +51,10 @@ def add_header(response):
 
 # 마스터 관리자 이메일 상수 정의
 MASTER_EMAIL = 'cpaeastsun@gmail.com'
+
+NOTION_API_BASE_URL = 'https://api.notion.com/v1'
+NOTION_API_VERSION = '2022-06-28'
+NOTION_TODO_DATABASE_ID = '1e9c14d9973a80bb8c3dc39aacdc1580'
 
 # 환경 변수 로드 (.env)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -570,6 +575,127 @@ def master_page():
             print(f"Master page error: {e}")
             
     return render_template('master.html', partners=partners, stats=stats)
+
+
+def _notion_plain_text(property_value):
+    """Return display text for the Notion property types used by the Todo DB."""
+    if not property_value:
+        return ''
+
+    property_type = property_value.get('type')
+    value = property_value.get(property_type)
+    if property_type in ('title', 'rich_text'):
+        return ''.join(item.get('plain_text', '') for item in (value or []))
+    if property_type in ('select', 'status'):
+        return (value or {}).get('name', '')
+    if property_type == 'multi_select':
+        return ', '.join(item.get('name', '') for item in (value or []))
+    if property_type in ('url', 'email', 'phone_number'):
+        return value or ''
+    if property_type == 'formula' and isinstance(value, dict):
+        formula_type = value.get('type')
+        return str(value.get(formula_type, '') or '')
+    return str(value or '') if value is not None else ''
+
+
+def _notion_checkbox(property_value):
+    if not property_value:
+        return False
+    if property_value.get('type') == 'checkbox':
+        return bool(property_value.get('checkbox'))
+    return _notion_plain_text(property_value).strip().lower() in ('true', 'yes', '1', 'y')
+
+
+def _normalize_notion_todo(page):
+    properties = page.get('properties', {})
+    date_value = properties.get('날짜', {}).get('date') or {}
+    return {
+        'id': page.get('id', ''),
+        'title': _notion_plain_text(properties.get('일정과할일')) or '제목 없는 일정',
+        'start': date_value.get('start'),
+        'end': date_value.get('end'),
+        'status': _notion_plain_text(properties.get('상태')),
+        'category': _notion_plain_text(properties.get('세부내역')),
+        'description': _notion_plain_text(properties.get('Description')),
+        'important': _notion_checkbox(properties.get('중요')),
+        'urgent': _notion_checkbox(properties.get('긴급')),
+        'must_do': _notion_checkbox(properties.get('Must-DO')),
+        'url': page.get('url', ''),
+    }
+
+
+def _query_notion_todos(start_date, end_date):
+    token = os.getenv('NOTION_ACCESS_TOKEN', '').strip()
+    database_id = os.getenv('NOTION_TODO_DATABASE_ID', NOTION_TODO_DATABASE_ID).strip()
+    if not token:
+        raise RuntimeError('NOTION_ACCESS_TOKEN 환경변수가 설정되지 않았습니다.')
+    if not database_id:
+        raise RuntimeError('NOTION_TODO_DATABASE_ID 환경변수가 설정되지 않았습니다.')
+
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Notion-Version': NOTION_API_VERSION,
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        'page_size': 100,
+        'filter': {
+            'and': [
+                {'property': '날짜', 'date': {'on_or_after': start_date}},
+                {'property': '날짜', 'date': {'before': end_date}},
+            ]
+        },
+        'sorts': [{'property': '날짜', 'direction': 'ascending'}],
+    }
+    pages = []
+    while True:
+        response = requests.post(
+            f'{NOTION_API_BASE_URL}/databases/{database_id}/query',
+            headers=headers,
+            json=payload,
+            timeout=15,
+        )
+        response.raise_for_status()
+        data = response.json()
+        pages.extend(data.get('results', []))
+        if not data.get('has_more') or not data.get('next_cursor'):
+            break
+        payload['start_cursor'] = data['next_cursor']
+
+    return [_normalize_notion_todo(page) for page in pages if page.get('properties', {}).get('날짜', {}).get('date')]
+
+
+@app.route('/api/master/calendar', methods=['GET'])
+def master_calendar_api():
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    start_date = request.args.get('start', '').strip()
+    end_date = request.args.get('end', '').strip()
+    if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', start_date) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}', end_date):
+        return jsonify({'error': 'start와 end는 YYYY-MM-DD 형식이어야 합니다.'}), 400
+    if start_date >= end_date:
+        return jsonify({'error': 'end는 start보다 이후 날짜여야 합니다.'}), 400
+
+    logger.info('Notion calendar query started: start=%s end=%s', start_date, end_date)
+    try:
+        events = _query_notion_todos(start_date, end_date)
+        logger.info('Notion calendar query completed: count=%d', len(events))
+        return jsonify({'events': events, 'count': len(events)})
+    except requests.HTTPError as exc:
+        status_code = exc.response.status_code if exc.response is not None else 'unknown'
+        logger.error('Notion API request failed: status=%s', status_code, exc_info=True)
+        return jsonify({'error': 'Notion 일정 조회에 실패했습니다. 연동 권한과 DB 설정을 확인해 주세요.'}), 502
+    except requests.RequestException:
+        logger.error('Notion API network error', exc_info=True)
+        return jsonify({'error': 'Notion API에 연결할 수 없습니다.'}), 502
+    except RuntimeError as exc:
+        logger.error('Notion calendar configuration error: %s', exc)
+        return jsonify({'error': str(exc)}), 503
+    except Exception:
+        logger.error('Unexpected Notion calendar error', exc_info=True)
+        return jsonify({'error': '일정 조회 중 예기치 않은 오류가 발생했습니다.'}), 500
+
 
 @app.route('/master/<company_name>')
 def master_detail(company_name):
