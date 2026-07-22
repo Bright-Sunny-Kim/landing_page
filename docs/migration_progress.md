@@ -1,5 +1,14 @@
 # Ubuntu 단일 노드 마이그레이션 진행 현황 (Migration Progress)
 
+## 2026-07-22 Render 운영 환경 후속 갱신
+
+- 운영 서비스 `landing_page`의 `SUPABASE_KEY`를 service-role 키로 교체하여 anon 권한과 RLS 충돌로 발생하던 로그인 `db_error`를 해결했다.
+- Render Environment Variables에 `NOTION_ACCESS_TOKEN`, `NOTION_TODO_DATABASE_ID`를 추가하고 재배포했다.
+- `main` 자동 배포 후 마스터 포털 탭 동기화와 Notion 캘린더를 검증했으며, 2026년 7월 조회 범위에서 26개 일정이 반환되었다.
+- 현재 운영 도메인은 계속 Render를 가리키며, Ubuntu 전환 Phase 4 상태에는 변화가 없다.
+
+---
+
 > **최종 업데이트**: 2026-07-14  
 > **전략**: Blue-Green (Render 운영 유지 → Ubuntu staging 검증 → DNS 전환)  
 > **목표**: Flask + Dify + ChromaDB를 Ubuntu 홈서버(`192.168.0.224`) 한 곳으로 통합하고, Cloudflare Tunnel로 외부 노출
