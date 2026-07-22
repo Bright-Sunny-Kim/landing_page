@@ -473,6 +473,13 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarMenuItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 const menu = item.getAttribute('data-menu');
+                const menuLabel = item.querySelector('span')?.textContent.trim() || 'Master Portal';
+
+                // Keep the URL and browser-tab title in sync with the active sidebar tab.
+                history.replaceState(null, '', `#${menu}`);
+                document.title = `${menuLabel} | Hyean Master Portal`;
+                sidebarMenuItems.forEach(i => i.removeAttribute('aria-current'));
+                item.setAttribute('aria-current', 'page');
                 
                 // 만약 상세 페이지(master_detail.html)에서 홈이 아닌 다른 Mock 메뉴를 클릭했을 때는 목록 페이지(/master)로 넘어가서 탭이 열리도록 링크 이동 허용
                 if (detailDashboardView && menu !== 'partners') {
@@ -485,6 +492,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     // 기본 상세 뷰 또는 홈 뷰 활성화
                     if (homeDashboardView) {
                         e.preventDefault();
+
+                        masterMainContent.querySelectorAll('.master-card').forEach(card => {
+                            card.style.display = 'none';
+                        });
                         
                         // 사이드바 active 갱신
                         sidebarMenuItems.forEach(i => i.classList.remove('active'));
@@ -512,10 +523,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.preventDefault();
                     sidebarMenuItems.forEach(i => i.classList.remove('active'));
                     item.classList.add('active');
-                    if (homeDashboardView) homeDashboardView.style.display = 'none';
-                    if (detailDashboardView) detailDashboardView.style.display = 'none';
-                    const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
-                    if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
+                    masterMainContent.querySelectorAll('.master-card').forEach(card => {
+                        card.style.display = 'none';
+                    });
                     const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
                     activeMocks.forEach(m => m.remove());
                     const calendarDashboardView = document.getElementById('calendar-dashboard-view');
@@ -533,10 +543,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     sidebarMenuItems.forEach(i => i.classList.remove('active'));
                     item.classList.add('active');
                     
-                    if (homeDashboardView) homeDashboardView.style.display = 'none';
-                    if (detailDashboardView) detailDashboardView.style.display = 'none';
-                    const calendarDashboardView = document.getElementById('calendar-dashboard-view');
-                    if (calendarDashboardView) calendarDashboardView.style.display = 'none';
+                    masterMainContent.querySelectorAll('.master-card').forEach(card => {
+                        card.style.display = 'none';
+                    });
                     
                     // 기존 Mock 뷰들 다 제거
                     const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
@@ -558,12 +567,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.classList.add('active');
                 
                 // 기존 대시보드 뷰 숨기기
-                if (homeDashboardView) homeDashboardView.style.display = 'none';
-                if (detailDashboardView) detailDashboardView.style.display = 'none';
-                const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
-                if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
-                const calendarDashboardView = document.getElementById('calendar-dashboard-view');
-                if (calendarDashboardView) calendarDashboardView.style.display = 'none';
+                masterMainContent.querySelectorAll('.master-card').forEach(card => {
+                    card.style.display = 'none';
+                });
                 
                 // 기존에 열려있던 다른 Mock 뷰 제거
                 const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
@@ -1225,6 +1231,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 모든 뷰 숨기기
             const allCards = document.querySelectorAll('.master-card');
             allCards.forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.mock-dashboard').forEach(view => view.remove());
             
             // 모든 메뉴 active 제거
             const allMenus = document.querySelectorAll('.master-menu-item');
@@ -1255,6 +1262,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 const allCards = document.querySelectorAll('.master-card');
                 allCards.forEach(c => c.style.display = 'none');
+                document.querySelectorAll('.mock-dashboard').forEach(view => view.remove());
                 
                 const allMenus = document.querySelectorAll('.master-menu-item');
                 allMenus.forEach(m => m.classList.remove('active'));
@@ -1922,4 +1930,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.hash === '#calendar') {
         document.querySelector('.master-menu-item[data-menu="calendar"]')?.click();
     }
+});
+
+// Restore any sidebar tab from its URL hash and set the initial browser title.
+document.addEventListener('DOMContentLoaded', () => {
+    const requestedMenu = window.location.hash.slice(1) || 'home';
+    const requestedItem = document.querySelector(`.master-menu-item[data-menu="${CSS.escape(requestedMenu)}"]`);
+    requestedItem?.click();
 });
