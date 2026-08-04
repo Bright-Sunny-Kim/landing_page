@@ -12,3 +12,6 @@ instance/
 .DS_Store
 *.db
 uploads/
+
+temporary_data/
+scratch/
