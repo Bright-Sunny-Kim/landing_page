@@ -329,18 +329,18 @@
   </div>
 
   <header>
-    <a href="{{ url_for('intro') }}" class="header-logo">
+    <a href="{{ url_for('pages.intro') }}" class="header-logo">
       <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="혜안 로고" onerror="this.style.display='none'">
-      회계법인 혜안
     </a>
-    <div class="nav-links">
-      <a href="{{ url_for('intro') }}" class="nav-link">홈</a>
+    <div style="display: flex; gap: 20px; align-items: center;">
+      <a href="{{ url_for('pages.intro') }}" class="nav-link">홈</a>
+      <a href="#" class="nav-link active">대표 소개</a>
       {% if 'email' in session %}
-      <a href="{{ url_for('logout') }}" class="nav-link" style="color: #f87171;">로그아웃</a>
-      <a href="{{ url_for('login_page') }}" class="login-btn-top">내 페이지로 이동</a>
+      <a href="{{ url_for('auth.logout') }}" class="nav-link" style="color: #f87171;">로그아웃</a>
+      <a href="{{ url_for('auth.login_page') }}" class="login-btn-top">내 페이지로 이동</a>
       {% else %}
-      <a href="{{ url_for('login_page') }}" class="nav-link">로그인</a>
-      <a href="{{ url_for('login_page') }}" class="login-btn-top">포털 접속하기</a>
+      <a href="{{ url_for('auth.login_page') }}" class="nav-link">로그인</a>
+      <a href="{{ url_for('auth.login_page') }}" class="login-btn-top">포털 접속하기</a>
       {% endif %}
     </div>
   </header>

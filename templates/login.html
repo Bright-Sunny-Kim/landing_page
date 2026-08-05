@@ -71,7 +71,7 @@
                 </div>
                 {% endif %}
                 
-                <form action="{{ url_for('login') }}" method="POST" class="login-form" id="login-form">
+                <form action="{{ url_for('auth.login') }}" method="POST" class="login-form" id="login-form">
                     <!-- 이메일 입력 (기본 노출 및 항상 필수) -->
                     <div class="input-group">
                         <input type="email" id="email" name="email" required autocomplete="off" placeholder=" ">

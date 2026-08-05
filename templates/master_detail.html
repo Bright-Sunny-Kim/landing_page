@@ -187,7 +187,7 @@
             </ul>
             
             <div class="master-sidebar-footer">
-                <a href="{{ url_for('logout') }}" id="btn-sidebar-logout" class="btn-logout">
+                <a href="{{ url_for('auth.logout') }}" id="btn-sidebar-logout" class="btn-logout">
                     <span>안전하게 로그아웃</span>
                 </a>
             </div>
@@ -197,7 +197,7 @@
         <main class="master-main-content" id="master-main-content">
             <div class="glass-card dashboard-card master-card" id="detail-dashboard-view">
                 <div class="detail-header">
-                    <a href="{{ url_for('master_page') }}" class="btn-back">
+                    <a href="{{ url_for('master.master_page') }}" class="btn-back">
                         &larr; 돌아가기
                     </a>
                     <div class="status-badge master-badge">
