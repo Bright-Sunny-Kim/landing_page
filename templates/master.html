@@ -140,6 +140,42 @@
                     </div>
                 </div>
                 
+                <!-- 감사절차 및 AI 파이프라인 진행상황 (진도표 요약) -->
+                <section class="audit-progress-section" style="margin-bottom: 2rem; padding: 20px; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 style="font-size: 1.1rem; font-weight: 600; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <span>📍 감사절차 & AI 파이프라인 진행상황</span>
+                        </h3>
+                        <a href="#analytics" onclick="document.querySelector('.master-menu-item[data-menu=\'analytics\']')?.click();" style="font-size: 0.85rem; color: #818cf8; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                            파이프라인 콘솔 관리 ›
+                        </a>
+                    </div>
+                    
+                    <div class="progress-tracker" style="background: rgba(15,23,42,0.6); padding: 18px 24px; border-radius: 10px;">
+                        <div class="progress-tracker-header" style="margin-bottom: 14px;">
+                            <span class="progress-tracker-title" style="font-size: 0.95rem; font-weight: 600;">우선순위(P0~P5) 실행 현황</span>
+                            <div class="progress-tracker-chips">
+                                <span class="progress-chip chip-done">✅ 완료 1</span>
+                                <span class="progress-chip chip-partial">🔶 진행중 2</span>
+                                <span class="progress-chip chip-backlog">⏸ 미착수 3</span>
+                            </div>
+                        </div>
+                        <div class="progress-tracker-track">
+                            <div class="progress-step" data-status="done" title="P0: 감사조서/분석 결과 영속화 (완료)"><span class="progress-dot"></span><span class="progress-label">P0 (조서 영속화)</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="partial" title="P1: T/B 파싱 로직 통합 (진행중)"><span class="progress-dot"></span><span class="progress-label">P1 (T/B 통합)</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog" title="P2: 계정과목 표준매핑 (미착수)"><span class="progress-dot"></span><span class="progress-label">P2 (표준매핑)</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="partial" title="P3: RAG 지식 베이스 (진행중)"><span class="progress-dot"></span><span class="progress-label">P3 (RAG지식)</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog" title="P4: 감사보고서 초안 생성 (미착수)"><span class="progress-dot"></span><span class="progress-label">P4 (보고서 초안)</span></div>
+                            <div class="progress-connector"></div>
+                            <div class="progress-step" data-status="backlog" title="P5: 교차검증 워크플로 (미착수)"><span class="progress-dot"></span><span class="progress-label">P5 (교차검증)</span></div>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="partners-section">
                     <div class="section-header-flex">
                         <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
