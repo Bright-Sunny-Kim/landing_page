@@ -97,28 +97,23 @@
                 <li class="master-menu-item" data-menu="analytics">
                     <a href="#analytics">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-                                <span class="tech-icon-badge data">Workflow</span>
-                            </div>
-                            <h4 class="tech-tools">n8n & PostgreSQL 16</h4>
-                            <p class="tech-role">OpenDART API 연동 및 주기적 수집(Cron Scheduler), T/B 원장 데이터 파싱, 데이터 가공 및 정제 Webhook 파이프라인 관리</p>
-                        </div>
+                        <span>시스템 통계 & AI 파이프라인</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="master-sidebar-footer" style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="{{ url_for('pages.intro') }}" class="btn-logout" style="background: rgba(99, 102, 241, 0.1); border-color: rgba(99, 102, 241, 0.2); color: #818cf8;">
+                    <span>홈 화면으로 복귀</span>
+                </a>
+                <a href="{{ url_for('auth.logout') }}" id="btn-sidebar-logout" class="btn-logout">
+                    <span>안전하게 로그아웃</span>
+                </a>
+            </div>
+        </aside>
 
-                        <!-- AI 에이전트 -->
-                        <div class="tech-card">
-                            <div class="tech-icon-wrapper">
-                                <span class="tech-icon-badge ai">AI Inference</span>
-                            </div>
-                            <h4 class="tech-tools">Dify (Docker)</h4>
-                            <p class="tech-role">K-GAAP/K-GAAS 기준서 RAG 구축, 감사조서 합성 에이전트 및 보고서 초안 생성/교차 검증 LLM 추론 오케스트레이션</p>
-                        </div>
-
-                        <!-- 저장소 -->
-                        <div class="tech-card">
-                            <div class="tech-icon-wrapper">
-                                <span class="tech-icon-badge storage">Storage</span>
-                            </div>
-                            <h4 class="tech-tools">Supabase & Nextcloud</h4>
-                            <p class="tech-role">고객 업로드 원본 파일 보관(Storage), 정제 데이터 테이블 및 pgvector 기반 고차원 텍스트 벡터 임베딩 저장소</p>
+        <!-- 우측 메인 콘텐츠 영역 -->
+        <main class="master-main-content" id="master-main-content">
             <!-- 시스템 통계 및 AI 파이프라인 대시보드 뷰 -->
             <div class="glass-card dashboard-card master-card" id="analytics-dashboard-view" style="display: none; margin-top: 0;">
                 <header class="dashboard-header" style="margin-bottom: 24px;">
