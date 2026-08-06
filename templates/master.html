@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Style CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260722-calendar') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260806-progress-v2') }}">
 </head>
 <body>
     <div class="background-decor">
@@ -125,21 +125,6 @@
                     <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 통합 관리 대시보드입니다.</p>
                 </header>
                 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-title">가입 파트너사</div>
-                        <div class="stat-value">{{ stats.total_partners }}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-title">총 누적 파일 수</div>
-                        <div class="stat-value">{{ stats.total_files }}</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-title">대기중인 업무</div>
-                        <div class="stat-value pending">{{ stats.pending_tasks }}</div>
-                    </div>
-                </div>
-                
                 <!-- 감사절차 및 AI 파이프라인 진행상황 (진도표 요약) -->
                 <section class="audit-progress-section" style="margin-bottom: 2rem; padding: 20px; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -176,6 +161,21 @@
                     </div>
                 </section>
 
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">가입 파트너사</div>
+                        <div class="stat-value">{{ stats.total_partners }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">총 누적 파일 수</div>
+                        <div class="stat-value">{{ stats.total_files }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">대기중인 업무</div>
+                        <div class="stat-value pending">{{ stats.pending_tasks }}</div>
+                    </div>
+                </div>
+                
                 <section class="partners-section">
                     <div class="section-header-flex">
                         <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
@@ -674,6 +674,6 @@
     </div>
     
     <!-- Script JS -->
-    <script src="{{ url_for('static', filename='js/main.js', v='20260722-tabs-calendar') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v='20260806-progress-v2') }}"></script>
 </body>
 </html>
