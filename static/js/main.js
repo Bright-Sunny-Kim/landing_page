@@ -490,7 +490,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 1. 홈 대시보드 탭 활성화 처리
                 if (menu === 'home' || menu === 'partners') {
                     // 기본 상세 뷰 또는 홈 뷰 활성화
-                    if (homeDashboardView) {
+                    const currentHomeView = document.getElementById('home-dashboard-view') || homeDashboardView;
+                    if (currentHomeView) {
                         e.preventDefault();
 
                         masterMainContent.querySelectorAll('.master-card').forEach(card => {
@@ -499,8 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // 사이드바 active 갱신
                         sidebarMenuItems.forEach(i => i.classList.remove('active'));
-                        const targetItem = document.querySelector(`.master-menu-item[data-menu="home"]`) || item;
-                        targetItem.classList.add('active');
+                        item.classList.add('active');
                         
                         // 기존에 로드된 Mock 뷰들 다 제거
                         const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
@@ -513,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (calendarDashboardView) calendarDashboardView.style.display = 'none';
                         
                         // 홈 보이기
-                        homeDashboardView.style.display = 'block';
+                        currentHomeView.style.display = 'block';
                     }
                     return;
                 }
@@ -1249,7 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(homeMenu) {
             homeMenu.addEventListener('click', () => {
                 if(adminFinanceView) adminFinanceView.style.display = 'none';
-                if(homeDashboardView) homeDashboardView.style.display = 'block';
+                if(homeDashboardView) currentHomeView.style.display = 'block';
             });
         }
         
