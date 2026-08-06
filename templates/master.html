@@ -114,6 +114,77 @@
 
         <!-- 우측 메인 콘텐츠 영역 -->
         <main class="master-main-content" id="master-main-content">
+            <!-- 대시보드 홈 / 파트너사 관리 뷰 -->
+            <div class="glass-card dashboard-card master-card" id="home-dashboard-view">
+                <header class="dashboard-header">
+                    <div class="status-badge master-badge">
+                        <span class="pulse-dot"></span>
+                        <span>마스터 관리자 권한</span>
+                    </div>
+                    <h1 id="dashboard-heading">혜안 <span class="company-highlight">Master</span> 포털</h1>
+                    <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 통합 관리 대시보드입니다.</p>
+                </header>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-title">가입 파트너사</div>
+                        <div class="stat-value">{{ stats.total_partners }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">총 누적 파일 수</div>
+                        <div class="stat-value">{{ stats.total_files }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-title">대기중인 업무</div>
+                        <div class="stat-value pending">{{ stats.pending_tasks }}</div>
+                    </div>
+                </div>
+                
+                <section class="partners-section">
+                    <div class="section-header-flex">
+                        <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
+                        <span class="partner-count">총 <strong>{{ partners|length }}</strong>개 기업</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="partners-table">
+                            <thead>
+                                <tr>
+                                    <th>기업명</th>
+                                    <th>담당자</th>
+                                    <th>제출현황</th>
+                                    <th>이메일</th>
+                                    <th>가입일시</th>
+                                    <th>작업</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for partner in partners %}
+                                <tr>
+                                    <td class="col-company">
+                                        <a href="{{ url_for('master.master_detail', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
+                                    </td>
+                                    <td>{{ partner.name or partner.username or '-' }}</td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                                                <div style="width: {{ partner.upload_rate|default(0) }}%; height: 100%; background: linear-gradient(90deg, #6366f1, #10b981);"></div>
+                                            </div>
+                                            <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ partner.upload_rate|default(0) }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>{{ partner.email }}</td>
+                                    <td class="col-date">{{ partner.created_at[:10] if partner.created_at is string else (partner.created_at.strftime('%Y-%m-%d') if partner.created_at else '-') }}</td>
+                                    <td>
+                                        <a href="{{ url_for('master.master_detail', company_name=partner.company) }}" class="btn-logout" style="padding: 4px 8px; font-size: 0.8rem;">상세보기</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
             <!-- 시스템 통계 및 AI 파이프라인 대시보드 뷰 -->
             <div class="glass-card dashboard-card master-card" id="analytics-dashboard-view" style="display: none; margin-top: 0;">
                 <header class="dashboard-header" style="margin-bottom: 24px;">
