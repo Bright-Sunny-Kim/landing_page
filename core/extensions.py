@@ -28,9 +28,16 @@ NOTION_API_BASE_URL = 'https://api.notion.com/v1'
 NOTION_API_VERSION = '2022-06-28'
 NOTION_TODO_DATABASE_ID = '1e9c14d9973a80bb8c3dc39aacdc1580'
 
-# 환경 변수 로드 (.env)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+# 환경 변수 로드 (config/.env 및 루트 .env 지원)
+CORE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(CORE_DIR)
+config_env_path = os.path.join(BASE_DIR, 'config', '.env')
+root_env_path = os.path.join(BASE_DIR, '.env')
+
+if os.path.exists(config_env_path):
+    load_dotenv(config_env_path)
+else:
+    load_dotenv(root_env_path)
 
 # Supabase 초기화
 url: str = os.getenv("SUPABASE_URL", "")

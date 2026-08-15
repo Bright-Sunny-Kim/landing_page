@@ -1,7 +1,7 @@
 /* Premium Glassmorphism Design System */
 
 :root {
-    /* Color Palette - Vibrant Slate & Aurora Purple */
+    /* Existing Color Palette - Vibrant Slate & Aurora Purple */
     --bg-dark: #09090b;
     --card-bg: rgba(20, 20, 25, 0.4);
     --card-border: rgba(255, 255, 255, 0.07);
@@ -13,6 +13,24 @@
     --accent-glow: rgba(99, 102, 241, 0.25);
     --accent-color: #6366f1;
     --success-color: #10b981;
+
+    /* Clean Slate Financial Design System Tokens (New) */
+    --bg-slate: #f4f6f9;
+    --card-bg-light: #ffffff;
+    --text-primary-slate: #1e293b;
+    --text-secondary-slate: #64748b;
+    --primary-blue: #2563eb;
+    --primary-blue-hover: #1d4ed8;
+    --up-color: #dc2626;
+    --down-color: #2563eb;
+    --flat-color: #475569;
+    --badge-consensus-bg: #fef3c7;
+    --badge-consensus-text: #92400e;
+    --badge-final-bg: #d1fae5;
+    --badge-final-text: #065f46;
+    --border-slate: #e2e8f0;
+    --radius-slate: 12px;
+    --shadow-slate: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     
     /* Font Stack */
     --font-header: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -2658,3 +2676,425 @@ textarea:focus {
 .calendar-day-list { display: flex; flex-direction: column; gap: 6px; }.calendar-day-list button { display: flex; align-items: center; gap: 5px; padding: 9px; border-radius: 8px; background: rgba(255,255,255,.05); font-size: .78rem; }.calendar-day-list button:hover { background: rgba(99,102,241,.18); }
 @media (max-width: 1100px) { .calendar-layout { grid-template-columns: 1fr; }.calendar-detail { min-height: 220px; }.calendar-detail-empty { min-height: 170px; } }
 @media (max-width: 700px) { .calendar-dashboard { padding: 18px 12px; }.calendar-header, .calendar-title-row { align-items: stretch; flex-direction: column; }.calendar-actions { width: 100%; }.calendar-refresh-btn { margin-left: auto; }.calendar-legend { justify-content: flex-start; }.calendar-grid-wrap { overflow-x: auto; }.calendar-weekdays, .calendar-grid { min-width: 680px; }.calendar-day { min-height: 105px; } }
+
+/* ==========================================================================
+   Clean Slate UI Components: Tab Nav, Inputs & Sample Tags
+   ========================================================================== */
+
+/* 캡슐형 탭 내비게이션 */
+.tab-nav {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 20px;
+    background: #ffffff;
+    border-radius: var(--radius-slate);
+    border: 1px solid var(--border-slate);
+    box-shadow: var(--shadow-slate);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary-slate);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.tab-num {
+    font-size: 0.75rem;
+    background: #e2e8f0;
+    color: #475569;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.tab-btn:hover {
+    background: #f1f5f9;
+    color: var(--text-primary-slate);
+}
+
+.tab-btn.active {
+    background: var(--primary-blue);
+    color: #ffffff;
+}
+
+.tab-btn.active .tab-num {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+.tab-panel.hidden {
+    display: none !important;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* 인풋 폼 & 샘플 퀵 선택 버튼 */
+.input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    border: 1px solid var(--border-slate);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-group input:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.input-group button, .btn-slate-primary {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    background-color: var(--primary-blue);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.input-group button:hover, .btn-slate-primary:hover {
+    background-color: var(--primary-blue-hover);
+}
+
+.sample-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    margin-top: 10px;
+}
+
+.sample-label {
+    color: var(--text-secondary-slate);
+}
+
+.btn-sample {
+    padding: 4px 10px;
+    background: #eff6ff;
+    color: var(--primary-blue);
+    border: 1px solid #bfdbfe;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-sample:hover {
+    background: #dbeafe;
+}
+
+/* ==========================================================================
+   Clean Slate UI Components: Snapshot Grid & Metric Cards
+   ========================================================================== */
+
+.snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    background: var(--card-bg-light);
+    border-radius: var(--radius-slate);
+    padding: 16px;
+    border: 1px solid var(--border-slate);
+    box-shadow: var(--shadow-slate);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.08);
+}
+
+.card-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary-slate);
+    font-weight: 500;
+}
+
+.card-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary-slate);
+    letter-spacing: -0.02em;
+}
+
+.val-up {
+    color: var(--up-color);
+}
+
+.val-down {
+    color: var(--down-color);
+}
+
+.val-flat {
+    color: var(--flat-color);
+}
+
+.metric-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.badge-metric {
+    background: #eff6ff;
+    color: var(--primary-blue);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Clean Slate UI Components: Status Badges
+   ========================================================================== */
+
+.badge-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    gap: 4px;
+}
+
+/* 감사조서 상태 뱃지 */
+.status-draft {
+    background-color: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.status-reviewed {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.status-approved {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+/* 금융조회서 및 기타 프로세스 상태 뱃지 */
+.status-consensus {
+    background-color: var(--badge-consensus-bg);
+    color: var(--badge-consensus-text);
+    border: 1px solid #fde68a;
+}
+
+.status-final {
+    background-color: var(--badge-final-bg);
+    color: var(--badge-final-text);
+    border: 1px solid #a7f3d0;
+}
+
+.status-submitted {
+    background-color: #ede9fe;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+}
+
+.status-fee-paid {
+    background-color: #fce7f3;
+    color: #be185d;
+    border: 1px solid #fbcfe8;
+}
+
+.status-cancelled {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+/* ==========================================================================
+   Clean Slate UI Components: AI & Markdown Viewer Formatting
+   ========================================================================== */
+
+.markdown-body, .bot-message {
+    background: #ffffff;
+    color: #1e293b;
+    border: 1px solid var(--border-slate);
+    border-radius: var(--radius-slate);
+    padding: 20px;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    word-break: break-word;
+    box-shadow: var(--shadow-slate);
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4,
+.bot-message h1, .bot-message h2, .bot-message h3, .bot-message h4 {
+    color: #0f172a;
+    font-weight: 700;
+    margin-top: 14px;
+    margin-bottom: 8px;
+    line-height: 1.35;
+}
+
+.markdown-body h1, .bot-message h1 { font-size: 1.25rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
+.markdown-body h2, .bot-message h2 { font-size: 1.1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; }
+.markdown-body h3, .bot-message h3 { font-size: 1.0rem; }
+.markdown-body h4, .bot-message h4 { font-size: 0.92rem; }
+
+.markdown-body p, .bot-message p {
+    margin-bottom: 10px;
+}
+
+.markdown-body p:last-child, .bot-message p:last-child {
+    margin-bottom: 0;
+}
+
+.markdown-body ul, .markdown-body ol,
+.bot-message ul, .bot-message ol {
+    margin-left: 22px;
+    margin-bottom: 12px;
+}
+
+.markdown-body li, .bot-message li {
+    margin-bottom: 4px;
+}
+
+.markdown-body strong, .bot-message strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.markdown-body code, .bot-message code {
+    background: #f1f5f9;
+    color: #0284c7;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+
+.markdown-body blockquote, .bot-message blockquote {
+    border-left: 4px solid var(--primary-blue);
+    padding: 8px 12px;
+    background: #f8fafc;
+    color: #475569;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+    font-style: normal;
+}
+
+.markdown-body hr, .bot-message hr {
+    border: 0;
+    border-top: 1px dashed #cbd5e1;
+    margin: 16px 0;
+}
+
+/* 정돈된 회계/재무 표 스타일 (Data Table) */
+.table-responsive {
+    overflow-x: auto;
+    margin: 12px 0;
+}
+
+.data-table, .markdown-body table, .bot-message table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    text-align: right;
+    margin: 12px 0;
+}
+
+.data-table th, .data-table td,
+.markdown-body th, .markdown-body td,
+.bot-message th, .bot-message td {
+    border: 1px solid #cbd5e1;
+    padding: 8px 12px;
+}
+
+.data-table th, .markdown-body th, .bot-message th {
+    background: #f8fafc;
+    color: var(--text-secondary-slate);
+    font-weight: 600;
+}
+
+.data-table th:first-child, .data-table td:first-child,
+.markdown-body th:first-child, .markdown-body td:first-child,
+.bot-message th:first-child, .bot-message td:first-child {
+    text-align: left;
+}
+
+/* ==========================================================================
+   Clean Slate UI Components: Responsive Media Queries
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .tab-nav {
+        flex-direction: column;
+        gap: 6px;
+        padding: 6px;
+    }
+    
+    .tab-btn {
+        padding: 10px 12px;
+        font-size: 0.88rem;
+    }
+
+    .snapshot-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+    }
+
+    .metric-card {
+        padding: 12px;
+    }
+
+    .card-value {
+        font-size: 1.1rem;
+    }
+
+    .input-group {
+        flex-direction: column;
+    }
+
+    .input-group button {
+        width: 100%;
+    }
+
+    .markdown-body, .bot-message {
+        padding: 14px;
+        font-size: 0.88rem;
+    }
+}
+
+
+
+
+

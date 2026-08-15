@@ -6,11 +6,11 @@ import requests
 import pandas as pd
 from werkzeug.utils import secure_filename
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
-from extensions import (
+from core.extensions import (
     supabase, s3_client, minio_endpoint, MASTER_EMAIL,
     NOTION_API_BASE_URL, NOTION_API_VERSION, NOTION_TODO_DATABASE_ID, logger
 )
-from audit_engine import (
+from core.audit_engine import (
     parse_tb_file, run_variance_analysis, retrieve_k_gaap, generate_working_paper,
     classify_source_file, parse_trial_balance_structured, parse_financial_statement,
     financial_statement_to_variance_input, build_standard_statements,
@@ -501,7 +501,7 @@ def _run_audit_analysis(company_name, allow_simulated_fallback=True):
             df_list.append(df_tb)
             parsed_filenames.append("Fallback Simulated T/B")
 
-        from audit_engine import merge_multiple_tb_dfs
+        from core.audit_engine import merge_multiple_tb_dfs
         df_integrated = merge_multiple_tb_dfs(df_list)
 
     analysis_res = run_variance_analysis(df_integrated, performance_materiality=50000000.0)

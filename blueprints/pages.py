@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 from flask import Blueprint, render_template, session, redirect, url_for, request
-from extensions import supabase, MASTER_EMAIL, logger
+from core.extensions import supabase, MASTER_EMAIL, logger
 
 pages_bp = Blueprint('pages', __name__)
 

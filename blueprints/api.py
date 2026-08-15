@@ -6,7 +6,7 @@ import datetime
 import requests
 from io import StringIO
 from flask import Blueprint, request, jsonify, session, Response, stream_with_context, send_from_directory, current_app
-from extensions import (
+from core.extensions import (
     supabase, openai_client, MASTER_EMAIL, logger
 )
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, render_template, request, session, jsonify
-from extensions import supabase, MASTER_EMAIL, logger
+from core.extensions import supabase, MASTER_EMAIL, logger
 
 billing_bp = Blueprint('billing', __name__)
 

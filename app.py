@@ -2,7 +2,7 @@
 import os
 from datetime import timedelta
 from flask import Flask
-from extensions import logger
+from core.extensions import logger
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", os.urandom(24))

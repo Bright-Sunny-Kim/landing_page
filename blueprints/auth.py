@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
-from extensions import (
+from core.extensions import (
     supabase, MASTER_EMAIL, _generate_password_hash,
     _check_password_hash_compatible, logger
 )

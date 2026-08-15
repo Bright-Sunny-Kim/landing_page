@@ -14,7 +14,10 @@ CATEGORIES = [
     "K-GAAS"
 ]
 
-TRACKER_FILE = os.path.join(os.path.dirname(__file__), "parse_tracker.json")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+TRACKER_FILE = os.path.join(BASE_DIR, "data", "parse_tracker.json")
+if not os.path.exists(TRACKER_FILE):
+    TRACKER_FILE = os.path.join(BASE_DIR, "parse_tracker.json")
 MAX_FILES_PER_RUN = 50  # 한 번 실행할 때 최대 처리할 파일 수 (필요시 조절 가능)
 
 def load_tracker():
