@@ -730,19 +730,22 @@ def master_analyze_direct():
         return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
 
     company_name = request.form.get('company_name', '').strip() or '직접 분석 기업'
+    fiscal_year = request.form.get('fiscal_year', '').strip()
     uploaded_files = request.files.getlist('files')
 
     if not uploaded_files or (len(uploaded_files) == 1 and uploaded_files[0].filename == ''):
         logger.warning("[MASTER_ANALYTICS:REQUEST] 업로드된 파일 없음")
         return jsonify({'error': '분석할 엑셀/CSV 파일을 최소 1개 이상 업로드해 주세요.'}), 400
 
-    logger.info("[MASTER_ANALYTICS:REQUEST] 직접 분석 요청 수신: company=%s, file_count=%d", 
-                company_name, len(uploaded_files))
+    logger.info("[MASTER_ANALYTICS:REQUEST] 직접 분석 요청 수신: company=%s, fiscal_year=%s, file_count=%d", 
+                company_name, fiscal_year, len(uploaded_files))
 
     files_data_list = []
     for f in uploaded_files:
         if f and f.filename:
-            fname = secure_filename(f.filename) or f.filename
+            # secure_filename은 한글을 제거하므로 원본 파일명을 안전하게 정제
+            raw_fname = os.path.basename(f.filename).strip()
+            fname = re.sub(r'[\\/:*?"<>|]', '_', raw_fname) or f.filename
             content = f.read()
             files_data_list.append({
                 'filename': fname,
@@ -753,6 +756,7 @@ def master_analyze_direct():
         payload = run_comprehensive_enterprise_analysis(
             company_name=company_name,
             files_data_list=files_data_list,
+            fiscal_year=fiscal_year,
             supabase_client=supabase
         )
         logger.info("[MASTER_ANALYTICS:SUCCESS] 직접 분석 완료: company=%s, files=%s", 
@@ -827,17 +831,23 @@ def master_analyze_company(company_name):
         except Exception as se:
             logger.error("[MASTER_ANALYTICS:ERROR] Supabase 파일 메타데이터 조회 오류: %s", se, exc_info=True)
 
-    # 2. 로컬 uploads/<company_name> 폴더 추가 탐색 (Supabase에 미등록된 로컬 파일 지원)
+    # 2. 로컬 uploads/<company_name> 및 uploads/고객제시자료 폴더 추가 탐색
     if not files_data_list:
-        local_dir = os.path.join(os.getcwd(), "uploads", company_name)
-        if os.path.exists(local_dir):
-            for lf in os.listdir(local_dir):
-                if any(lf.lower().endswith(ext) for ext in ['.xlsx', '.xls', '.csv']):
-                    with open(os.path.join(local_dir, lf), "rb") as f:
-                        files_data_list.append({
-                            'filename': lf,
-                            'content': f.read()
-                        })
+        candidate_dirs = [
+            os.path.join(os.getcwd(), "uploads", company_name),
+            os.path.join(os.getcwd(), "uploads", "고객제시자료")
+        ]
+        for cdir in candidate_dirs:
+            if os.path.exists(cdir):
+                for lf in os.listdir(cdir):
+                    if any(lf.lower().endswith(ext) for ext in ['.xlsx', '.xls', '.csv']):
+                        with open(os.path.join(cdir, lf), "rb") as f:
+                            files_data_list.append({
+                                'filename': lf,
+                                'content': f.read()
+                            })
+                if files_data_list:
+                    break
 
     if not files_data_list:
         logger.warning("[MASTER_ANALYTICS:REQUEST] 분석 가능한 회계 엑셀/CSV 파일 없음: company=%s", company_name)
