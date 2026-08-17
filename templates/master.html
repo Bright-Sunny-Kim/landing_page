@@ -94,6 +94,12 @@
                         <span>수수료 및 청구 관리</span>
                     </a>
                 </li>
+                <li class="master-menu-item" data-menu="analytics-hub">
+                    <a href="#analytics-hub">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                        <span>기업 정밀 분석 (Hub)</span>
+                    </a>
+                </li>
                 <li class="master-menu-item" data-menu="analytics">
                     <a href="#analytics">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
@@ -670,10 +676,302 @@
                     </aside>
                 </div>
             </div>
+
+            <!-- [기업 정밀 분석 허브 뷰] -->
+            <div class="glass-card dashboard-card master-card analytics-hub-dashboard" id="analytics-hub-view" style="display: none;">
+                <header class="dashboard-header">
+                    <div class="status-badge master-badge" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); color: #a5b4fc;">
+                        <span class="pulse-dot" style="background: #818cf8;"></span>
+                        <span>AI Enterprise Financial Analytics Hub</span>
+                    </div>
+                    <h2>기업 정밀 재무분석 & 감사 리스크 허브</h2>
+                    <p class="welcome-message">고객사가 제출한 5대 회계자료(재무제표, 합잔, 분개장, 거래처원장) 및 직접 업로드한 엑셀 파일로 4대 재무비율, JET 이상치, 거래처 리스크를 정밀 진단합니다.</p>
+                </header>
+
+                <div class="analytics-hub-container" id="analytics-hub-container">
+                    <!-- 1. 분석 모드 & 소스 선택 패널 -->
+                    <div class="analytics-control-panel glass-card-nested" style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                            <!-- 분석 모드 탭 -->
+                            <div class="analytics-mode-tabs" style="display: flex; gap: 8px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 8px;">
+                                <button type="button" class="btn-mode-tab active" id="tab-mode-company" onclick="window.switchAnalyticsMode('company')" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; background: #6366f1; color: #fff; transition: all 0.2s;">
+                                    🏢 등록 파트너사 선택 분석
+                                </button>
+                                <button type="button" class="btn-mode-tab" id="tab-mode-direct" onclick="window.switchAnalyticsMode('direct')" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; background: transparent; color: #94a3b8; transition: all 0.2s;">
+                                    📂 엑셀 파일 직접 업로드
+                                </button>
+                            </div>
+
+                            <!-- 회계연도 및 기준일자 -->
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label style="font-size: 0.85rem; color: #94a3b8;">기준연도:</label>
+                                <select id="analytics-fiscal-year" class="status-select" style="padding: 6px 12px; font-size: 0.9rem;">
+                                    <option value="2025" selected>2025년 (당기)</option>
+                                    <option value="2024">2024년 (전기)</option>
+                                    <option value="2026">2026년</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- [모드 1 영역] 파트너사 드롭다운 & 기존 업로드 파일 선택 -->
+                        <div id="panel-company-mode" style="display: block;">
+                            <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end;">
+                                <div>
+                                    <label for="analytics-company-select" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">분석 대상 파트너사 선택</label>
+                                    <select id="analytics-company-select" class="status-select" style="width: 100%; padding: 10px 14px; font-size: 1rem; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;">
+                                        <option value="">-- 기업을 선택하세요 --</option>
+                                        {% for p in partners %}
+                                        <option value="{{ p.company }}">{{ p.company }} ({{ p.username or p.email }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <button type="button" id="btn-run-company-analysis" class="btn-primary" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer; transition: transform 0.2s;">
+                                    <span>⚡ 원클릭 종합 분석 실행</span>
+                                </button>
+                            </div>
+                            <div id="company-files-status" style="margin-top: 10px; font-size: 0.85rem; color: #64748b;"></div>
+                        </div>
+
+                        <!-- [모드 2 영역] 엑셀 파일 직접 업로드 드롭존 -->
+                        <div id="panel-direct-mode" style="display: none;">
+                            <div style="margin-bottom: 12px;">
+                                <label for="analytics-direct-company-name" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">분석 대상 기업명 (직접 입력)</label>
+                                <input type="text" id="analytics-direct-company-name" placeholder="예: (주)대한상사" style="width: 100%; max-width: 400px; padding: 8px 12px; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff;">
+                            </div>
+
+                            <div id="analytics-dropzone" style="border: 2px dashed rgba(99,102,241,0.4); border-radius: 10px; padding: 28px; text-align: center; background: rgba(99,102,241,0.03); cursor: pointer; transition: all 0.2s;">
+                                <input type="file" id="analytics-file-input" multiple accept=".xlsx, .xls, .csv" style="display: none;">
+                                <div style="font-size: 2rem; margin-bottom: 8px;">📊</div>
+                                <div style="font-size: 1rem; font-weight: 600; color: #e2e8f0; margin-bottom: 4px;">엑셀(.xlsx, .xls) 또는 CSV 파일을 여기에 끌어다 놓으세요</div>
+                                <div style="font-size: 0.85rem; color: #94a3b8;">또는 <span style="color: #818cf8; text-decoration: underline;">내 PC에서 파일 선택</span> (재무제표, 합잔, 분개장, 거래처원장 다중 선택 가능)</div>
+                            </div>
+
+                            <div id="analytics-selected-files" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+
+                            <div style="margin-top: 16px; text-align: right;">
+                                <button type="button" id="btn-run-direct-analysis" class="btn-primary" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer;">
+                                    <span>🚀 직접 업로드 파일 분석 시작</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 분석 결과 렌더링 컨테이너 -->
+                    <div id="analytics-results-wrapper" style="display: none;">
+                        <!-- [결과 헤더 메타 & 액션바] -->
+                        <div class="glass-card-nested" style="background: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 18px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                                    <h3 id="res-company-title" style="font-size: 1.35rem; font-weight: 700; color: #fff; margin: 0;">-</h3>
+                                    <span id="res-fiscal-badge" class="badge" style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.4); padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">2025년 결산</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="font-size: 0.82rem; color: #94a3b8;">파싱된 자료:</span>
+                                    <div id="res-files-chips" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="button" id="btn-save-current-analysis" class="btn-primary" style="padding: 8px 18px; font-size: 0.9rem; background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); color: #34d399; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+                                    <span>💾 분석 결과 DB 저장</span>
+                                </button>
+                                <button type="button" id="btn-print-analysis" class="btn-secondary" onclick="window.print()" style="padding: 8px 16px; font-size: 0.9rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    <span>🖨️ 보고서 인쇄</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- [재무 요약 4대 KPI 카드] -->
+                        <div class="analytics-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                            <div class="glass-card-nested kpi-card" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+                                <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;">총자산 (Total Assets)</div>
+                                <div id="kpi-assets-val" style="font-size: 1.4rem; font-weight: 700; color: #f8fafc;">-</div>
+                                <div id="kpi-assets-diff" style="font-size: 0.8rem; margin-top: 4px; color: #64748b;">-</div>
+                            </div>
+                            <div class="glass-card-nested kpi-card" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+                                <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;">매출액 (Revenue)</div>
+                                <div id="kpi-sales-val" style="font-size: 1.4rem; font-weight: 700; color: #38bdf8;">-</div>
+                                <div id="kpi-sales-diff" style="font-size: 0.8rem; margin-top: 4px; color: #64748b;">-</div>
+                            </div>
+                            <div class="glass-card-nested kpi-card" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+                                <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;">영업이익 (Operating Income)</div>
+                                <div id="kpi-op-income-val" style="font-size: 1.4rem; font-weight: 700; color: #34d399;">-</div>
+                                <div id="kpi-op-income-diff" style="font-size: 0.8rem; margin-top: 4px; color: #64748b;">-</div>
+                            </div>
+                            <div class="glass-card-nested kpi-card" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+                                <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 6px;">당기순이익 (Net Income)</div>
+                                <div id="kpi-net-income-val" style="font-size: 1.4rem; font-weight: 700; color: #a78bfa;">-</div>
+                                <div id="kpi-net-income-diff" style="font-size: 0.8rem; margin-top: 4px; color: #64748b;">-</div>
+                            </div>
+                        </div>
+
+                        <!-- [4대 재무비율 정밀 분석 그리드 (안정성 / 수익성 / 성장성 / 활동성)] -->
+                        <div style="margin-bottom: 24px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                <h4 style="font-size: 1.1rem; font-weight: 700; color: #f1f5f9; margin: 0;">📊 4대 핵심 재무건전성 진단</h4>
+                                <span style="font-size: 0.8rem; color: #94a3b8;">한국은행 기업경영분석 표준 벤치마크 적용</span>
+                            </div>
+                            <div class="analytics-ratios-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+                                <!-- 1. 안정성 -->
+                                <div class="glass-card-nested ratio-category-card" style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 12px;">
+                                        <span style="font-weight: 700; color: #60a5fa;">🛡️ 안정성 비율</span>
+                                        <span id="badge-stability" class="status-badge" style="font-size: 0.75rem; padding: 2px 8px;">진단중</span>
+                                    </div>
+                                    <div id="ratio-list-stability" style="display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem;"></div>
+                                </div>
+
+                                <!-- 2. 수익성 -->
+                                <div class="glass-card-nested ratio-category-card" style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 12px;">
+                                        <span style="font-weight: 700; color: #34d399;">💰 수익성 비율</span>
+                                        <span id="badge-profitability" class="status-badge" style="font-size: 0.75rem; padding: 2px 8px;">진단중</span>
+                                    </div>
+                                    <div id="ratio-list-profitability" style="display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem;"></div>
+                                </div>
+
+                                <!-- 3. 성장성 -->
+                                <div class="glass-card-nested ratio-category-card" style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 12px;">
+                                        <span style="font-weight: 700; color: #fbbf24;">📈 성장성 비율</span>
+                                        <span id="badge-growth" class="status-badge" style="font-size: 0.75rem; padding: 2px 8px;">진단중</span>
+                                    </div>
+                                    <div id="ratio-list-growth" style="display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem;"></div>
+                                </div>
+
+                                <!-- 4. 활동성 -->
+                                <div class="glass-card-nested ratio-category-card" style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; margin-bottom: 12px;">
+                                        <span style="font-weight: 700; color: #c084fc;">⚡ 활동성 비율</span>
+                                        <span id="badge-activity" class="status-badge" style="font-size: 0.75rem; padding: 2px 8px;">진단중</span>
+                                    </div>
+                                    <div id="ratio-list-activity" style="display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- [Step 16 영역] JET 이상치 & 거래처 리스크 섹션 -->
+                        <div id="res-risks-container" style="margin-bottom: 24px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px;">
+                                <!-- 1. JET 분개장 이상 전표 탐지 카드 -->
+                                <div class="glass-card-nested" style="background: rgba(15,23,42,0.7); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 20px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <h4 style="font-size: 1.1rem; font-weight: 700; color: #f87171; margin: 0;">🔍 JET 분개장 이상 전표 탐지</h4>
+                                            <span id="jet-anomaly-count-badge" class="badge" style="background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600;">0건</span>
+                                        </div>
+                                        <div id="jet-risk-score-badge" style="font-size: 0.82rem; padding: 3px 10px; border-radius: 6px; font-weight: 600; background: rgba(239,68,68,0.2); color: #f87171;">위험도: 정상</div>
+                                    </div>
+                                    <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 12px;">ISA 240(부정감사기준)에 따른 주말 전표, 라운드넘버, 쪼개기 거래, 가지급금 등 전수 스캔 결과입니다.</p>
+                                    
+                                    <div id="jet-anomalies-table-wrap" style="max-height: 280px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;">
+                                        <table class="master-table" style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
+                                            <thead>
+                                                <tr style="background: rgba(0,0,0,0.3); color: #94a3b8; text-align: left;">
+                                                    <th style="padding: 8px 10px;">날짜</th>
+                                                    <th style="padding: 8px 10px;">계정과목</th>
+                                                    <th style="padding: 8px 10px; text-align: right;">금액(원)</th>
+                                                    <th style="padding: 8px 10px;">이상 유형</th>
+                                                    <th style="padding: 8px 10px;">적요/설명</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="jet-anomalies-tbody">
+                                                <tr><td colspan="5" style="text-align: center; padding: 20px; color: #64748b;">분석 데이터 대기 중...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- 2. 거래처원장 집중도 & 채권 리스크 카드 -->
+                                <div class="glass-card-nested" style="background: rgba(15,23,42,0.7); border: 1px solid rgba(245,158,11,0.2); border-radius: 12px; padding: 20px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <h4 style="font-size: 1.1rem; font-weight: 700; color: #fbbf24; margin: 0;">🏢 거래처 집중도 & 장기채권 리스크</h4>
+                                        </div>
+                                        <div id="subledger-top5-badge" style="font-size: 0.82rem; padding: 3px 10px; border-radius: 6px; font-weight: 600; background: rgba(245,158,11,0.2); color: #fbbf24;">Top 5 집중도: -%</div>
+                                    </div>
+                                    <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 12px;">상위 매출처 의존도 및 180일 이상 장기 미회수 부실 위험 채권을 모니터링합니다.</p>
+
+                                    <div id="subledger-risks-wrap" style="display: flex; flex-direction: column; gap: 10px;">
+                                        <!-- 위험 플래그 태그 목록 -->
+                                        <div id="subledger-flags-chips" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+                                        
+                                        <!-- 장기 미회수 채권 테이블 -->
+                                        <div style="max-height: 220px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;">
+                                            <table class="master-table" style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
+                                                <thead>
+                                                    <tr style="background: rgba(0,0,0,0.3); color: #94a3b8; text-align: left;">
+                                                        <th style="padding: 8px 10px;">거래처명</th>
+                                                        <th style="padding: 8px 10px; text-align: right;">미회수 잔액</th>
+                                                        <th style="padding: 8px 10px; text-align: center;">경과일수</th>
+                                                        <th style="padding: 8px 10px;">위험 등급</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="subledger-overdue-tbody">
+                                                    <tr><td colspan="4" style="text-align: center; padding: 20px; color: #64748b;">분석 데이터 대기 중...</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- [Step 17 영역] 5대 분석 한계점 체크리스트 & K-GAAP 마크다운 조서 뷰어 -->
+                        <div id="res-report-container" style="margin-bottom: 24px;">
+                            <!-- 1. 5대 분석 한계점 & 전문가 추가 검토 체크리스트 -->
+                            <div class="glass-card-nested" style="background: rgba(15,23,42,0.7); border: 1px solid rgba(148,163,184,0.15); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <h4 style="font-size: 1.1rem; font-weight: 700; color: #38bdf8; margin: 0;">📋 5대 회계자료 분석 한계점 & 추가 확인 체크리스트</h4>
+                                        <span class="badge" style="background: rgba(56,189,248,0.15); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600;">실무 필수 확인</span>
+                                    </div>
+                                    <span style="font-size: 0.8rem; color: #94a3b8;">장부 외 잠재 위험 방어</span>
+                                </div>
+                                <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 14px;">재무제표 및 원장 숫자만으로는 파악할 수 없는 실물/계약적 리스크 목록입니다. 추가 서류 징구 및 실사를 완료한 항목을 체크하세요.</p>
+                                
+                                <div id="analytics-checklist-list" style="display: flex; flex-direction: column; gap: 10px;">
+                                    <!-- 동적으로 5대 체크리스트 카드 바인딩 -->
+                                </div>
+                            </div>
+
+                            <!-- 2. K-GAAP RAG 기반 종합 감사 보고서 / 조서 마크다운 뷰어 -->
+                            <div class="glass-card-nested" style="background: rgba(15,23,42,0.85); border: 1px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 24px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <h4 style="font-size: 1.15rem; font-weight: 700; color: #a5b4fc; margin: 0;">📑 K-GAAP 기준 종합 감사 분석 보고서</h4>
+                                        <span class="badge" style="background: rgba(99,102,241,0.2); color: #c7d2fe; border: 1px solid rgba(99,102,241,0.4); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600;">RAG AI Generated</span>
+                                    </div>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button type="button" id="btn-copy-report-md" class="btn-secondary" style="padding: 6px 14px; font-size: 0.82rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                            <span>📋 마크다운 복사</span>
+                                        </button>
+                                        <button type="button" id="btn-download-report-md" class="btn-secondary" style="padding: 6px 14px; font-size: 0.82rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                            <span>📥 .md 파일 다운로드</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 마크다운 렌더링 본문 -->
+                                <div id="analytics-report-md-body" class="markdown-body" style="font-size: 0.92rem; line-height: 1.7; color: #e2e8f0; max-height: 600px; overflow-y: auto; padding: 16px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                                    <p style="color: #64748b; text-align: center; padding: 30px;">분석을 실행하면 K-GAAP 회계기준 매핑 종합 보고서가 여기에 생성됩니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. 로딩 상태 스피너 -->
+                    <div id="analytics-loading" style="display: none; text-align: center; padding: 60px 20px;">
+                        <div class="spinner" style="width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                        <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc;" id="analytics-loading-text">5대 회계자료 스마트 파싱 및 정밀 진단 중...</div>
+                        <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 6px;">재무비율 계산 ➔ 변동분석 ➔ JET 전표 스캔 ➔ K-GAAP 기준 매핑 진행</div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
     
     <!-- Script JS -->
     <script src="{{ url_for('static', filename='js/main.js', v='20260806-progress-v2') }}"></script>
+    <script src="{{ url_for('static', filename='js/master_analytics.js', v='20260817-v3') }}"></script>
 </body>
 </html>

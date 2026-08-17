@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 import os
 import re
+import json
 import datetime
 import requests
 import pandas as pd
@@ -14,6 +14,7 @@ from core.audit_engine import (
     parse_tb_file, run_variance_analysis, retrieve_k_gaap, generate_working_paper,
     classify_source_file, parse_trial_balance_structured, parse_financial_statement,
     financial_statement_to_variance_input, build_standard_statements,
+    run_comprehensive_enterprise_analysis
 )
 
 master_bp = Blueprint('master', __name__)
@@ -716,3 +717,275 @@ def audit_working_paper_status(paper_id):
     except Exception as e:
         logger.exception("Audit working paper status update error: %s", e)
         return jsonify({'error': f'감사조서 상태 변경 중 에러 발생: {str(e)}'}), 500
+
+
+@master_bp.route('/master/api/analyze-direct', methods=['POST'])
+def master_analyze_direct():
+    """
+    마스터 관리자가 업로드한 1개 이상의 엑셀/CSV 파일을 즉시 분석하여
+    4대 재무비율, 변동분석, JET 이상치, 거래처 리스크, K-GAAP 조서 마크다운을 반환합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[MASTER_ANALYTICS:REQUEST] 비인가 접근 차단: %s", session.get('email'))
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    company_name = request.form.get('company_name', '').strip() or '직접 분석 기업'
+    uploaded_files = request.files.getlist('files')
+
+    if not uploaded_files or (len(uploaded_files) == 1 and uploaded_files[0].filename == ''):
+        logger.warning("[MASTER_ANALYTICS:REQUEST] 업로드된 파일 없음")
+        return jsonify({'error': '분석할 엑셀/CSV 파일을 최소 1개 이상 업로드해 주세요.'}), 400
+
+    logger.info("[MASTER_ANALYTICS:REQUEST] 직접 분석 요청 수신: company=%s, file_count=%d", 
+                company_name, len(uploaded_files))
+
+    files_data_list = []
+    for f in uploaded_files:
+        if f and f.filename:
+            fname = secure_filename(f.filename) or f.filename
+            content = f.read()
+            files_data_list.append({
+                'filename': fname,
+                'content': content
+            })
+
+    try:
+        payload = run_comprehensive_enterprise_analysis(
+            company_name=company_name,
+            files_data_list=files_data_list,
+            supabase_client=supabase
+        )
+        logger.info("[MASTER_ANALYTICS:SUCCESS] 직접 분석 완료: company=%s, files=%s", 
+                    company_name, payload.get('analyzed_files'))
+        return jsonify(payload), 200
+
+    except Exception as e:
+        logger.error("[MASTER_ANALYTICS:ERROR] 직접 분석 중 예외 발생: %s", e, exc_info=True)
+        return jsonify({'error': f'기업 분석 수행 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@master_bp.route('/master/api/analyze-company/<string:company_name>', methods=['POST', 'GET'])
+def master_analyze_company(company_name):
+    """
+    특정 고객사가 업로드한 기존 엑셀/CSV 파일들을 스토리지에서 조회하여 원클릭으로 정밀 분석합니다.
+    선택된 파일 ID 목록(selected_file_ids)이 주어지면 해당 파일만 분석하고, 없으면 전체 회계 파일을 분석합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[MASTER_ANALYTICS:REQUEST] 비인가 접근 차단: %s", session.get('email'))
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    req_data = request.get_json(silent=True) or {}
+    selected_ids = req_data.get('selected_file_ids') or []
+    fiscal_year = req_data.get('fiscal_year') or request.args.get('fiscal_year', '').strip()
+    
+    logger.info("[MASTER_ANALYTICS:REQUEST] 고객사 분석 요청: company=%s, fiscal_year=%s, selected_ids=%s", 
+                company_name, fiscal_year, selected_ids)
+
+    files_data_list = []
+
+    # 1. Supabase company_files 테이블 조회
+    if supabase:
+        try:
+            query = supabase.table('company_files').select('*').eq('company_name', company_name)
+            if selected_ids:
+                query = query.in_('id', selected_ids)
+            file_res = query.order('created_at', desc=True).execute()
+
+            for f_info in (file_res.data or []):
+                f_name = str(f_info.get('file_name') or '').strip()
+                f_url = f_info.get('file_url')
+                
+                # 엑셀/CSV 확장자 필터
+                if not f_name or not any(f_name.lower().endswith(ext) for ext in ['.xlsx', '.xls', '.csv']):
+                    continue
+
+                f_bytes = None
+                if f_url:
+                    try:
+                        if f_url.startswith('http'):
+                            resp = requests.get(f_url, timeout=10)
+                            if resp.status_code == 200:
+                                f_bytes = resp.content
+                        else:
+                            f_bytes = supabase.storage.from_('company-uploads').download(f_url)
+                    except Exception as down_err:
+                        logger.warning("[MASTER_ANALYTICS:PARSE] 원격 스토리지 다운로드 실패 (%s): %s", f_url, down_err)
+
+                # 로컬 폴더 폴백 탐색
+                if not f_bytes:
+                    local_path = os.path.join(os.getcwd(), "uploads", company_name, f_name)
+                    if os.path.exists(local_path):
+                        with open(local_path, "rb") as lf:
+                            f_bytes = lf.read()
+
+                if f_bytes:
+                    files_data_list.append({
+                        'filename': f_name,
+                        'content': f_bytes
+                    })
+
+        except Exception as se:
+            logger.error("[MASTER_ANALYTICS:ERROR] Supabase 파일 메타데이터 조회 오류: %s", se, exc_info=True)
+
+    # 2. 로컬 uploads/<company_name> 폴더 추가 탐색 (Supabase에 미등록된 로컬 파일 지원)
+    if not files_data_list:
+        local_dir = os.path.join(os.getcwd(), "uploads", company_name)
+        if os.path.exists(local_dir):
+            for lf in os.listdir(local_dir):
+                if any(lf.lower().endswith(ext) for ext in ['.xlsx', '.xls', '.csv']):
+                    with open(os.path.join(local_dir, lf), "rb") as f:
+                        files_data_list.append({
+                            'filename': lf,
+                            'content': f.read()
+                        })
+
+    if not files_data_list:
+        logger.warning("[MASTER_ANALYTICS:REQUEST] 분석 가능한 회계 엑셀/CSV 파일 없음: company=%s", company_name)
+        return jsonify({
+            'success': False,
+            'error_code': 'NO_EXCEL_FILES',
+            'error': f"'{company_name}' 고객사가 업로드한 회계 파일(.xlsx, .xls, .csv)이 없습니다. 상단의 '파일 직접 업로드' 기능을 이용하거나 고객사 자료 업로드를 요청해 주세요."
+        }), 404
+
+    try:
+        payload = run_comprehensive_enterprise_analysis(
+            company_name=company_name,
+            files_data_list=files_data_list,
+            fiscal_year=fiscal_year,
+            supabase_client=supabase
+        )
+        logger.info("[MASTER_ANALYTICS:SUCCESS] 고객사 분석 완료: company=%s, files=%s", 
+                    company_name, payload.get('analyzed_files'))
+        return jsonify(payload), 200
+
+    except Exception as e:
+        logger.error("[MASTER_ANALYTICS:ERROR] 고객사 분석 중 예외 발생: %s", e, exc_info=True)
+        return jsonify({'error': f'기업 분석 수행 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@master_bp.route('/master/api/save-analysis', methods=['POST'])
+def master_save_analysis():
+    """
+    기업 분석 결과(JSON 지표 및 마크다운 조서)를 Supabase audit_working_papers 테이블 및 로컬 백업에 영속화합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[MASTER_ANALYTICS:REQUEST] 비인가 저장 요청 차단: %s", session.get('email'))
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    try:
+        data = request.get_json(force=True) or {}
+        company_name = data.get('company_name', '').strip() or '미지정 기업'
+        fiscal_year = int(data.get('fiscal_year', 2025))
+        analysis_payload = data.get('analysis_data', {})
+        report_md = data.get('report_md', '') or analysis_payload.get('report_md', '')
+        memo = data.get('memo', '기업 정밀 분석 허브에서 자동 생성 및 저장')
+
+        logger.info("[MASTER_ANALYTICS:REQUEST] 분석 결과 저장 요청: company=%s, fiscal_year=%d", 
+                    company_name, fiscal_year)
+
+        saved_paper = None
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 1. Supabase 영속화
+        if supabase:
+            try:
+                company_id = _resolve_company_id(company_name) or 1
+                version_res = supabase.table('audit_working_papers').select('version') \
+                    .eq('company_id', company_id).eq('fiscal_year', fiscal_year) \
+                    .order('version', desc=True).limit(1).execute()
+                next_version = (version_res.data[0]['version'] + 1) if (version_res.data and len(version_res.data) > 0) else 1
+
+                insert_res = supabase.table('audit_working_papers').insert({
+                    'company_id': company_id,
+                    'company_name': company_name,
+                    'fiscal_year': fiscal_year,
+                    'version': next_version,
+                    'status': 'draft',
+                    'analysis_result_json': analysis_payload,
+                    'working_paper_md': report_md,
+                    'created_by': session['email']
+                }).execute()
+
+                if insert_res.data:
+                    saved_paper = insert_res.data[0]
+                    logger.info("[MASTER_ANALYTICS:SUCCESS] Supabase 조서 저장 성공 (ID: %s, v%d)", 
+                                saved_paper.get('id'), next_version)
+            except Exception as se:
+                logger.error("[MASTER_ANALYTICS:ERROR] Supabase 영속화 오류 (로컬 백업 진행): %s", se)
+
+        # 2. 로컬 백업 저장 (JSON 및 MD)
+        backup_dir = os.path.join(os.getcwd(), "temporary_data", "saved_reports", company_name)
+        os.makedirs(backup_dir, exist_ok=True)
+        backup_fn_base = f"{fiscal_year}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        with open(os.path.join(backup_dir, f"{backup_fn_base}_report.md"), "w", encoding="utf-8") as mf:
+            mf.write(report_md)
+        with open(os.path.join(backup_dir, f"{backup_fn_base}_data.json"), "w", encoding="utf-8") as jf:
+            json.dump(analysis_payload, jf, ensure_ascii=False, indent=2)
+
+        return jsonify({
+            'success': True,
+            'message': f"'{company_name}' 기업의 {fiscal_year}년도 분석 조서가 안전하게 저장되었습니다.",
+            'saved_at': now_str,
+            'paper': saved_paper or {
+                'company_name': company_name,
+                'fiscal_year': fiscal_year,
+                'version': 1,
+                'status': 'draft',
+                'created_at': now_str
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error("[MASTER_ANALYTICS:ERROR] 분석 조서 저장 실패: %s", e, exc_info=True)
+        return jsonify({'error': f'분석 결과 저장 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@master_bp.route('/master/api/analysis-history/<string:company_name>', methods=['GET'])
+def master_analysis_history(company_name):
+    """
+    특정 회사의 과거 저장된 감사/기업분석 보고서 이력 목록을 반환합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    logger.info("[MASTER_ANALYTICS:REQUEST] 기업분석 이력 조회: company=%s", company_name)
+    history_list = []
+
+    # 1. Supabase 조회
+    if supabase:
+        try:
+            company_id = _resolve_company_id(company_name)
+            if company_id:
+                res = supabase.table('audit_working_papers') \
+                    .select('id, company_name, fiscal_year, version, status, created_at, reviewed_at, approved_at') \
+                    .eq('company_id', company_id) \
+                    .order('created_at', desc=True).execute()
+                history_list = res.data or []
+        except Exception as se:
+            logger.error("[MASTER_ANALYTICS:ERROR] Supabase 이력 조회 오류: %s", se)
+
+    # 2. 로컬 백업 폴더 조회 보강
+    backup_dir = os.path.join(os.getcwd(), "temporary_data", "saved_reports", company_name)
+    if os.path.exists(backup_dir):
+        for fname in os.listdir(backup_dir):
+            if fname.endswith("_report.md"):
+                ts_str = fname.replace("_report.md", "")
+                history_list.append({
+                    'id': f"local_{ts_str}",
+                    'company_name': company_name,
+                    'fiscal_year': ts_str.split('_')[0] if '_' in ts_str else '2025',
+                    'version': 1,
+                    'status': 'saved_local',
+                    'created_at': ts_str
+                })
+
+    return jsonify({
+        'success': True,
+        'company_name': company_name,
+        'count': len(history_list),
+        'history': history_list
+    }), 200
+
+
+

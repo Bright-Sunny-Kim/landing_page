@@ -536,6 +536,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // 2-1. 기업 정밀 분석 허브 (analytics-hub) 분기 처리
+                if (menu === 'analytics-hub') {
+                    e.preventDefault();
+                    sidebarMenuItems.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    masterMainContent.querySelectorAll('.master-card').forEach(card => {
+                        card.style.display = 'none';
+                    });
+                    
+                    const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+                    activeMocks.forEach(m => m.remove());
+                    
+                    const hubView = document.getElementById('analytics-hub-view');
+                    if (hubView) {
+                        hubView.style.display = 'block';
+                        window.initAnalyticsHub?.();
+                    }
+                    return;
+                }
+
                 // 3. 시스템 통계 및 리포트 (analytics) 분기 처리
                 if (menu === 'analytics') {
                     e.preventDefault();

@@ -6,6 +6,8 @@ from collections import deque
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import logging
+logger = logging.getLogger(__name__)
 
 # scikit-learn을 이용한 로컬 Fallback RAG 구현용 임포트
 try:
@@ -381,25 +383,47 @@ def classify_source_file(filename):
 
 
 def _normalize_account_name(raw):
-    """계정과목 셀 특유의 글자간격 공백(가운데정렬용)과 ◀▶ 소계 괄호기호를 제거."""
+    """계정과목 셀 특유의 로마자 접두사(Ⅰ. Ⅱ. Ⅹ.), ◀▶ 소계 괄호, 글자간격 공백을 제거하여 순수 계정명으로 정규화."""
     s = str(raw).replace("　", " ")
-    is_subtotal = any(c in s for c in _BRACKET_CHARS)
+    is_subtotal = any(c in s for c in _BRACKET_CHARS) or any(c in s for c in _ROMAN_PREFIXES)
     for c in _BRACKET_CHARS:
         s = s.replace(c, "")
-    return s.replace(" ", "").strip(), is_subtotal
+    for r in _ROMAN_PREFIXES:
+        s = s.replace(r, "")
+    # 선두의 점(.)이나 공백 제거
+    s = s.strip(". ").replace(" ", "").strip()
+    return s, is_subtotal
 
 
 def _to_amount(v):
-    """콤마 포함 금액 문자열/NaN을 float 또는 None으로 정규화."""
+    """콤마, 괄호 음수(100,000), 세모 음수(△100,000 / ▲100,000), 통화기호(₩, 원)를 float로 정규화."""
     if v is None or (isinstance(v, float) and pd.isna(v)):
-        return None
-    s = str(v).replace(",", "").strip()
-    if s in ("", "nan"):
-        return None
+        return 0.0
+    s = str(v).strip()
+    if not s or s.lower() == "nan" or s == "-":
+        return 0.0
+    
+    # 괄호 음수 형태: (1,000,000) or （1,000,000）
+    is_negative = False
+    if (s.startswith("(") and s.endswith(")")) or (s.startswith("（") and s.endswith("）")):
+        is_negative = True
+        s = s[1:-1].strip()
+    elif s.startswith("△") or s.startswith("▲") or s.startswith("-"):
+        is_negative = True
+        s = s[1:].strip()
+        
+    # 특수문자 제거
+    for ch in [",", "₩", "원", " ", "$", "%"]:
+        s = s.replace(ch, "")
+        
+    if not s:
+        return 0.0
+        
     try:
-        return float(s)
+        val = float(s)
+        return -val if is_negative else val
     except ValueError:
-        return None
+        return 0.0
 
 
 def _read_tabular(file_content, filename):
@@ -411,9 +435,1022 @@ def _read_tabular(file_content, filename):
     elif filename.endswith(".xlsx"):
         return pd.read_excel(io.BytesIO(file_content), header=None, engine="openpyxl")
     elif filename.endswith(".xls"):
-        # 구 바이너리 .xls는 openpyxl이 아니라 xlrd 엔진이 필요 (레거시 parse_tb_file은 이 구분이 없어 .xls에서 실패할 수 있음)
         return pd.read_excel(io.BytesIO(file_content), header=None, engine="xlrd")
     raise ValueError("지원하지 않는 파일 형식입니다. (CSV, Excel 파일만 지원)")
+
+
+def smart_parse_accounting_workbook(file_content_or_path, filename):
+    """
+    .xlsx, .xls, .csv 파일을 열어 포함된 시트들을 분석하고,
+    5대 회계자료(재무상태표, 손익계산서, 합계잔액시산표, 분개장, 거래처원장)를 자동으로 분류 및 파싱합니다.
+    """
+    logger.info("[MASTER_ANALYTICS:PARSE] 엑셀 파싱 시작: filename=%s", filename)
+    result = {
+        "balance_sheet": None,
+        "income_statement": None,
+        "trial_balance": None,
+        "journal_entries": None,
+        "subledger": None,
+        "detected_sheets": [],
+        "errors": []
+    }
+
+    try:
+        # 파일 내용 로드
+        if isinstance(file_content_or_path, (str, os.PathLike)):
+            with open(file_content_or_path, "rb") as f:
+                raw_bytes = f.read()
+        else:
+            raw_bytes = file_content_or_path
+
+        # CSV 파일 단일 처리
+        if filename.lower().endswith(".csv"):
+            df = _read_tabular(raw_bytes, filename)
+            sheet_type, parsed_data = _detect_and_parse_single_sheet(df, "CSV_SHEET", filename)
+            if sheet_type:
+                result[sheet_type] = parsed_data
+                result["detected_sheets"].append(f"CSV ({sheet_type})")
+            return result
+
+        # Excel 다중 시트 읽기
+        engine = "openpyxl" if filename.lower().endswith(".xlsx") else "xlrd"
+        excel_file = pd.ExcelFile(io.BytesIO(raw_bytes), engine=engine)
+        sheet_names = excel_file.sheet_names
+        logger.debug("[MASTER_ANALYTICS:PARSE] 시트 목록: %s", sheet_names)
+
+        for sname in sheet_names:
+            try:
+                df_sheet = pd.read_excel(excel_file, sheet_name=sname, header=None)
+                if df_sheet.empty or len(df_sheet) < 2:
+                    continue
+
+                sheet_type, parsed_data = _detect_and_parse_single_sheet(df_sheet, sname, filename)
+                if sheet_type and parsed_data is not None:
+                    # 우선순위가 높은 데이터 우선 할당 (기존 데이터가 없거나 덮어쓰기)
+                    if not result[sheet_type]:
+                        result[sheet_type] = parsed_data
+                        result["detected_sheets"].append(f"{sname} -> {sheet_type}")
+                        logger.info("[MASTER_ANALYTICS:PARSE] 시트 분류 성공: %s -> %s (행 수: %d)", sname, sheet_type, len(parsed_data))
+            except Exception as se:
+                logger.warning("[MASTER_ANALYTICS:PARSE] 시트 파싱 경고 (%s): %s", sname, se)
+                result["errors"].append(f"시트 '{sname}' 파싱 실패: {str(se)}")
+
+    except Exception as e:
+        logger.error("[MASTER_ANALYTICS:ERROR] 엑셀 워크북 파싱 실패: %s", e, exc_info=True)
+        result["errors"].append(f"파일 파싱 오류: {str(e)}")
+
+    return result
+
+
+def _detect_and_parse_single_sheet(df, sheet_name="", filename=""):
+    """
+    단일 DataFrame의 헤더, 시트명 및 파일명 키워드를 감지하여 회계자료 유형을 식별하고 파싱합니다.
+    """
+    sname_clean = str(sheet_name).replace(" ", "").lower()
+    fname_clean = str(filename).replace(" ", "").lower()
+    
+    # 상단 1~10행 텍스트 수집
+    top_text = ""
+    for r in range(min(12, len(df))):
+        row_str = " ".join([str(x) for x in df.iloc[r].dropna().tolist()])
+        top_text += " " + row_str
+    
+    top_text = top_text.replace(" ", "")
+
+    # [1] 거래처원장 감지 (파일명/시트명/상단 키워드)
+    if any(k in fname_clean or k in sname_clean for k in ["거래처", "원장", "subledger", "거래처원장"]) or \
+       any(k in top_text for k in ["거래처:", "거래처코드", "거래처명", "전기(월)이월", "전기이월", "총괄잔액"]):
+        parsed = parse_subledger_df(df)
+        if parsed and len(parsed) > 0:
+            return "subledger", parsed
+
+    # [2] 분개장 감지
+    if any(k in fname_clean or k in sname_clean for k in ["분개", "전표", "journal"]) or \
+       (any(k in top_text for k in ["전표일자", "전표번호", "차변금액", "대변금액"]) and "합계잔액" not in top_text):
+        parsed = parse_journal_df(df)
+        if parsed and len(parsed) > 0:
+            return "journal_entries", parsed
+
+    # [3] 합계잔액시산표 감지
+    if any(k in fname_clean or k in sname_clean for k in ["시산표", "tb", "trialbalance", "합잔", "합계잔액"]) or \
+       ("합계잔액" in top_text or ("차변합계" in top_text and "대변합계" in top_text)):
+        parsed = parse_tb_from_df(df)
+        if parsed and len(parsed) > 0:
+            return "trial_balance", parsed
+
+    # [4] 손익계산서 감지 (재무상태표보다 먼저 검사)
+    if any(k in fname_clean or k in sname_clean for k in ["손익", "is", "pl", "incomestatement"]) or \
+       ("손익계산서" in top_text or "매출총이익" in top_text or "영업이익" in top_text or "당기순이익" in top_text):
+        parsed = parse_statement_from_df(df, "income_statement")
+        if parsed and len(parsed) > 0:
+            return "income_statement", parsed
+
+    # [5] 재무상태표 감지
+    if any(k in fname_clean or k in sname_clean for k in ["재무", "재무상태표", "대차대조표", "bs", "balancesheet"]) or \
+       ("재무상태표" in top_text or "자산총계" in top_text or "부채총계" in top_text or "부채및자본총계" in top_text):
+        parsed = parse_statement_from_df(df, "balance_sheet")
+        if parsed and len(parsed) > 0:
+            return "balance_sheet", parsed
+
+    # 범용 재무제표 파서 폴백
+    parsed_gen = parse_statement_from_df(df, "unknown")
+    if parsed_gen and len(parsed_gen) > 3:
+        acc_text = "".join([str(x.get("Account", "")) for x in parsed_gen])
+        if any(k in acc_text for k in ["매출", "급여", "영업이익", "순이익"]):
+            return "income_statement", parsed_gen
+        elif any(k in acc_text for k in ["자산", "부채", "자본", "현금", "매출채권"]):
+            return "balance_sheet", parsed_gen
+
+    return None, None
+
+
+def parse_statement_from_df(df, expected_type="unknown"):
+    """
+    재무상태표 / 손익계산서 시트를 파싱하여 [{Account, Current, Prior, Diff, IsSubtotal}] 구조로 반환합니다.
+    5열 구조(과목 | 당기세부 | 당기소계 | 전기세부 | 전기소계) 및 3열/4열 구조를 모두 완벽 지원합니다.
+    """
+    header_row = -1
+    acc_col = 0
+    is_5col_layout = False
+
+    for r in range(min(10, len(df))):
+        row_cells = [str(x).replace(" ", "").strip() for x in df.iloc[r].tolist()]
+        for idx, cell in enumerate(row_cells):
+            if any(k in cell for k in ["과목", "계정과목", "항목"]):
+                acc_col = idx
+                header_row = r
+                break
+        if header_row != -1:
+            break
+
+    if header_row == -1:
+        header_row = 0
+        acc_col = 0
+
+    # 5열 레이아웃 판별 (0:과목, 1:당기세부, 2:당기소계, 3:전기세부, 4:전기소계)
+    if len(df.columns) >= 5:
+        is_5col_layout = True
+
+    records = []
+    for i in range(header_row + 1, len(df)):
+        if acc_col >= len(df.columns):
+            continue
+        raw_acc = df.iat[i, acc_col]
+        if pd.isna(raw_acc):
+            continue
+            
+        acc_clean, is_subtotal = _normalize_account_name(raw_acc)
+        if not acc_clean or acc_clean in ["nan", "계정과목", "과목", "항목"]:
+            continue
+
+        if is_5col_layout:
+            # 세부금액(col 1/3)이 있으면 세부금액 우선, 없으면 소계/합계(col 2/4)
+            c_detail = _to_amount(df.iat[i, 1]) if len(df.columns) > 1 else 0.0
+            c_sub = _to_amount(df.iat[i, 2]) if len(df.columns) > 2 else 0.0
+            cur_val = c_detail if c_detail != 0.0 else c_sub
+
+            p_detail = _to_amount(df.iat[i, 3]) if len(df.columns) > 3 else 0.0
+            p_sub = _to_amount(df.iat[i, 4]) if len(df.columns) > 4 else 0.0
+            prior_val = p_detail if p_detail != 0.0 else p_sub
+        else:
+            cur_val = _to_amount(df.iat[i, 1]) if len(df.columns) > 1 else 0.0
+            prior_val = _to_amount(df.iat[i, 2]) if len(df.columns) > 2 else 0.0
+
+        diff_val = cur_val - prior_val
+
+        records.append({
+            "Account": acc_clean,
+            "Current": cur_val,
+            "Prior": prior_val,
+            "Diff": diff_val,
+            "IsSubtotal": is_subtotal
+        })
+
+    return records
+
+
+def parse_tb_from_df(df):
+    """
+    합계잔액시산표 시트를 파싱하여 [{Account, Current, Prior, DebitSum, CreditSum...}] 구조로 반환합니다.
+    5열 표준 구조: [0: 차변잔액 | 1: 차변합계 | 2: 계정과목 | 3: 대변합계 | 4: 대변잔액] 지원
+    """
+    header_row = -1
+    acc_col = -1
+    
+    for r in range(min(10, len(df))):
+        row_cells = [str(x).replace(" ", "").strip() for x in df.iloc[r].tolist()]
+        matching_cols = [idx for idx, c in enumerate(row_cells) if any(k in c for k in ["계정과목", "과목", "계정명"])]
+        if matching_cols:
+            header_row = r
+            acc_col = matching_cols[0]
+            break
+
+    if header_row == -1 or acc_col == -1:
+        acc_col = 2 if len(df.columns) >= 5 else 0
+        header_row = 1 if len(df) > 1 else 0
+
+    records = []
+    for i in range(header_row + 1, len(df)):
+        if acc_col >= len(df.columns):
+            continue
+        raw_acc = df.iat[i, acc_col]
+        if pd.isna(raw_acc):
+            continue
+
+        raw_str = str(raw_acc).strip()
+        is_subtotal = bool(re.search(r"[◀◁▶▷ⅠⅡⅢⅣ]", raw_str)) or any(k in raw_str for k in ["합계", "소계", "총계"])
+        acc_clean = re.sub(r"[◀◁▶▷\s]", "", raw_str)
+        if not acc_clean or acc_clean in ["합계", "계정과목", "과목"]:
+            continue
+
+        # 5열 표준 구조 (0: 차변잔액, 1: 차변합계, 2: 과목, 3: 대변합계, 4: 대변잔액)
+        if acc_col == 2 and len(df.columns) >= 5:
+            deb_bal = _to_amount(df.iat[i, 0])
+            deb_tot = _to_amount(df.iat[i, 1])
+            crd_tot = _to_amount(df.iat[i, 3])
+            crd_bal = _to_amount(df.iat[i, 4])
+            cur_val = deb_bal if deb_bal != 0.0 else crd_bal
+        else:
+            row_vals = [_to_amount(x) for x in df.iloc[i].tolist() if not pd.isna(x)]
+            cur_val = row_vals[0] if row_vals else 0.0
+            deb_tot = row_vals[1] if len(row_vals) > 1 else 0.0
+            crd_tot = row_vals[2] if len(row_vals) > 2 else 0.0
+
+        records.append({
+            "Account": acc_clean,
+            "Current": cur_val,
+            "Prior": 0.0,
+            "DebitTotal": deb_tot if 'deb_tot' in locals() else 0.0,
+            "CreditTotal": crd_tot if 'crd_tot' in locals() else 0.0,
+            "IsSubtotal": is_subtotal
+        })
+
+    return records
+
+
+def parse_journal_df(df):
+    """
+    분개장 시트를 파싱하여 표준 전표 목록 [{Date, VoucherNo, AccountCode, AccountName, Debit, Credit, Customer, Description}]으로 반환합니다.
+    """
+    header_row = -1
+    col_map = {"date": -1, "voucher": -1, "code": -1, "account": -1, "debit": -1, "credit": -1, "customer": -1, "desc": -1}
+
+    for r in range(min(10, len(df))):
+        row_cells = [str(x).replace(" ", "").strip().lower() for x in df.iloc[r].tolist()]
+        for idx, cell in enumerate(row_cells):
+            if any(k in cell for k in ["전표일자", "일자", "날짜", "date"]):
+                col_map["date"] = idx
+            elif any(k in cell for k in ["전표번호", "번호", "no", "voucherno"]):
+                col_map["voucher"] = idx
+            elif any(k in cell for k in ["code", "코드", "계정코드"]):
+                col_map["code"] = idx
+            elif any(k in cell for k in ["계정과목", "과목", "계정명", "account"]):
+                col_map["account"] = idx
+            elif any(k in cell for k in ["차변", "차변금액", "debit"]):
+                col_map["debit"] = idx
+            elif any(k in cell for k in ["대변", "대변금액", "credit"]):
+                col_map["credit"] = idx
+            elif any(k in cell for k in ["거래처", "거래처명", "customer", "vendor"]):
+                col_map["customer"] = idx
+            elif any(k in cell for k in ["적요", "내역", "비고", "description", "memo"]):
+                col_map["desc"] = idx
+
+        if col_map["account"] != -1 and (col_map["debit"] != -1 or col_map["credit"] != -1):
+            header_row = r
+            break
+
+    if header_row == -1:
+        # 위치 기반 폴백 (0:일자, 1:전표, 4:과목, 5:차변, 6:대변, 7:거래처, 9:적요)
+        if len(df.columns) >= 7:
+            header_row = 0
+            col_map = {"date": 0, "voucher": 1, "code": 3, "account": 4, "debit": 5, "credit": 6, "customer": 7, "desc": min(9, len(df.columns)-1)}
+        else:
+            return []
+
+    entries = []
+    for i in range(header_row + 1, len(df)):
+        raw_acc = df.iat[i, col_map["account"]] if col_map["account"] != -1 and col_map["account"] < len(df.columns) else None
+        if pd.isna(raw_acc) or not str(raw_acc).strip():
+            continue
+
+        acc_name = str(raw_acc).strip()
+        if acc_name in ["계정과목", "합계", "소계", "총계"]:
+            continue
+
+        raw_date = str(df.iat[i, col_map["date"]]).strip() if col_map["date"] != -1 and col_map["date"] < len(df.columns) else ""
+        raw_voucher = str(df.iat[i, col_map["voucher"]]).strip() if col_map["voucher"] != -1 and col_map["voucher"] < len(df.columns) else ""
+        raw_code = str(df.iat[i, col_map["code"]]).strip() if col_map["code"] != -1 and col_map["code"] < len(df.columns) and not pd.isna(df.iat[i, col_map["code"]]) else ""
+        debit_val = _to_amount(df.iat[i, col_map["debit"]]) if col_map["debit"] != -1 and col_map["debit"] < len(df.columns) else 0.0
+        credit_val = _to_amount(df.iat[i, col_map["credit"]]) if col_map["credit"] != -1 and col_map["credit"] < len(df.columns) else 0.0
+        cust_name = str(df.iat[i, col_map["customer"]]).strip() if col_map["customer"] != -1 and col_map["customer"] < len(df.columns) and not pd.isna(df.iat[i, col_map["customer"]]) else ""
+        desc_text = str(df.iat[i, col_map["desc"]]).strip() if col_map["desc"] != -1 and col_map["desc"] < len(df.columns) and not pd.isna(df.iat[i, col_map["desc"]]) else ""
+
+        # 날짜 포맷 정리 (예: 2024-01-01 00:00:00 -> 2024-01-01)
+        if " " in raw_date:
+            raw_date = raw_date.split(" ")[0]
+
+        entries.append({
+            "Date": raw_date,
+            "VoucherNo": raw_voucher,
+            "AccountCode": raw_code,
+            "AccountName": acc_name,
+            "Debit": debit_val,
+            "Credit": credit_val,
+            "Customer": cust_name,
+            "Description": desc_text
+        })
+
+    logger.debug("[MASTER_ANALYTICS:PARSE] 분개장 파싱 완료: %d건 추출", len(entries))
+    return entries
+
+
+def parse_subledger_df(df):
+    """
+    거래처원장 시트를 파싱하여 표준 레코드 목록 [{CustCode, CustName, BizNo, AccountName, PriorBalance, Debit, Credit, EndBalance, LastDate}]으로 반환합니다.
+    '거래처별 계정별 총괄잔액' 서식 및 일반 표 서식을 모두 완벽 지원합니다.
+    """
+    records = []
+    cur_cust_code = ""
+    cur_cust_name = ""
+
+    for i in range(len(df)):
+        row_str = " ".join([str(x) for x in df.iloc[i].dropna().tolist()])
+        
+        # 1. 거래처 헤더 패턴 감지: "거래처 : [000101] 씨엔비(주)"
+        cust_match = re.search(r"거래처\s*:\s*\[(\w+)\]\s*(.+)", row_str)
+        if cust_match:
+            cur_cust_code = cust_match.group(1).strip()
+            cur_cust_name = cust_match.group(2).strip()
+            continue
+
+        # 2. 거래처 총괄잔액 서식 (col 0이 숫자 계정코드, col 1이 계정과목명)
+        if len(df.columns) >= 6:
+            col0_val = str(df.iat[i, 0]).strip()
+            col1_val = str(df.iat[i, 1]).strip()
+
+            # 3자리 숫자 계정코드 검사 (예: 153, 108, 251)
+            if col0_val.isdigit() and len(col0_val) >= 3 and col1_val and col1_val not in ["nan", "계정과목", "과목"]:
+                prior_val = _to_amount(df.iat[i, 2])
+                debit_val = _to_amount(df.iat[i, 3])
+                credit_val = _to_amount(df.iat[i, 4])
+                end_val = _to_amount(df.iat[i, 5])
+
+                records.append({
+                    "CustCode": cur_cust_code,
+                    "CustName": cur_cust_name or f"거래처_{cur_cust_code}",
+                    "BizNo": "",
+                    "AccountName": col1_val,
+                    "PriorBalance": prior_val,
+                    "Debit": debit_val,
+                    "Credit": credit_val,
+                    "EndBalance": end_val,
+                    "LastDate": "2024-12-31"
+                })
+
+    if records:
+        logger.debug("[MASTER_ANALYTICS:PARSE] 거래처 총괄원장 파싱 완료: %d개 레코드 추출", len(records))
+        return records
+
+    # 3. 일반 표 형태 거래처원장 폴백 파서
+    header_row = -1
+    col_map = {"code": -1, "name": -1, "account": -1, "prior": -1, "debit": -1, "credit": -1, "balance": -1}
+    for r in range(min(10, len(df))):
+        row_cells = [str(x).replace(" ", "").strip() for x in df.iloc[r].tolist()]
+        for idx, cell in enumerate(row_cells):
+            if any(k in cell for k in ["거래처명", "상호", "거래처"]):
+                col_map["name"] = idx
+            elif any(k in cell for k in ["차변", "발생"]):
+                col_map["debit"] = idx
+            elif any(k in cell for k in ["대변", "회수"]):
+                col_map["credit"] = idx
+            elif any(k in cell for k in ["기말잔액", "잔액"]):
+                col_map["balance"] = idx
+        if col_map["name"] != -1 and (col_map["balance"] != -1 or col_map["debit"] != -1):
+            header_row = r
+            break
+
+    if header_row != -1:
+        for i in range(header_row + 1, len(df)):
+            cust_name = str(df.iat[i, col_map["name"]]).strip() if col_map["name"] != -1 else ""
+            if not cust_name or cust_name in ["거래처명", "합계", "소계"]:
+                continue
+            debit_val = _to_amount(df.iat[i, col_map["debit"]]) if col_map["debit"] != -1 else 0.0
+            credit_val = _to_amount(df.iat[i, col_map["credit"]]) if col_map["credit"] != -1 else 0.0
+            end_val = _to_amount(df.iat[i, col_map["balance"]]) if col_map["balance"] != -1 else 0.0
+
+            records.append({
+                "CustCode": "",
+                "CustName": cust_name,
+                "BizNo": "",
+                "AccountName": "매출채권",
+                "PriorBalance": 0.0,
+                "Debit": debit_val,
+                "Credit": credit_val,
+                "EndBalance": end_val,
+                "LastDate": "2024-12-31"
+            })
+
+    return records
+
+
+# ==========================================
+# 3-2. 4대 핵심 재무비율 및 Variance 변동분석 모듈
+# ==========================================
+
+def _find_account_vals(records, keywords, exclude_keywords=None):
+    """
+    레코드 목록에서 주어진 키워드와 매칭되는 계정의 당기(Current), 전기(Prior) 금액을 찾습니다.
+    0이 아닌 유효한 금액을 가진 레코드를 최우선으로 반환합니다.
+    """
+    if not records:
+        return 0.0, 0.0
+
+    best_match = (0.0, 0.0)
+
+    # 1. 완전 일치 매칭 (Exact Match)
+    for rec in records:
+        acc = str(rec.get("Account", "")).replace(" ", "").strip()
+        if exclude_keywords and any(ex in acc for ex in exclude_keywords):
+            continue
+        if any(kw == acc for kw in keywords):
+            c_val = float(rec.get("Current", 0.0) or 0.0)
+            p_val = float(rec.get("Prior", 0.0) or 0.0)
+            if c_val != 0.0 or p_val != 0.0:
+                return c_val, p_val
+            best_match = (c_val, p_val)
+
+    # 2. 부분 포함 매칭 (Partial Match)
+    for rec in records:
+        acc = str(rec.get("Account", "")).replace(" ", "").strip()
+        if exclude_keywords and any(ex in acc for ex in exclude_keywords):
+            continue
+        if any(kw in acc for kw in keywords):
+            c_val = float(rec.get("Current", 0.0) or 0.0)
+            p_val = float(rec.get("Prior", 0.0) or 0.0)
+            if c_val != 0.0 or p_val != 0.0:
+                return c_val, p_val
+            if best_match == (0.0, 0.0):
+                best_match = (c_val, p_val)
+
+    return best_match
+
+
+def calculate_financial_ratios(bs_records=None, is_records=None, tb_records=None):
+    """
+    재무상태표(BS), 손익계산서(IS), 합계잔액시산표(TB)로부터 4대 핵심 재무비율
+    [안정성(Stability), 수익성(Profitability), 성장성(Growth), 활동성(Activity)]을 계산합니다.
+    """
+    logger.info("[MASTER_ANALYTICS:RATIO] 4대 재무비율 계산 시작")
+    bs = bs_records or []
+    is_rec = is_records or []
+    tb = tb_records or []
+    combined_records = bs + is_rec + tb
+
+    # 1. 재무상태표(BS) 계정 우선 추출
+    cur_assets, prior_assets = _find_account_vals(bs or combined_records, ["자산총계", "자산합계", "자산총액", "부채및자본총계"])
+    cur_curr_assets, prior_curr_assets = _find_account_vals(bs or combined_records, ["유동자산", "[유동자산]"])
+    cur_quick_assets, prior_quick_assets = _find_account_vals(bs or combined_records, ["당좌자산", "[당좌자산]"])
+    cur_inventory, prior_inventory = _find_account_vals(bs or combined_records, ["재고자산", "[재고자산]", "상품", "제품", "원재료"])
+    cur_receivables, prior_receivables = _find_account_vals(bs or combined_records, ["매출채권", "외상매출금", "받을어음"])
+
+    cur_liab, prior_liab = _find_account_vals(bs or combined_records, ["부채총계", "부채합계", "부채총액"])
+    cur_curr_liab, prior_curr_liab = _find_account_vals(bs or combined_records, ["유동부채", "[유동부채]"])
+    cur_short_borrow, prior_short_borrow = _find_account_vals(bs or combined_records, ["단기차입금", "단기차입"])
+    cur_long_borrow, prior_long_borrow = _find_account_vals(bs or combined_records, ["장기차입금", "장기차입"])
+    cur_total_borrow = cur_short_borrow + cur_long_borrow
+
+    cur_equity, prior_equity = _find_account_vals(bs or combined_records, ["자본총계", "자본합계", "자본총액", "순자산총계"])
+    cur_capital, prior_capital = _find_account_vals(bs or combined_records, ["자본금"])
+
+    # 2. 손익계산서(IS) 계정 우선 추출
+    cur_sales, prior_sales = _find_account_vals(is_rec or combined_records, ["매출액", "수익", "매출", "영업수익", "제품매출", "상품매출"])
+    cur_cogs, prior_cogs = _find_account_vals(is_rec or combined_records, ["매출원가", "제품매출원가", "상품매출원가", "공사원가", "용역원가"])
+    cur_gp, prior_gp = _find_account_vals(is_rec or combined_records, ["매출총이익"])
+    cur_sga, prior_sga = _find_account_vals(is_rec or combined_records, ["판매비와관리비", "판관비"])
+    cur_op_income, prior_op_income = _find_account_vals(is_rec or combined_records, ["영업이익", "영업손익", "영업이익(손실)"])
+    cur_interest, prior_interest = _find_account_vals(is_rec or combined_records, ["이자비용", "금융비용"])
+    cur_net_income, prior_net_income = _find_account_vals(is_rec or combined_records, ["당기순이익", "당기순손익", "분기순이익", "순이익"])
+
+    # 당좌자산 Fallback (유동자산 - 재고자산)
+    if cur_quick_assets == 0.0 and cur_curr_assets > 0:
+        cur_quick_assets = max(0.0, cur_curr_assets - cur_inventory)
+
+    # 자본총계 Fallback (자산 - 부채)
+    if cur_equity == 0.0 and cur_assets > 0 and cur_liab > 0:
+        cur_equity = cur_assets - cur_liab
+
+    # 평균치 계산 (전기 값이 없으면 당기 값 적용)
+    avg_assets = (cur_assets + prior_assets) / 2.0 if prior_assets > 0 else (cur_assets or 1.0)
+    avg_equity = (cur_equity + prior_equity) / 2.0 if prior_equity > 0 else (cur_equity or 1.0)
+    avg_receivables = (cur_receivables + prior_receivables) / 2.0 if prior_receivables > 0 else (cur_receivables or 1.0)
+    avg_inventory = (cur_inventory + prior_inventory) / 2.0 if prior_inventory > 0 else (cur_inventory or 1.0)
+
+    # -------------------------------------------------------------
+    # [1] 안정성 지표 (Stability)
+    # -------------------------------------------------------------
+    debt_ratio = round((cur_liab / cur_equity * 100.0), 2) if cur_equity > 0 else None
+    current_ratio = round((cur_curr_assets / cur_curr_liab * 100.0), 2) if cur_curr_liab > 0 else None
+    quick_ratio = round((cur_quick_assets / cur_curr_liab * 100.0), 2) if cur_curr_liab > 0 else None
+    borrowing_dep = round((cur_total_borrow / cur_assets * 100.0), 2) if cur_assets > 0 else None
+    interest_coverage = round((cur_op_income / cur_interest), 2) if cur_interest > 0 else (999.0 if cur_op_income > 0 else None)
+
+    # -------------------------------------------------------------
+    # [2] 수익성 지표 (Profitability)
+    # -------------------------------------------------------------
+    op_margin = round((cur_op_income / cur_sales * 100.0), 2) if cur_sales > 0 else None
+    net_margin = round((cur_net_income / cur_sales * 100.0), 2) if cur_sales > 0 else None
+    roe = round((cur_net_income / avg_equity * 100.0), 2) if avg_equity > 0 else None
+    roa = round((cur_net_income / avg_assets * 100.0), 2) if avg_assets > 0 else None
+
+    # -------------------------------------------------------------
+    # [3] 성장성 지표 (Growth)
+    # -------------------------------------------------------------
+    sales_growth = round(((cur_sales - prior_sales) / prior_sales * 100.0), 2) if prior_sales > 0 else None
+    op_income_growth = round(((cur_op_income - prior_op_income) / abs(prior_op_income) * 100.0), 2) if prior_op_income != 0.0 else None
+    asset_growth = round(((cur_assets - prior_assets) / prior_assets * 100.0), 2) if prior_assets > 0 else None
+    net_income_growth = round(((cur_net_income - prior_net_income) / abs(prior_net_income) * 100.0), 2) if prior_net_income != 0.0 else None
+
+    # -------------------------------------------------------------
+    # [4] 활동성 지표 (Activity)
+    # -------------------------------------------------------------
+    rec_turnover = round((cur_sales / avg_receivables), 2) if avg_receivables > 0 and cur_sales > 0 else None
+    rec_days = round((365.0 / rec_turnover), 1) if rec_turnover and rec_turnover > 0 else None
+    inv_turnover = round((cur_cogs / avg_inventory), 2) if avg_inventory > 0 and cur_cogs > 0 else None
+    inv_days = round((365.0 / inv_turnover), 1) if inv_turnover and inv_turnover > 0 else None
+    asset_turnover = round((cur_sales / avg_assets), 2) if avg_assets > 0 and cur_sales > 0 else None
+
+    result = {
+        "summary": {
+            "total_assets": cur_assets,
+            "prior_assets": prior_assets,
+            "assets": cur_assets,
+            "assets_prev": prior_assets,
+            "total_liabilities": cur_liab,
+            "prior_liabilities": prior_liab,
+            "total_equity": cur_equity,
+            "prior_equity": prior_equity,
+            "sales": cur_sales,
+            "prior_sales": prior_sales,
+            "sales_prev": prior_sales,
+            "operating_income": cur_op_income,
+            "prior_operating_income": prior_op_income,
+            "operating_income_prev": prior_op_income,
+            "net_income": cur_net_income,
+            "prior_net_income": prior_net_income,
+            "net_income_prev": prior_net_income
+        },
+        "stability": {
+            "debt_ratio": {"value": debt_ratio, "unit": "%", "label": "부채비율", "desc": "100% 이하 양호, 200% 초과 주의"},
+            "current_ratio": {"value": current_ratio, "unit": "%", "label": "유동비율", "desc": "150% 이상 양호, 100% 미만 단기지급력 부족"},
+            "quick_ratio": {"value": quick_ratio, "unit": "%", "label": "당좌비율", "desc": "100% 이상 양호"},
+            "borrowing_dependency": {"value": borrowing_dep, "unit": "%", "label": "차입금의존도", "desc": "30% 이하 양호, 50% 초과 위험"},
+            "interest_coverage": {"value": interest_coverage, "unit": "배", "label": "이자보상배율", "desc": "1.0 미만 시 이자지급능력 취약"}
+        },
+        "profitability": {
+            "operating_margin": {"value": op_margin, "unit": "%", "label": "영업이익률", "desc": "본업의 수익 창출력"},
+            "net_margin": {"value": net_margin, "unit": "%", "label": "순이익률", "desc": "최종 당기순이익 비율"},
+            "roe": {"value": roe, "unit": "%", "label": "ROE (자기자본이익률)", "desc": "주주자본 대비 수익률"},
+            "roa": {"value": roa, "unit": "%", "label": "ROA (총자산이익률)", "desc": "기업 총자산 대비 순수익 창출력"}
+        },
+        "growth": {
+            "sales_growth": {"value": sales_growth, "unit": "%", "label": "매출액증가율", "desc": "전년 대비 외형 성장"},
+            "operating_income_growth": {"value": op_income_growth, "unit": "%", "label": "영업이익증가율", "desc": "영업수익성 개선도"},
+            "asset_growth": {"value": asset_growth, "unit": "%", "label": "총자산증가율", "desc": "회사 규모 성장도"},
+            "net_income_growth": {"value": net_income_growth, "unit": "%", "label": "순이익증가율", "desc": "최종 손익 개선도"}
+        },
+        "activity": {
+            "receivables_turnover": {"value": rec_turnover, "unit": "회", "label": "매출채권회전율", "desc": "외상대금 회수 속도"},
+            "receivables_collection_days": {"value": rec_days, "unit": "일", "label": "매출채권회수기간(DSO)", "desc": "평균 매출 회수 소요일"},
+            "inventory_turnover": {"value": inv_turnover, "unit": "회", "label": "재고자산회전율", "desc": "재고 판매 속도"},
+            "inventory_holding_days": {"value": inv_days, "unit": "일", "label": "재고보유기간(DIO)", "desc": "평균 재고 체류일수"},
+            "asset_turnover": {"value": asset_turnover, "unit": "회", "label": "총자산회전율", "desc": "총자산 1원당 매출 발생 배수"}
+        }
+    }
+
+    logger.info("[MASTER_ANALYTICS:RATIO] 4대 재무비율 계산 완료: 부채비율=%s%%, 영업이익률=%s%%, 매출증가율=%s%%", 
+                debt_ratio, op_margin, sales_growth)
+    return result
+
+
+def calculate_advanced_variance_analysis(bs_records=None, is_records=None, tb_records=None, materiality_rate=0.01):
+    """
+    계정별 전기 대비 증감(Variance)을 분석하고, 감사 중요성 기준(Performance Materiality) 초과 항목을 추출합니다.
+    """
+    logger.info("[MASTER_ANALYTICS:RATIO] 전기 대비 계정 변동분석(Variance) 시작")
+    records = (bs_records or []) + (is_records or []) + (tb_records or [])
+    
+    # 총자산 추출하여 중요성 기준 산출 (기본값: 자산총계의 1%, 최소 10,000,000원)
+    total_assets, _ = _find_account_vals(records, ["자산총계", "자산합계", "자산총액"])
+    sales, _ = _find_account_vals(records, ["매출액", "수익", "매출", "영업수익"])
+    
+    benchmark = total_assets if total_assets > 0 else sales
+    performance_materiality = max(10000000.0, round(benchmark * materiality_rate, -6)) if benchmark > 0 else 50000000.0
+
+    significant_items = []
+    seen_accounts = set()
+
+    for rec in records:
+        acc = str(rec.get("Account", "")).strip()
+        if not acc or rec.get("IsSubtotal") or acc in seen_accounts:
+            continue
+        if any(h in acc for h in ["총계", "합계", "소계", "[유동자산]", "[비유동자산]", "[유동부채]", "[비유동부채]", "[자본총계]"]):
+            continue
+
+        seen_accounts.add(acc)
+        cur = float(rec.get("Current", 0.0) or 0.0)
+        prior = float(rec.get("Prior", 0.0) or 0.0)
+        diff = cur - prior
+        diff_abs = abs(diff)
+
+        # 증감률 계산
+        if prior != 0.0:
+            rate = round((diff / abs(prior)) * 100.0, 1)
+        else:
+            rate = 999.0 if cur != 0.0 else 0.0
+
+        is_significant = (diff_abs >= performance_materiality) or (abs(rate) >= 30.0 and diff_abs >= 20000000.0)
+
+        if is_significant:
+            significant_items.append({
+                "account": acc,
+                "current": cur,
+                "prior": prior,
+                "diff": diff,
+                "diff_rate": rate,
+                "exceeds_materiality": diff_abs >= performance_materiality
+            })
+
+    # 변동금액 절대값 기준 내림차순 정렬
+    significant_items.sort(key=lambda x: abs(x["diff"]), reverse=True)
+
+    logger.info("[MASTER_ANALYTICS:RATIO] 변동분석 완료: 중요성 기준=%s원, 중요 변동 항목=%d건 도출", 
+                f"{performance_materiality:,.0f}", len(significant_items))
+
+    return {
+        "performance_materiality": performance_materiality,
+        "total_assets": total_assets,
+        "total_sales": sales,
+        "significant_items": significant_items
+    }
+
+
+# ==========================================
+# 3-3. 분개장 저널 엔트리 테스팅 (JET) 모듈
+# ==========================================
+
+def _parse_date_safe(date_val):
+    """다양한 날짜 포맷 및 Timestamp/datetime 객체를 안전하게 datetime 객체로 파싱합니다."""
+    if date_val is None:
+        return None
+    if isinstance(date_val, datetime):
+        return date_val
+    if hasattr(date_val, "to_pydatetime"):
+        try:
+            return date_val.to_pydatetime()
+        except Exception:
+            pass
+    s = str(date_val).strip()
+    if not s or s.lower() == "nan":
+        return None
+    for fmt in ["%Y-%m-%d", "%Y.%m.%d", "%Y/%m/%d", "%Y%m%d", "%Y-%m-%d %H:%M:%S"]:
+        try:
+            return datetime.strptime(s[:10], fmt)
+        except Exception:
+            continue
+    return None
+
+
+def run_journal_entry_testing(journal_entries):
+    """
+    분개장 전표 데이터를 전수 스캔(JET)하여 이상/부정 징후 패턴을 탐지합니다.
+    1) 주말/공휴일 작성 전표 (Weekend/Holiday Entries)
+    2) 라운드 넘버 분개 (Round Number Entries)
+    3) 내부결재 한도 직하 쪼개기 분개 의심 (Threshold-Splitting Entries)
+    4) 위험 키워드 적요 스캔 (Risk Keywords in Description)
+    5) 가지급금 / 가수금 / 단기대여금 등 고위험 계정 거래
+    6) 결산일 직전(12월 말) 집중 분개 (Year-end Surge Entries)
+    """
+    logger.info("[MASTER_ANALYTICS:JET] 분개장 저널 엔트리 테스팅(JET) 시작: 총 %d건", len(journal_entries or []))
+    if not journal_entries:
+        return {
+            "total_entries": 0,
+            "anomaly_count": 0,
+            "risk_score": 0,
+            "weekend_holiday_entries": [],
+            "round_number_entries": [],
+            "splitting_entries": [],
+            "risk_keyword_entries": [],
+            "suspicious_account_entries": [],
+            "year_end_entries": []
+        }
+
+    RISK_KEYWORDS = [
+        "가지급", "가수", "대표", "임원", "대여", "차입", "과태료", "벌금",
+        "합의금", "손실", "원인불명", "불상", "횡령", "개인", "식음료", "골프", "유흥", "조정"
+    ]
+    SUSPICIOUS_ACCOUNTS = [
+        "가지급금", "가수금", "단기대여금", "주임종단기대여금", "잡손실", "잡이익", "임직원등단기대여금"
+    ]
+
+    weekend_entries = []
+    round_num_entries = []
+    splitting_candidates = []
+    risk_keyword_entries = []
+    suspicious_acc_entries = []
+    year_end_entries = []
+
+    for entry in journal_entries:
+        date_str = entry.get("Date", "")
+        dt = _parse_date_safe(date_str)
+        voucher = entry.get("VoucherNo", "")
+        acc_name = entry.get("AccountName", "")
+        debit = float(entry.get("Debit", 0.0) or 0.0)
+        credit = float(entry.get("Credit", 0.0) or 0.0)
+        amount = max(debit, credit)
+        customer = entry.get("Customer", "")
+        desc = entry.get("Description", "")
+
+        # [1] 주말(토/일) 전표 탐지
+        if dt and dt.weekday() in [5, 6]:
+            weekend_entries.append({
+                "date": date_str,
+                "day_name": "토요일" if dt.weekday() == 5 else "일요일",
+                "voucher": voucher,
+                "account": acc_name,
+                "amount": amount,
+                "customer": customer,
+                "desc": desc,
+                "reason": "휴일/주말에 입력된 비경상적 전표"
+            })
+
+        # [2] 라운드 넘버 분개 (1천만원 이상 딱 떨어지는 금액)
+        if amount >= 10000000.0 and amount % 1000000.0 == 0:
+            round_num_entries.append({
+                "date": date_str,
+                "voucher": voucher,
+                "account": acc_name,
+                "amount": amount,
+                "customer": customer,
+                "desc": desc,
+                "reason": f"{amount:,.0f}원 라운드 넘버(정액) 분개"
+            })
+
+        # [3] 1천만원 직하 쪼개기 분개 후보 (9백만 ~ 9.99백만원)
+        if 9000000.0 <= amount < 10000000.0:
+            splitting_candidates.append({
+                "date": date_str,
+                "voucher": voucher,
+                "account": acc_name,
+                "amount": amount,
+                "customer": customer,
+                "desc": desc,
+                "reason": "1천만원 내부결재/보고 한도 직하 쪼개기 의심 금액"
+            })
+
+        # [4] 위험 키워드 적요 스캔
+        matched_kws = [kw for kw in RISK_KEYWORDS if kw in desc or kw in acc_name]
+        if matched_kws:
+            risk_keyword_entries.append({
+                "date": date_str,
+                "voucher": voucher,
+                "account": acc_name,
+                "amount": amount,
+                "customer": customer,
+                "desc": desc,
+                "matched_keywords": matched_kws,
+                "reason": f"위험 감시 키워드 [{', '.join(matched_kws)}] 포함"
+            })
+
+        # [5] 고위험 계정 거래 (가지급금, 가수금, 대여금 등)
+        if any(sa in acc_name for sa in SUSPICIOUS_ACCOUNTS):
+            suspicious_acc_entries.append({
+                "date": date_str,
+                "voucher": voucher,
+                "account": acc_name,
+                "amount": amount,
+                "customer": customer,
+                "desc": desc,
+                "reason": "가지급금/가수금/대여금 등 세무·감사 중점 검토 계정"
+            })
+
+        # [6] 연말(12/25~12/31) 집중 분개
+        if dt and dt.month == 12 and dt.day >= 25 and amount >= 30000000.0:
+            year_end_entries.append({
+                "date": date_str,
+                "voucher": voucher,
+                "account": acc_name,
+                "amount": amount,
+                "customer": customer,
+                "desc": desc,
+                "reason": "연말 결산기 대규모 집중 분개 (수익/비용 왜곡 가능성)"
+            })
+
+    total_anomalies = len(weekend_entries) + len(round_num_entries) + len(splitting_candidates) + \
+                      len(risk_keyword_entries) + len(suspicious_acc_entries) + len(year_end_entries)
+    
+    # 위험도 점수 계산 (0~100점)
+    risk_score = min(100, int((total_anomalies / max(1, len(journal_entries))) * 150) + (len(suspicious_acc_entries) * 10))
+
+    logger.info("[MASTER_ANALYTICS:JET] JET 스캔 완료: 이상치 총 %d건 (주말: %d, 라운드: %d, 키워드: %d, 고위험계정: %d), 위험도=%d점",
+                total_anomalies, len(weekend_entries), len(round_num_entries), len(risk_keyword_entries), len(suspicious_acc_entries), risk_score)
+
+    return {
+        "total_entries": len(journal_entries),
+        "anomaly_count": total_anomalies,
+        "risk_score": risk_score,
+        "weekend_holiday_entries": weekend_entries,
+        "round_number_entries": round_num_entries,
+        "splitting_entries": splitting_candidates,
+        "risk_keyword_entries": risk_keyword_entries,
+        "suspicious_account_entries": suspicious_acc_entries,
+        "year_end_entries": year_end_entries
+    }
+
+
+# ==========================================
+# 3-4. 거래처원장 집중도 및 채권 연령(Aging) 분석 모듈
+# ==========================================
+
+def run_subledger_risk_analysis(subledger_records, base_date="2025-12-31"):
+    """
+    거래처원장 레코드를 분석하여:
+    1) 매출처/매입처 거래처 집중도 (Concentration Risk - Top 5/10 점유율)
+    2) 장기 미회수 채권(Aged Receivables) 및 대손 의심 거래처 도출
+    3) 고액 매입채무 거래처 분석
+    4) 동일 거래처 상계/순환 거래(매출/매입 양방향 발생) 징후 탐지
+    """
+    logger.info("[MASTER_ANALYTICS:SUBLEDGER] 거래처원장 리스크 분석 시작: 총 %d개 거래처 레코드", len(subledger_records or []))
+    if not subledger_records:
+        return {
+            "total_customers": 0,
+            "total_receivables_balance": 0.0,
+            "total_payables_balance": 0.0,
+            "top_receivables": [],
+            "top_payables": [],
+            "receivables_concentration_top5": 0.0,
+            "aged_receivables": [],
+            "bilateral_trade_customers": [],
+            "risk_flags": []
+        }
+
+    base_dt = _parse_date_safe(base_date) or datetime(2025, 12, 31)
+
+    receivables_list = []
+    payables_list = []
+    customer_map = {}
+
+    for rec in subledger_records:
+        cust_code = rec.get("CustCode", "")
+        cust_name = rec.get("CustName", "").strip()
+        biz_no = rec.get("BizNo", "").strip()
+        acc_name = rec.get("AccountName", "").strip()
+        prior_bal = float(rec.get("PriorBalance", 0.0) or 0.0)
+        debit = float(rec.get("Debit", 0.0) or 0.0)
+        credit = float(rec.get("Credit", 0.0) or 0.0)
+        end_bal = float(rec.get("EndBalance", 0.0) or 0.0)
+        last_date_str = rec.get("LastDate", "")
+        last_dt = _parse_date_safe(last_date_str)
+
+        # 경과 일수 계산
+        overdue_days = (base_dt - last_dt).days if last_dt else 0
+
+        item = {
+            "code": cust_code,
+            "name": cust_name,
+            "biz_no": biz_no,
+            "account": acc_name,
+            "prior_balance": prior_bal,
+            "debit": debit,
+            "credit": credit,
+            "end_balance": end_bal,
+            "last_date": last_date_str,
+            "overdue_days": max(0, overdue_days)
+        }
+
+        # 동일 거래처 양방향 추적용
+        cust_key = biz_no if biz_no else cust_name
+        if cust_key:
+            if cust_key not in customer_map:
+                customer_map[cust_key] = {"name": cust_name, "has_receivable": False, "has_payable": False}
+            if any(k in acc_name for k in ["매출", "받을", "미수", "외상매출금"]):
+                customer_map[cust_key]["has_receivable"] = True
+            if any(k in acc_name for k in ["매입", "지급", "미지급", "외상매입금"]):
+                customer_map[cust_key]["has_payable"] = True
+
+        # 매출채권군 vs 매입채무군 분류
+        if any(k in acc_name for k in ["매출", "받을", "미수", "외상매출금"]):
+            receivables_list.append(item)
+        elif any(k in acc_name for k in ["매입", "지급", "미지급", "외상매입금"]):
+            payables_list.append(item)
+        else:
+            # 기본적으로 차변 발생이 크면 채권군, 대변 발생이 크면 채무군으로 분류
+            if debit >= credit:
+                receivables_list.append(item)
+            else:
+                payables_list.append(item)
+
+    # 1. 매출채권 발생액 및 잔액 기준 상위 정렬 & 집중도 산출
+    total_rec_debit = sum(x["debit"] for x in receivables_list)
+    total_rec_balance = sum(x["end_balance"] for x in receivables_list)
+    use_balance_metric = total_rec_debit <= 0.0 and total_rec_balance > 0.0
+
+    target_metric = total_rec_balance if use_balance_metric else (total_rec_debit or 1.0)
+    sort_key = (lambda x: x["end_balance"]) if use_balance_metric else (lambda x: x["debit"])
+
+    receivables_list.sort(key=sort_key, reverse=True)
+    top_receivables = []
+    top5_sum = 0.0
+
+    for idx, r in enumerate(receivables_list):
+        val = r["end_balance"] if use_balance_metric else r["debit"]
+        share = round((val / target_metric * 100.0), 1) if target_metric > 0 else 0.0
+        r_item = dict(r)
+        r_item["share"] = share
+        top_receivables.append(r_item)
+        if idx < 5:
+            top5_sum += val
+
+    rec_concentration_top5 = round((top5_sum / target_metric * 100.0), 1) if target_metric > 0 else 0.0
+
+    # 2. 매입채무 정렬
+    total_pay_credit = sum(x["credit"] or x["debit"] for x in payables_list) or 1.0
+    total_pay_balance = sum(x["end_balance"] for x in payables_list)
+
+    payables_list.sort(key=lambda x: x["credit"] or x["debit"], reverse=True)
+    top_payables = []
+    for p in payables_list:
+        share = round(((p["credit"] or p["debit"]) / total_pay_credit * 100.0), 1)
+        p_item = dict(p)
+        p_item["share"] = share
+        top_payables.append(p_item)
+
+    # 3. 장기 미회수 채권 도출 (경과일수 180일 이상 및 기말잔액 > 0)
+    aged_receivables = [
+        r for r in receivables_list 
+        if r["end_balance"] > 0 and r["overdue_days"] >= 180
+    ]
+    aged_receivables.sort(key=lambda x: x["overdue_days"], reverse=True)
+
+    # 4. 양방향 상계 거래처
+    bilateral_customers = [
+        v["name"] for k, v in customer_map.items() 
+        if v["has_receivable"] and v["has_payable"]
+    ]
+
+    # 5. 리스크 플래그 생성
+    risk_flags = []
+    if rec_concentration_top5 >= 60.0:
+        risk_flags.append({
+            "type": "CONCENTRATION_HIGH",
+            "level": "주의",
+            "title": "상위 5대 매출처 집중도 과다",
+            "message": f"상위 5대 매출처 발생 비중이 {rec_concentration_top5}%로 특정 거래처에 대한 매출 의존도가 매우 높습니다."
+        })
+
+    if aged_receivables:
+        total_aged_amount = sum(x["end_balance"] for x in aged_receivables)
+        risk_flags.append({
+            "type": "AGED_RECEIVABLES",
+            "level": "경고",
+            "title": "장기 미회수 채권 대손 리스크",
+            "message": f"6개월 이상 미회수 채권이 {len(aged_receivables)}개 사 ({total_aged_amount:,.0f}원) 존재하여 대손충당금 설정 검토가 필요합니다."
+        })
+
+    if bilateral_customers:
+        risk_flags.append({
+            "type": "BILATERAL_TRADING",
+            "level": "안내",
+            "title": "동일 거래처 매출/매입 동시 발생",
+            "message": f"동일 상호로 매출과 매입이 동시 발생한 거래처 ({', '.join(bilateral_customers)})가 식별되었습니다."
+        })
+
+    logger.info("[MASTER_ANALYTICS:SUBLEDGER] 거래처원장 분석 완료: Top5 집중도=%s%%, 장기 미회수=%d건, 리스크 플래그=%d건",
+                rec_concentration_top5, len(aged_receivables), len(risk_flags))
+
+    return {
+        "total_customers": len(subledger_records),
+        "total_receivables_balance": total_rec_balance,
+        "total_payables_balance": total_pay_balance,
+        "receivables_concentration_top5": rec_concentration_top5,
+        "top5_concentration_pct": rec_concentration_top5,
+        "top_receivables": top_receivables,
+        "top_payables": top_payables,
+        "aged_receivables": aged_receivables,
+        "overdue_receivables": [
+            {
+                "customer_name": r.get("customer") or r.get("customer_name"),
+                "amount": r.get("end_balance", 0.0),
+                "days_overdue": r.get("overdue_days", 0),
+                "risk_level": "고위험" if r.get("overdue_days", 0) >= 365 else "주의"
+            } for r in aged_receivables
+        ],
+        "bilateral_trade_customers": bilateral_customers,
+        "risk_flags": risk_flags
+    }
+
+
+
+
 
 
 def parse_trial_balance_structured(file_content, filename):
@@ -871,3 +1908,278 @@ def generate_working_paper(company_name, analysis_results, matched_standards):
     wp.append("- **검토필**: 파트너 / 품질관리 담당 회계사 (인)")
     
     return "\n".join(wp)
+
+
+# ==========================================
+# 3-5. 종합 기업분석 보고서 및 한계 체크리스트 생성 모듈
+# ==========================================
+
+def generate_enterprise_analysis_report(company_name, ratios_res, variance_res, jet_res, subledger_res, matched_standards=None):
+    """
+    5대 분석 결과를 집대성하여 최고 수준의 종합 기업분석 & 감사 리스크 보고서(Markdown)를 생성합니다.
+    """
+    logger.info("[MASTER_ANALYTICS:REPORT] 종합 기업분석 보고서 마크다운 생성: %s", company_name)
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    summary = ratios_res.get("summary", {})
+    stability = ratios_res.get("stability", {})
+    profit = ratios_res.get("profitability", {})
+    growth = ratios_res.get("growth", {})
+    activity = ratios_res.get("activity", {})
+
+    lines = []
+    lines.append(f"# 🏢 [{company_name}] 기업 정밀 재무분석 및 리스크 진단 보고서")
+    lines.append(f"**분석 일시**: {now_str} | **분석 기관**: 회계법인 혜안 AI 기업진단본부\n")
+    lines.append("> 📌 **본 보고서는 고객사 제출 장부(재무제표, 합계잔액시산표, 분개장, 거래처원장)를 전수 분석하여 산출된 정밀 진단 결과입니다.**\n")
+
+    # 1. 기업 재무 개요 요약
+    lines.append("## 1. 재무 개요 요약 (Financial Highlights)")
+    lines.append("| 지표 항목 | 당기 금액 | 전기 금액 | 증감액 | 증감률 |")
+    lines.append("| :--- | :---: | :---: | :---: | :---: |")
+    
+    def _row(label, cur, prior):
+        diff = cur - prior
+        rate = ((diff / abs(prior)) * 100.0) if prior != 0 else (999.0 if cur != 0 else 0.0)
+        return f"| **{label}** | {cur:,.0f}원 | {prior:,.0f}원 | {diff:+,.0f}원 | {rate:+0.1f}% |"
+
+    lines.append(_row("자산총계", summary.get("total_assets", 0), summary.get("prior_assets", 0)))
+    lines.append(_row("부채총계", summary.get("total_liabilities", 0), summary.get("prior_liabilities", 0)))
+    lines.append(_row("자본총계", summary.get("total_equity", 0), summary.get("prior_equity", 0)))
+    lines.append(_row("매출액", summary.get("sales", 0), summary.get("prior_sales", 0)))
+    lines.append(_row("영업이익", summary.get("operating_income", 0), summary.get("prior_operating_income", 0)))
+    lines.append(_row("당기순이익", summary.get("net_income", 0), summary.get("prior_net_income", 0)))
+    lines.append("\n---\n")
+
+    # 2. 4대 재무비율 종합 평가
+    lines.append("## 2. 4대 핵심 재무비율 평가 (Financial Ratio Analysis)")
+    lines.append("### (1) 안정성 & 수익성 지표")
+    lines.append("| 범주 | 세부 지표 | 산출 수치 | 적정 기준치 | 평가 상태 |")
+    lines.append("| :--- | :--- | :---: | :---: | :---: |")
+    
+    dr = stability.get("debt_ratio", {}).get("value")
+    dr_eval = "🟢 양호" if dr and dr <= 150 else ("🟡 보통" if dr and dr <= 200 else "🔴 주의")
+    lines.append(f"| 안정성 | 부채비율 | {dr}% | 100% 이하 | {dr_eval} |")
+
+    cr = stability.get("current_ratio", {}).get("value")
+    cr_eval = "🟢 양호" if cr and cr >= 150 else ("🟡 보통" if cr and cr >= 100 else "🔴 위험")
+    lines.append(f"| 안정성 | 유동비율 | {cr}% | 150% 이상 | {cr_eval} |")
+
+    bd = stability.get("borrowing_dependency", {}).get("value")
+    bd_eval = "🟢 양호" if bd and bd <= 30 else ("🟡 보통" if bd and bd <= 50 else "🔴 과다")
+    lines.append(f"| 안정성 | 차입금의존도 | {bd}% | 30% 이하 | {bd_eval} |")
+
+    opm = profit.get("operating_margin", {}).get("value")
+    opm_eval = "🟢 우수" if opm and opm >= 8 else ("🟡 보통" if opm and opm >= 4 else "🔴 부진")
+    lines.append(f"| 수익성 | 매출액영업이익률 | {opm}% | 동종업계 평균 | {opm_eval} |")
+
+    roe_val = profit.get("roe", {}).get("value")
+    roe_eval = "🟢 우수" if roe_val and roe_val >= 10 else "🟡 보통"
+    lines.append(f"| 수익성 | ROE (자기자본이익률) | {roe_val}% | 10% 이상 | {roe_eval} |")
+
+    lines.append("\n### (2) 성장성 & 활동성 지표")
+    lines.append(f"- **매출액성장률**: `{growth.get('sales_growth', {}).get('value')}%` / **영업이익성장률**: `{growth.get('operating_income_growth', {}).get('value')}%`")
+    lines.append(f"- **매출채권 회수기간(DSO)**: `{activity.get('receivables_collection_days', {}).get('value')}일` (회전율: {activity.get('receivables_turnover', {}).get('value')}회)")
+    lines.append(f"- **재고자산 체류기간(DIO)**: `{activity.get('inventory_holding_days', {}).get('value')}일` (회전율: {activity.get('inventory_turnover', {}).get('value')}회)")
+    lines.append("\n---\n")
+
+    # 3. 중요 계정 변동분석 (Variance)
+    lines.append("## 3. 중요 계정 변동분석 (Significant Variances)")
+    pm = variance_res.get("performance_materiality", 50000000)
+    lines.append(f"> 🔍 **감사 중요성 기준(Performance Materiality)**: `{pm:,.0f}원` 초과 계정 중점 검토\n")
+    
+    sig_items = variance_res.get("significant_items", [])
+    if sig_items:
+        lines.append("| 계정과목 | 전기 잔액 | 당기 잔액 | 증감액 | 증감률 | 중점 검토 사유 |")
+        lines.append("| :--- | :---: | :---: | :---: | :---: | :--- |")
+        for item in sig_items[:8]:
+            tag = "⚠️ 중요성 금액 초과" if item.get("exceeds_materiality") else "급변 계정(30%↑)"
+            lines.append(f"| {item['account']} | {item['prior']:,.0f}원 | {item['current']:,.0f}원 | {item['diff']:+,.0f}원 | {item['diff_rate']:+0.1f}% | {tag} |")
+    else:
+        lines.append("- 특기할 만한 중요 변동 계정이 발견되지 않았습니다.")
+    lines.append("\n---\n")
+
+    # 4. 분개장 JET 이상 거래 감지
+    lines.append("## 4. 분개장 저널 엔트리 테스팅 (JET Anomaly Detection)")
+    total_jet = jet_res.get("total_entries", 0)
+    anom_count = jet_res.get("anomaly_count", 0)
+    risk_score = jet_res.get("risk_score", 0)
+    lines.append(f"**전표 스캔**: 총 `{total_jet}건` 전수 검사 | **이상치 포착**: `{anom_count}건` | **부정·오류 위험도**: `{risk_score}점 / 100점`\n")
+
+    if anom_count > 0:
+        lines.append("### 주요 감지된 리스크 전표 내역")
+        # 주말 전표
+        for item in jet_res.get("weekend_holiday_entries", [])[:3]:
+            lines.append(f"- 🔴 **[주말 전표]** `{item['date']}({item['day_name']})` {item['account']} `{item['amount']:,.0f}원` ({item['customer']}) - *{item['desc']}*")
+        # 쪼개기 전표
+        for item in jet_res.get("splitting_entries", [])[:3]:
+            lines.append(f"- 🟡 **[한도직하 쪼개기 의심]** `{item['date']}` {item['account']} `{item['amount']:,.0f}원` - *{item['desc']}*")
+        # 고위험 계정
+        for item in jet_res.get("suspicious_account_entries", [])[:3]:
+            lines.append(f"- 🔴 **[가지급금/가수금]** `{item['date']}` {item['account']} `{item['amount']:,.0f}원` ({item['customer']}) - *{item['desc']}*")
+        # 위험 키워드
+        for item in jet_res.get("risk_keyword_entries", [])[:3]:
+            lines.append(f"- 🔍 **[키워드 포착: {item['matched_keywords']}]** `{item['date']}` {item['account']} `{item['amount']:,.0f}원` - *{item['desc']}*")
+    else:
+        lines.append("- 분개장 전수 검사 결과 특이 이상 거래 전표가 식별되지 않았습니다.")
+    lines.append("\n---\n")
+
+    # 5. 거래처 구조 및 채권 리스크
+    lines.append("## 5. 거래처 구조 및 매출채권 리스크 (Subledger Analysis)")
+    rec_conc = subledger_res.get("receivables_concentration_top5", 0)
+    lines.append(f"- **상위 5대 매출처 집중도**: `{rec_conc}%` (60% 이상 시 매출 편중 위험)")
+    
+    aged = subledger_res.get("aged_receivables", [])
+    if aged:
+        lines.append(f"- **🚨 장기 미회수 채권 (대손 위험)**: 총 `{len(aged)}개사`")
+        for a in aged[:5]:
+            lines.append(f"  * **{a['name']}**: 미회수 잔액 `{a['end_balance']:,.0f}원` (경과일수: {a['overdue_days']}일, 최종거래: {a['last_date']})")
+    else:
+        lines.append("- 장기 미회수 채권이 발견되지 않아 채권 건전성이 양호합니다.")
+
+    # 6. K-GAAP 관련 조항
+    if matched_standards:
+        lines.append("\n## 6. K-GAAP 일반기업회계기준 관련 조항")
+        for idx, std in enumerate(matched_standards[:2], 1):
+            lines.append(f"**[{idx}] {std.get('standard_no')} {std.get('paragraph_no')} ({std.get('title')})**")
+            lines.append(f"> \"{std.get('content')}\"\n")
+
+    # 7. 필수 검토 체크리스트 및 분석의 한계
+    lines.append("\n## 7. 필수 검토 체크리스트 및 분석의 한계 (Limitations & Checklist)")
+    lines.append("> ⚠️ **본 분석은 고객이 제출한 내부 장부 기준이므로, 최종 세무 신고 및 감사를 위해 아래 사항에 대한 추가 확인이 반드시 필요합니다.**")
+    lines.append("- [ ] **적격증빙 대사**: 홈택스 전자세금계산서/신용카드 매입매출 합계표와 장부상 금액 일치 여부 확인")
+    lines.append("- [ ] **금융기관 잔액 조회**: 주요 거래은행의 보통예금/외화예금 잔액증명서 및 부채증명원 실물 대사")
+    lines.append("- [ ] **기말 재고 실사 입회**: 장부상 기말 재고자산과 실제 창고 실물 수량/파손 여부 확인")
+    lines.append("- [ ] **가지급금 인정이자 계산**: 대표이사 가지급금/가수금에 대한 세법상 인정이자 및 지급이자 손불 처리 검토")
+    lines.append("- [ ] **우발채무 및 소송사건 확인**: 진행 중인 소송, 담보제공, 지급보증 등 장부 외 계약 사항 검토")
+
+    return "\n".join(lines)
+
+
+def run_comprehensive_enterprise_analysis(company_name, files_data_list, fiscal_year=None, supabase_client=None):
+    """
+    여러 엑셀/CSV 파일들을 일괄 수신하여 파싱부터 4대 비율, JET, 거래처원장, 조서 보고서까지 원스톱 실행합니다.
+    fiscal_year가 지정된 경우 해당 연도 파일(예: 2025_...)을 최우선으로 선별하여 분석합니다.
+    """
+    logger.info("[MASTER_ANALYTICS:EXEC] 통합 기업분석 실행 시작: company=%s, fiscal_year=%s, files_count=%d", 
+                company_name, fiscal_year, len(files_data_list))
+
+    # 기준연도(fiscal_year) 파일 필터링 및 우선순위 정렬
+    target_fy_str = str(fiscal_year).strip() if fiscal_year else ""
+    
+    if target_fy_str:
+        # 1. 파일명에 해당 연도가 포함된 파일 우선
+        fy_files = [f for f in files_data_list if target_fy_str in f.get("filename", "")]
+        non_fy_files = [f for f in files_data_list if not any(y in f.get("filename", "") for y in ["2023", "2024", "2025", "2026", "2027"])]
+        if fy_files:
+            sorted_files = fy_files + non_fy_files
+        else:
+            sorted_files = sorted(files_data_list, key=lambda x: x.get("filename", ""), reverse=True)
+    else:
+        sorted_files = sorted(files_data_list, key=lambda x: x.get("filename", ""), reverse=True)
+
+    parsed_filenames = []
+    bs_records_all = []
+    is_records_all = []
+    tb_records_all = []
+    journal_all = []
+    subledger_all = []
+    all_errors = []
+
+    # 파일 유형별 최우선 파일 1개씩 선별 (중복 덮어쓰기 방지)
+    seen_types = set()
+
+    for item in sorted_files:
+        fname = item.get("filename", "")
+        fcontent = item.get("content", b"")
+        parsed_res = smart_parse_accounting_workbook(fcontent, fname)
+        parsed_filenames.append(fname)
+
+        if parsed_res.get("balance_sheet") and "balance_sheet" not in seen_types:
+            bs_records_all = parsed_res["balance_sheet"]
+            seen_types.add("balance_sheet")
+        if parsed_res.get("income_statement") and "income_statement" not in seen_types:
+            is_records_all = parsed_res["income_statement"]
+            seen_types.add("income_statement")
+        if parsed_res.get("trial_balance") and "trial_balance" not in seen_types:
+            tb_records_all = parsed_res["trial_balance"]
+            seen_types.add("trial_balance")
+        if parsed_res.get("journal_entries") and "journal_entries" not in seen_types:
+            journal_all = parsed_res["journal_entries"]
+            seen_types.add("journal_entries")
+        if parsed_res.get("subledger") and "subledger" not in seen_types:
+            subledger_all = parsed_res["subledger"]
+            seen_types.add("subledger")
+        if parsed_res.get("errors"):
+            all_errors.extend(parsed_res["errors"])
+
+    # 1. 4대 재무비율 계산
+    ratios_res = calculate_financial_ratios(bs_records_all, is_records_all, tb_records_all)
+
+    # 2. 계정 변동분석(Variance)
+    variance_res = calculate_advanced_variance_analysis(bs_records_all, is_records_all, tb_records_all)
+
+    # 3. 분개장 JET 분석
+    jet_res = run_journal_entry_testing(journal_all)
+
+    # 4. 거래처원장 리스크 분석
+    subledger_res = run_subledger_risk_analysis(subledger_all)
+
+    # 5. K-GAAP RAG 매칭
+    matched_standards = retrieve_k_gaap("수취채권 손상 재고자산 저가법 수익인식 유형자산 감가상각", limit=2, supabase_client=supabase_client)
+
+    # 6. 마크다운 종합 보고서 생성
+    report_md = generate_enterprise_analysis_report(
+        company_name=company_name,
+        ratios_res=ratios_res,
+        variance_res=variance_res,
+        jet_res=jet_res,
+        subledger_res=subledger_res,
+        matched_standards=matched_standards
+    )
+
+    checklist = [
+        {
+            "category": "적격증빙 및 세무신고 일치",
+            "limitation": "전자세금계산서/신용카드 매출매입 합계표 및 원천세 신고내역과 장부상 수치가 정확히 일치하는지 대사가 필요합니다.",
+            "additional_evidence_needed": "부가가치세 신고서 및 매입매출처별 세금계산서 합계표"
+        },
+        {
+            "category": "금융기관 실물 잔액 대사",
+            "limitation": "보통예금 및 단기차입금 잔액이 실제 금융기관 발행 잔액증명서와 일치하는지 확인해야 합니다.",
+            "additional_evidence_needed": "은행별 잔액증명서 및 금융거래확인서"
+        },
+        {
+            "category": "재고자산 실물 실사 및 저가법",
+            "limitation": "장부상 재고자산의 실제 보유 여부와 파손/부패/진부화에 따른 순실현가능가치 평가손실을 점검해야 합니다.",
+            "additional_evidence_needed": "기말 재고실사표 및 단가 산출내역"
+        },
+        {
+            "category": "특수관계자 거래 및 가지급금",
+            "limitation": "대표이사 및 특수관계자와의 비공식 자금대여/가수금에 대한 세법상 인정이자 계산 및 지급이자 손금불산입을 검토해야 합니다.",
+            "additional_evidence_needed": "가지급금/가수금 원장 및 금전소비대차계약서"
+        },
+        {
+            "category": "우발채무 및 소송/담보",
+            "limitation": "타사를 위한 지급보증, 담보제공, 계류 중인 소송사건 등 장부상 계상되지 않은 우발부채를 방어해야 합니다.",
+            "additional_evidence_needed": "등기부등본(을구 담보확인) 및 소송사건 조회서"
+        }
+    ]
+
+    payload = {
+        "success": True,
+        "company_name": company_name,
+        "analyzed_files": parsed_filenames,
+        "summary": ratios_res.get("summary", {}),
+        "ratios": ratios_res,
+        "variance_analysis": variance_res,
+        "jet_anomalies": jet_res,
+        "subledger_risks": subledger_res,
+        "matched_standards": matched_standards,
+        "report_md": report_md,
+        "limitations_checklist": checklist,
+        "errors": all_errors
+    }
+
+    logger.info("[MASTER_ANALYTICS:EXEC] 통합 기업분석 완료 성공: company=%s", company_name)
+    return payload
+

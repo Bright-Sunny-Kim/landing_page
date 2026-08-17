@@ -3094,6 +3094,183 @@ textarea:focus {
     }
 }
 
+/* ==========================================================================
+   Enterprise Analytics Hub Styles (Step 19)
+   ========================================================================== */
+
+.analytics-hub-dashboard {
+    animation: fadeIn 0.3s ease;
+}
+
+.btn-mode-tab:hover {
+    filter: brightness(1.1);
+}
+
+.kpi-card {
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.3) !important;
+    box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+}
+
+.ratio-category-card {
+    transition: border-color 0.2s ease;
+}
+
+.ratio-category-card:hover {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Master Table Custom Scrollbar & Hover */
+#jet-anomalies-table-wrap::-webkit-scrollbar,
+#subledger-risks-wrap div::-webkit-scrollbar,
+#analytics-report-md-body::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+#jet-anomalies-table-wrap::-webkit-scrollbar-track,
+#subledger-risks-wrap div::-webkit-scrollbar-track,
+#analytics-report-md-body::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+#jet-anomalies-table-wrap::-webkit-scrollbar-thumb,
+#subledger-risks-wrap div::-webkit-scrollbar-thumb,
+#analytics-report-md-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+}
+
+#jet-anomalies-table-wrap::-webkit-scrollbar-thumb:hover,
+#subledger-risks-wrap div::-webkit-scrollbar-thumb:hover,
+#analytics-report-md-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.master-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* K-GAAP Markdown Viewer Typography */
+#analytics-report-md-body h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #f8fafc;
+    border-bottom: 2px solid rgba(99, 102, 241, 0.4);
+    padding-bottom: 8px;
+    margin-top: 24px;
+    margin-bottom: 16px;
+}
+
+#analytics-report-md-body h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    border-left: 3px solid #6366f1;
+    padding-left: 10px;
+    margin-top: 20px;
+    margin-bottom: 12px;
+}
+
+#analytics-report-md-body h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+#analytics-report-md-body p {
+    margin-bottom: 12px;
+    line-height: 1.7;
+}
+
+#analytics-report-md-body ul, #analytics-report-md-body ol {
+    margin-left: 20px;
+    margin-bottom: 14px;
+}
+
+#analytics-report-md-body li {
+    margin-bottom: 6px;
+}
+
+#analytics-report-md-body blockquote {
+    background: rgba(99, 102, 241, 0.08);
+    border-left: 4px solid #818cf8;
+    padding: 10px 16px;
+    border-radius: 4px;
+    margin: 14px 0;
+    color: #cbd5e1;
+}
+
+#analytics-report-md-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.88rem;
+}
+
+#analytics-report-md-body th, #analytics-report-md-body td {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+}
+
+#analytics-report-md-body th {
+    background: rgba(30, 41, 59, 0.8);
+    color: #f1f5f9;
+}
+
+#analytics-report-md-body hr {
+    border: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 24px 0;
+}
+
+/* Spinner Animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Print Optimization */
+@media print {
+    .master-sidebar,
+    .analytics-control-panel,
+    #btn-save-current-analysis,
+    #btn-print-analysis,
+    #btn-copy-report-md,
+    #btn-download-report-md {
+        display: none !important;
+    }
+
+    body, .master-layout, .master-main-content, .analytics-hub-dashboard {
+        background: #fff !important;
+        color: #000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .glass-card, .glass-card-nested {
+        background: #fff !important;
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        color: #000 !important;
+    }
+
+    #analytics-report-md-body {
+        max-height: none !important;
+        overflow: visible !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+}
+
+
 
 
 
