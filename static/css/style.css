@@ -3261,14 +3261,80 @@ textarea:focus {
         box-shadow: none !important;
         color: #000 !important;
     }
-
-    #analytics-report-md-body {
-        max-height: none !important;
-        overflow: visible !important;
-        background: #fff !important;
-        color: #000 !important;
-    }
 }
+
+/* ==========================================
+   Phase 2: Ingestion Health & Data Inspector Modal Styles
+   ========================================== */
+.health-card {
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.health-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.4) !important;
+    box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.4);
+}
+.btn-inspect-data:hover {
+    background: rgba(99, 102, 241, 0.3) !important;
+    color: #fff !important;
+    border-color: #818cf8 !important;
+}
+#modal-data-inspector table.master-table th {
+    background: #1e293b;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+#modal-data-inspector table.master-table tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* ==========================================
+   Analytics Mode Tab Styles
+   ========================================== */
+.btn-mode-tab {
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+}
+.btn-mode-tab.active {
+    background: #6366f1 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+/* ==========================================
+   Horizontal 2-Row Ingestion Health Matrix Table
+   ========================================== */
+.health-matrix-table th {
+    background: rgba(30, 41, 59, 0.95) !important;
+    color: #cbd5e1 !important;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    white-space: nowrap;
+}
+.health-matrix-table td {
+    vertical-align: middle;
+    transition: background 0.15s ease;
+}
+.health-matrix-table tr:hover td {
+    background: rgba(99, 102, 241, 0.05);
+}
+.health-matrix-table .btn-inspect-data:hover {
+    background: rgba(99, 102, 241, 0.35) !important;
+    color: #ffffff !important;
+    border-color: #818cf8 !important;
+}
+
+.analytics-health-panel {
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+
+
+
 
 
 

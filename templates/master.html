@@ -694,10 +694,10 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                             <!-- 분석 모드 탭 -->
                             <div class="analytics-mode-tabs" style="display: flex; gap: 8px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 8px;">
-                                <button type="button" class="btn-mode-tab active" id="tab-mode-company" onclick="window.switchAnalyticsMode('company')" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; background: #6366f1; color: #fff; transition: all 0.2s;">
+                                <button type="button" class="btn-mode-tab active" id="tab-mode-company" onclick="switchAnalyticsMode('company')" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                                     🏢 등록 파트너사 선택 분석
                                 </button>
-                                <button type="button" class="btn-mode-tab" id="tab-mode-direct" onclick="window.switchAnalyticsMode('direct')" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; background: transparent; color: #94a3b8; transition: all 0.2s;">
+                                <button type="button" class="btn-mode-tab" id="tab-mode-direct" onclick="switchAnalyticsMode('direct')" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
                                     📂 엑셀 파일 직접 업로드
                                 </button>
                             </div>
@@ -730,6 +730,20 @@
                                 </button>
                             </div>
                             <div id="company-files-status" style="margin-top: 10px; font-size: 0.85rem; color: #64748b;"></div>
+
+                            <!-- [Phase 3 & 확장] 하이브리드 보관함(로컬 + 사내 Ubuntu 서버) 빠른 로드 바 -->
+                            <div id="local-archive-load-bar" style="margin-top: 14px; padding: 10px 14px; background: rgba(30,41,59,0.5); border: 1px dashed rgba(99,102,241,0.3); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">📂 보관함 빠른 불러오기:</span>
+                                    <select id="select-local-archive-history" style="padding: 6px 10px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #e2e8f0; font-size: 0.82rem; min-width: 240px;">
+                                        <option value="">과거 분석 보관 이력 없음</option>
+                                    </select>
+                                    <span id="storage-engine-badge" style="padding: 2px 8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; font-size: 0.72rem; color: #34d399;">💾 사내 안전 보관함</span>
+                                </div>
+                                <button type="button" id="btn-load-local-archive" style="padding: 6px 14px; font-size: 0.82rem; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); border-radius: 6px; color: #a5b4fc; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    <span>⚡ 0.01초 즉시 복원</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- [모드 2 영역] 엑셀 파일 직접 업로드 드롭존 -->
@@ -753,6 +767,83 @@
                                     <span>🚀 직접 업로드 파일 분석 시작</span>
                                 </button>
                             </div>
+                        </div>
+                    <!-- 1-1. 파싱 데이터 수집 현황 및 무결성 검증 블록 (Data Ingestion & Integrity Health) -->
+                    <div id="analytics-health-container" class="analytics-health-panel glass-card-nested" style="display: none; width: 100%; box-sizing: border-box; background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.15rem;">🔍</span>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">회계 원본 데이터 수집 및 대차 무결성 검증 현황</h3>
+                                <span style="font-size: 0.78rem; color: #94a3b8;">(100% Python 결정론적 정규화)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div id="health-integrity-badge" style="display: flex; align-items: center; gap: 6px; padding: 4px 14px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); border-radius: 20px; color: #34d399; font-size: 0.85rem; font-weight: 700;">
+                                    <span>🛡️ 수집 무결성:</span>
+                                    <span id="health-integrity-score">100점</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 가로형 2행(당기 / 전기) 컴팩트 수집 매트릭스 테이블 -->
+                        <div class="table-responsive" style="width: 100%; overflow-x: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+                            <table class="master-table health-matrix-table" style="width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+                                <thead>
+                                    <tr style="background: rgba(30, 41, 59, 0.95); border-bottom: 1px solid rgba(255,255,255,0.12);">
+                                        <th style="padding: 12px 10px; width: 14%; text-align: center; color: #cbd5e1; font-weight: 700;">구분 (결산기)</th>
+                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">🏢 재무상태표 (BS)</th>
+                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">📈 손익계산서 (IS)</th>
+                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">⚖️ 시산표 (TB)</th>
+                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">📝 분개장 (Journal)</th>
+                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">🤝 거래처원장 (Ledger)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- 1행: 당기 (2025년) -->
+                                    <tr id="health-row-cur" style="background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                        <td style="padding: 10px 12px; text-align: center; font-weight: 700; border-right: 1px solid rgba(255,255,255,0.06);">
+                                            <span id="health-cur-year-label" style="display: block; font-size: 0.92rem; color: #818cf8;">당기 (2025)</span>
+                                            <span style="font-size: 0.7rem; color: #94a3b8;">주요 감사 대상</span>
+                                        </td>
+                                        <td id="cell-cur-bs" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                            <div id="cell-cur-bs-content">-</div>
+                                        </td>
+                                        <td id="cell-cur-is" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                            <div id="cell-cur-is-content">-</div>
+                                        </td>
+                                        <td id="cell-cur-tb" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                            <div id="cell-cur-tb-content">-</div>
+                                        </td>
+                                        <td id="cell-cur-journal" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                            <div id="cell-cur-journal-content">-</div>
+                                        </td>
+                                        <td id="cell-cur-subledger" style="padding: 8px 10px; text-align: center;">
+                                            <div id="cell-cur-subledger-content">-</div>
+                                        </td>
+                                    </tr>
+                                    <!-- 2행: 전기 (2024년) -->
+                                    <tr id="health-row-prior" style="background: rgba(15, 23, 42, 0.35);">
+                                        <td style="padding: 10px 12px; text-align: center; font-weight: 700; border-right: 1px solid rgba(255,255,255,0.06);">
+                                            <span id="health-prior-year-label" style="display: block; font-size: 0.92rem; color: #cbd5e1;">전기 (2024)</span>
+                                            <span style="font-size: 0.7rem; color: #64748b;">비교표시/증감분석</span>
+                                        </td>
+                                        <td id="cell-prior-bs" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                            <div id="cell-prior-bs-content">-</div>
+                                        </td>
+                                        <td id="cell-prior-is" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                            <div id="cell-prior-is-content">-</div>
+                                        </td>
+                                        <td id="cell-prior-tb" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                            <div id="cell-prior-tb-content">-</div>
+                                        </td>
+                                        <td id="cell-prior-journal" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                            <div id="cell-prior-journal-content">-</div>
+                                        </td>
+                                        <td id="cell-prior-subledger" style="padding: 8px 10px; text-align: center;">
+                                            <div id="cell-prior-subledger-content">-</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -967,11 +1058,48 @@
                     </div>
                 </div>
             </div>
-        </main>
+    <!-- [데이터 원본 인스펙터 모달] -->
+    <div id="modal-data-inspector" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; width: 100%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+            <!-- 모달 헤더 -->
+            <div style="padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.3rem;">📊</span>
+                    <h3 id="inspector-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #f8fafc;">회계 원천 데이터 인스펙터</h3>
+                    <span id="inspector-modal-count" class="badge" style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.4); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">0건</span>
+                </div>
+                <button type="button" id="btn-close-inspector" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+            </div>
+
+            <!-- 모달 탭 바 -->
+            <div style="padding: 10px 24px; background: rgba(30,41,59,0.5); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="tab-inspect-table" class="btn-subtab active" style="padding: 6px 14px; font-size: 0.82rem; border-radius: 6px; background: #6366f1; color: white; border: none; cursor: pointer;">표(Table) 뷰</button>
+                    <button type="button" id="tab-inspect-json" class="btn-subtab" style="padding: 6px 14px; font-size: 0.82rem; border-radius: 6px; background: rgba(255,255,255,0.08); color: #cbd5e1; border: none; cursor: pointer;">JSON 원본 뷰</button>
+                </div>
+                <button type="button" id="btn-copy-inspector-json" style="padding: 5px 12px; font-size: 0.78rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #e2e8f0; cursor: pointer;">📋 JSON 복사</button>
+            </div>
+
+            <!-- 모달 바디 (스크롤 영역) -->
+            <div style="padding: 20px 24px; overflow-y: auto; flex: 1;">
+                <!-- 테이블 뷰 영역 -->
+                <div id="inspector-table-container">
+                    <table class="master-table" style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
+                        <thead id="inspector-table-thead" style="background: rgba(0,0,0,0.4); color: #94a3b8; position: sticky; top: 0;"></thead>
+                        <tbody id="inspector-table-tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- JSON 뷰 영역 -->
+                <div id="inspector-json-container" style="display: none;">
+                    <pre id="inspector-json-content" style="margin: 0; padding: 14px; background: #020617; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; font-family: monospace; font-size: 0.8rem; color: #38bdf8; overflow-x: auto; max-height: 480px;"></pre>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- Script JS -->
     <script src="{{ url_for('static', filename='js/main.js', v='20260806-progress-v2') }}"></script>
-    <script src="{{ url_for('static', filename='js/master_analytics.js', v='20260817-v4') }}"></script>
+    <script src="{{ url_for('static', filename='js/master_analytics.js', v='20260817-v12') }}"></script>
 </body>
 </html>
