@@ -383,14 +383,24 @@ def classify_source_file(filename):
 
 
 def _normalize_account_name(raw):
-    """계정과목 셀 특유의 로마자 접두사(Ⅰ. Ⅱ. Ⅹ.), ◀▶ 소계 괄호, 글자간격 공백을 제거하여 순수 계정명으로 정규화."""
-    s = str(raw).replace("　", " ")
-    is_subtotal = any(c in s for c in _BRACKET_CHARS) or any(c in s for c in _ROMAN_PREFIXES)
+    """계정과목 셀의 로마자 접두사(Ⅰ. Ⅱ. Ⅹ.), 괄호 번호((1), (2)), ◀▶ 소계 괄호, 글자간격 공백을 제거하여 순수 계정명으로 정규화."""
+    s = str(raw).replace("　", " ").strip()
+    
+    # 1. 재무제표 하단 단순 주석 행 필터링 (예: 당기 : 78,552,336 원, 전기 : 581,069,320 원)
+    if any(s.startswith(p) for p in ["당기:", "당기 :", "전기:", "전기 :", "(당기순이익)", "당기순손익"]):
+        if ":" in s or "원" in s:
+            return "", False
+
+    is_subtotal = any(c in s for c in _BRACKET_CHARS) or any(c in s for c in _ROMAN_PREFIXES) or bool(re.search(r"^\s*\(\d+\)", s))
     for c in _BRACKET_CHARS:
         s = s.replace(c, "")
     for r in _ROMAN_PREFIXES:
         s = s.replace(r, "")
-    # 선두의 점(.)이나 공백 제거
+    
+    # 2. 괄호 번호 제거 (예: (1) 당좌자산 -> 당좌자산, (2) 재고자산 -> 재고자산)
+    s = re.sub(r"^\s*\(\d+\)\s*", "", s)
+    
+    # 3. 선두의 점(.)이나 공백 제거
     s = s.strip(". ").replace(" ", "").strip()
     return s, is_subtotal
 
@@ -424,8 +434,7 @@ def _to_amount(v):
         return -val if is_negative else val
     except ValueError:
         return 0.0
-
-
+        
 def _read_tabular(file_content, filename):
     if filename.endswith(".csv"):
         try:
@@ -509,7 +518,7 @@ def _detect_and_parse_single_sheet(df, sheet_name="", filename=""):
     sname_clean = str(sheet_name).replace(" ", "").lower()
     fname_clean = str(filename).replace(" ", "").lower()
     
-    # 상단 1~10행 텍스트 수집
+    # 상단 1~12행 텍스트 수집
     top_text = ""
     for r in range(min(12, len(df))):
         row_str = " ".join([str(x) for x in df.iloc[r].dropna().tolist()])
@@ -567,7 +576,7 @@ def _detect_and_parse_single_sheet(df, sheet_name="", filename=""):
 def parse_statement_from_df(df, expected_type="unknown"):
     """
     재무상태표 / 손익계산서 시트를 파싱하여 [{Account, Current, Prior, Diff, IsSubtotal}] 구조로 반환합니다.
-    5열 구조(과목 | 당기세부 | 당기소계 | 전기세부 | 전기소계) 및 3열/4열 구조를 모두 완벽 지원합니다.
+    차감계정(대손충당금, 감가상각누계액)의 음수 부호 및 5열 구조(과목 | 당기세부 | 당기소계 | 전기세부 | 전기소계)를 완벽 지원합니다.
     """
     header_row = -1
     acc_col = 0
@@ -587,9 +596,11 @@ def parse_statement_from_df(df, expected_type="unknown"):
         header_row = 0
         acc_col = 0
 
-    # 5열 레이아웃 판별 (0:과목, 1:당기세부, 2:당기소계, 3:전기세부, 4:전기소계)
     if len(df.columns) >= 5:
         is_5col_layout = True
+
+    # 차감적 평가계정 목록
+    CONTRA_ACCOUNTS = ("대손충당금", "감가상각누계액", "감가상각충당금", "손상차손누계액", "사채할인발행차금", "퇴직연금운용자산(차감)", "현재가치할인차금", "보조금")
 
     records = []
     for i in range(header_row + 1, len(df)):
@@ -600,21 +611,37 @@ def parse_statement_from_df(df, expected_type="unknown"):
             continue
             
         acc_clean, is_subtotal = _normalize_account_name(raw_acc)
-        if not acc_clean or acc_clean in ["nan", "계정과목", "과목", "항목"]:
+        if not acc_clean or acc_clean in ["nan", "계정과목", "과목", "항목", "당기순이익(처분전)"]:
             continue
 
+        is_contra = any(ca in acc_clean for ca in CONTRA_ACCOUNTS)
+
         if is_5col_layout:
-            # 세부금액(col 1/3)이 있으면 세부금액 우선, 없으면 소계/합계(col 2/4)
             c_detail = _to_amount(df.iat[i, 1]) if len(df.columns) > 1 else 0.0
             c_sub = _to_amount(df.iat[i, 2]) if len(df.columns) > 2 else 0.0
-            cur_val = c_detail if c_detail != 0.0 else c_sub
-
             p_detail = _to_amount(df.iat[i, 3]) if len(df.columns) > 3 else 0.0
             p_sub = _to_amount(df.iat[i, 4]) if len(df.columns) > 4 else 0.0
-            prior_val = p_detail if p_detail != 0.0 else p_sub
+
+            c_detail = 0.0 if c_detail is None else float(c_detail)
+            c_sub = 0.0 if c_sub is None else float(c_sub)
+            p_detail = 0.0 if p_detail is None else float(p_detail)
+            p_sub = 0.0 if p_sub is None else float(p_sub)
+
+            if is_contra:
+                # 차감계정은 세부금액(col 1)을 음수(-)로 추출
+                cur_val = -abs(c_detail if c_detail != 0.0 else c_sub)
+                prior_val = -abs(p_detail if p_detail != 0.0 else p_sub)
+            else:
+                cur_val = c_detail if c_detail != 0.0 else c_sub
+                prior_val = p_detail if p_detail != 0.0 else p_sub
         else:
             cur_val = _to_amount(df.iat[i, 1]) if len(df.columns) > 1 else 0.0
             prior_val = _to_amount(df.iat[i, 2]) if len(df.columns) > 2 else 0.0
+            cur_val = 0.0 if cur_val is None else float(cur_val)
+            prior_val = 0.0 if prior_val is None else float(prior_val)
+            if is_contra:
+                cur_val = -abs(cur_val)
+                prior_val = -abs(prior_val)
 
         diff_val = cur_val - prior_val
 
