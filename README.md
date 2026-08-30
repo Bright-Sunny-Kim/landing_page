@@ -114,7 +114,11 @@ UBUNTU_PG_PASSWORD=your_password
   - 스마트폰 뷰포트 Single-Column 스택 레이아웃 및 상단 가로 스크롤 탭 바
   - 카카오톡 스타일 1:1 실시간 자문 상담실 모바일 UI 및 터치 최적화
   - PWA (`manifest.json`, `sw.js`, 192x192/512x512 아이콘) 홈 화면 추가 지원
-- [ ] **Phase 5. 향후 다각적 분석 허브 로드맵**:
+- [x] **Phase 5. 전역 플로팅 AI 회계사 팝업 & 3계층 무중단 하이브리드 RAG 엔진 고도화** (완료)
+  - **전역 플로팅 팝업 위젯 (`templates/components/ai_cpa_widget.html`)**: 파트너사 포털 및 마스터 관리자 등 로그인된 모든 창에서 FAB 버튼 및 사이드바 연동을 통한 독립 모달 팝업 가동
+  - **3단계 무중단 RAG Fallback 파이프라인 (`blueprints/api.py`)**: 사내 Ubuntu 서버(ChromaDB/Dify) 접속 불가 시에도 내부 로컬 K-GAAP 기준서 코퍼스(`core/audit_engine.py`) 및 OpenAI 모델로 자동 전환되어 '서버 에러' 없는 100% 정상 스트리밍 답변 보장
+  - **모바일/앱 뷰포트 텍스트 찌그러짐 원천 차단 (`static/css/style.css`)**: 한글 단어 단위 줄바꿈(`word-break: keep-all; min-width: 0;`) 및 100% 풀스크린 반응형 오버레이 적용
+- [ ] **Phase 6. 향후 다각적 분석 허브 로드맵**:
   - **마스터 관리자 사이드바 3대 탭 체계(대시보드 / 파트너사 관리 / 회계감사) 리팩토링**
   - **시계열 다개년 추세 분석 (Multi-year Trend)**: 3~5개년도 저장본 결합 분석
   - **동종업계 피어 그룹 교차 비교 (Cross-sectional Peer Benchmarking)**

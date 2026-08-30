@@ -12,39 +12,104 @@ from core.extensions import (
 
 api_bp = Blueprint('api', __name__)
 
-@api_bp.route('/api/faq/ask', methods=['POST'])
-def faq_ask():
-    global openai_client, supabase
+def _generate_fallback_cpa_stream(question: str, category: str, conversation_id: str):
+    """우분투 서버 RAG/Dify 통신 장애 시 클라이언트에 무중단 회계기준 답변을 제공하는 로컬/LLM Fallback 스트리밍 생성기"""
+    global openai_client
+    logger.info("[FAQ Fallback] Activating local/LLM fallback stream for question: %s (Category: %s)", question, category)
     
+    # 1. 로컬 RAG 검색 시도
+    rag_context = ""
+    sources_summary = []
+    try:
+        from core.audit_engine import query_k_gaap_rag
+        matched_docs = query_k_gaap_rag(question, limit=3)
+        if matched_docs:
+            context_blocks = []
+            for doc in matched_docs:
+                src_label = f"{doc.get('standard_no', '')} {doc.get('paragraph_no', '')} ({doc.get('title', '')})".strip()
+                sources_summary.append(src_label)
+                context_blocks.append(f"[{src_label}]\n{doc.get('content', '')}")
+            rag_context = "\n\n".join(context_blocks)
+            logger.info("[FAQ Fallback] Retrieved %d fallback reference docs: %s", len(matched_docs), sources_summary)
+    except Exception as re_err:
+        logger.warning("[FAQ Fallback] Fallback local RAG query warning: %s", re_err)
+
+    # 2. OpenAI 클라이언트 확보
     if not openai_client:
         api_key = os.getenv("OPENAI_API_KEY", "")
         if api_key:
             from openai import OpenAI
             openai_client = OpenAI(api_key=api_key)
+
+    # 3. OpenAI 직접 질의 스트리밍 시도
+    if openai_client:
+        try:
+            system_prompt = (
+                f"당신은 대한민국 공인회계사 및 회계감사 전문 AI 어시스턴트입니다.\n"
+                f"사용자가 질문한 회계/세무/감사 기준({category})에 대해 명확하고 논리정연하게 답변해 주세요.\n"
+                f"답변 형식: 1) 핵심 결론 요약, 2) 상세 규정 및 실무 적용 가이드, 3) 관련 기준서 조항 근거\n"
+            )
+            if rag_context:
+                system_prompt += f"\n[참고 기준서 발췌 데이터]\n{rag_context}\n"
+
+            logger.info("[FAQ Fallback] Calling OpenAI ChatCompletion stream...")
+            completion = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": question}
+                ],
+                stream=True,
+                temperature=0.2
+            )
+
+            for chunk in completion:
+                delta = chunk.choices[0].delta.content if chunk.choices and chunk.choices[0].delta else None
+                if delta:
+                    event_data = {
+                        "event": "message",
+                        "answer": delta,
+                        "conversation_id": conversation_id
+                    }
+                    yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n".encode('utf-8')
+
+            # 출처 안내가 있을 경우 마무리 전송
+            if sources_summary:
+                src_text = "\n\n---\n**📚 관련 참고 기준서 근거:**\n" + "\n".join([f"- {s}" for s in sources_summary])
+                yield f"data: {json.dumps({'event': 'message', 'answer': src_text, 'conversation_id': conversation_id}, ensure_ascii=False)}\n\n".encode('utf-8')
             
-    if not supabase:
-        url = os.getenv("SUPABASE_URL", "")
-        key = os.getenv("SUPABASE_KEY", "")
-        if url and key and url != "YOUR_SUPABASE_PROJECT_URL_HERE":
-            from supabase import create_client
-            supabase = create_client(url, key)
+            logger.info("[FAQ Fallback] OpenAI fallback stream completed successfully.")
+            return
+        except Exception as oai_err:
+            logger.error("[FAQ Fallback] OpenAI API call failed: %s", oai_err, exc_info=True)
 
-    if not openai_client or not supabase:
-        missing = []
-        if not openai_client: missing.append("openai")
-        if not supabase: missing.append("supabase")
-        return jsonify({'error': f'서버의 AI 설정이 올바르지 않습니다. (Missing: {", ".join(missing)})'}), 500
+    # 4. LLM API까지 모두 불가할 때 최종 룰베이스 응답
+    logger.warning("[FAQ Fallback] Returning rule-based fallback response.")
+    base_msg = f"안녕하세요. 현재 외부 RAG 연동 서버 점검 중으로 내장 회계기준 검색 결과를 안내해 드립니다.\n\n"
+    if rag_context:
+        base_msg += f"**[관련 회계기준 발췌 조항]**\n{rag_context}\n\n상세한 자문은 1:1 담당 회계사 상담실을 이용해 주시기 바랍니다."
+    else:
+        base_msg += f"질문하신 '{question}'과 관련된 회계/감사 기준 적용에 대해서는 담당 공인회계사 1:1 자문 상담 창구를 통해 신속히 답변해 드리겠습니다."
 
+    yield f"data: {json.dumps({'event': 'message', 'answer': base_msg, 'conversation_id': conversation_id}, ensure_ascii=False)}\n\n".encode('utf-8')
+
+
+@api_bp.route('/api/faq/ask', methods=['POST'])
+def faq_ask():
+    global openai_client, supabase
+    
     data = request.get_json() or {}
     question = data.get('question', '').strip()
     category = data.get('category', '전체')
+    conversation_id = data.get('conversation_id', '').strip()
+
+    logger.info("[API_REQ] POST /api/faq/ask - question: '%s', category: '%s', conv_id: '%s'", question, category, conversation_id)
 
     if not question:
+        logger.warning("[API_RES] POST /api/faq/ask - Empty question provided.")
         return jsonify({'error': '질문을 입력해주세요.'}), 400
 
     try:
-        conversation_id = data.get('conversation_id', '').strip()
-        
         clean_q = question.replace(" ", "").lower()
         trivial_keywords = ["안녕", "반가워", "고마워", "수고", "감사", "안뇽", "하이", "hello"]
         swear_keywords = ["시발", "씨발", "개새끼", "미친", "존나", "좆", "병신"]
@@ -52,18 +117,17 @@ def faq_ask():
         if any(w in clean_q for w in swear_keywords):
             def generate_trivial():
                 msg = "올바른 언어를 사용해주세요. 저는 회계감사 기준에 대해 답변해 드리는 AI입니다."
-                yield f'data: {json.dumps({"event": "message", "answer": msg, "conversation_id": conversation_id})}\n\n'.encode('utf-8')
+                yield f'data: {json.dumps({"event": "message", "answer": msg, "conversation_id": conversation_id}, ensure_ascii=False)}\n\n'.encode('utf-8')
             return Response(stream_with_context(generate_trivial()), content_type='text/event-stream')
             
         if len(clean_q) <= 10 and any(w in clean_q for w in trivial_keywords):
             def generate_trivial():
                 msg = "안녕하세요! 혜안 파트너스 회계감사 AI 어시스턴트입니다. 회계 기준이나 감사 기준에 대해 무엇이든 물어보세요!"
-                yield f'data: {json.dumps({"event": "message", "answer": msg, "conversation_id": conversation_id})}\n\n'.encode('utf-8')
+                yield f'data: {json.dumps({"event": "message", "answer": msg, "conversation_id": conversation_id}, ensure_ascii=False)}\n\n'.encode('utf-8')
             return Response(stream_with_context(generate_trivial()), content_type='text/event-stream')
         
-        logger.info("[FAQ Ask] Received question: %s, category: %s, conv_id: %s", question, category, conversation_id)
-        
         dify_api_key = os.environ.get("DIFY_API_KEY", "app-mIeCNphyBVBn6diJpnybnzdS")
+        dify_api_base_url = os.environ.get("DIFY_API_BASE_URL", "https://api.dify.ai/v1")
         
         payload = {
             "inputs": {"category": category},
@@ -71,7 +135,6 @@ def faq_ask():
             "response_mode": "streaming",
             "user": session.get("user_id", "web-user")
         }
-        
         if conversation_id:
             payload["conversation_id"] = conversation_id
             
@@ -80,25 +143,31 @@ def faq_ask():
             "Content-Type": "application/json"
         }
         
-        logger.info("[FAQ Ask] Forwarding streaming request to Dify API...")
-        
-        dify_api_base_url = os.environ.get("DIFY_API_BASE_URL", "https://api.dify.ai/v1")
-        dify_response = requests.post(f"{dify_api_base_url}/chat-messages", json=payload, headers=headers, stream=True)
-        
-        if dify_response.status_code != 200:
-            logger.error("[FAQ Ask] Dify API returned status %s: %s", dify_response.status_code, dify_response.text)
-            return jsonify({'error': 'Dify AI 챗봇 연동 중 오류가 발생했습니다.'}), 500
+        logger.info("[FAQ Ask] Requesting Dify API (%s)...", dify_api_base_url)
+        dify_succeeded = False
+        try:
+            dify_response = requests.post(f"{dify_api_base_url}/chat-messages", json=payload, headers=headers, stream=True, timeout=8)
+            if dify_response.status_code == 200:
+                dify_succeeded = True
+                logger.info("[API_RES] POST /api/faq/ask - Dify streaming response established.")
+                def generate():
+                    for line in dify_response.iter_lines():
+                        if line:
+                            yield line + b'\n\n'
+                return Response(stream_with_context(generate()), content_type='text/event-stream')
+            else:
+                logger.warning("[FAQ Ask] Dify API returned status %s: %s", dify_response.status_code, dify_response.text)
+        except Exception as dify_err:
+            logger.warning("[FAQ Ask] Dify connection error or timeout: %s", dify_err)
 
-        def generate():
-            for line in dify_response.iter_lines():
-                if line:
-                    yield line + b'\n\n'
-                    
-        return Response(stream_with_context(generate()), content_type='text/event-stream')
+        # Dify 실패 시 무중단 Fallback 스트림 활성화
+        logger.info("[FAQ Ask] Initiating zero-downtime fallback stream...")
+        return Response(stream_with_context(_generate_fallback_cpa_stream(question, category, conversation_id)), content_type='text/event-stream')
 
     except Exception as e:
-        logger.exception("FAQ Ask error: %s", e)
-        return jsonify({'error': '질의 처리 중 오류가 발생했습니다.'}), 500
+        logger.error("[ERROR] POST /api/faq/ask exception: %s", e, exc_info=True)
+        # 최종 예외 상황에서도 Fallback 스트림으로 안전하게 응답
+        return Response(stream_with_context(_generate_fallback_cpa_stream(question, category, conversation_id)), content_type='text/event-stream')
 
 
 @api_bp.route('/api/dify/retrieval', methods=['POST'])
@@ -106,71 +175,98 @@ def dify_retrieval():
     data = request.get_json() or {}
     query = data.get('query', '').strip()
     
-    logger.info("[Dify Retrieval] Received query: %s", query)
+    logger.info("[API_REQ] POST /api/dify/retrieval - Received query: %s", query)
     
     if not query:
-        logger.warning("[Dify Retrieval] Empty query received.")
+        logger.warning("[API_RES] POST /api/dify/retrieval - Empty query received.")
         return jsonify({"records": []}), 200
         
     try:
-        logger.info("[Dify Retrieval] Generating embeddings for query...")
-        embed_response = openai_client.embeddings.create(
-            input=query,
-            model="text-embedding-3-large",
-            dimensions=1536
-        )
-        query_embedding = embed_response.data[0].embedding
-        logger.info("[Dify Retrieval] Embedding generated successfully.")
-        
-        import chromadb
-        host = os.environ.get("CHROMA_SERVER_HOST", "localhost")
-        port = int(os.environ.get("CHROMA_SERVER_PORT", "8000"))
-        logger.info("[Dify Retrieval] Connecting to ChromaDB at %s:%d...", host, port)
-        
-        chroma_client = chromadb.HttpClient(host=host, port=port)
-        collection = chroma_client.get_collection(name="document_chunks")
-        
-        n_results_target = 30
-        logger.info("[Dify Retrieval] Querying top %d results from collection...", n_results_target)
-        
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=n_results_target
-        )
-        
+        global openai_client
+        if not openai_client:
+            api_key = os.getenv("OPENAI_API_KEY", "")
+            if api_key:
+                from openai import OpenAI
+                openai_client = OpenAI(api_key=api_key)
+
+        query_embedding = None
+        if openai_client:
+            try:
+                embed_response = openai_client.embeddings.create(
+                    input=query,
+                    model="text-embedding-3-large",
+                    dimensions=1536
+                )
+                query_embedding = embed_response.data[0].embedding
+                logger.info("[Dify Retrieval] OpenAI embedding generated successfully.")
+            except Exception as emb_e:
+                logger.warning("[Dify Retrieval] OpenAI embedding error: %s", emb_e)
+
         initial_records = []
         documents_for_rerank = []
-        
-        if results and results['ids'] and len(results['ids'][0]) > 0:
-            for i in range(len(results['ids'][0])):
-                metadata = results['metadatas'][0][i]
-                document = results['documents'][0][i]
-                distance = results['distances'][0][i]
-                sim = 1.0 - distance
+
+        # 1. Ubuntu ChromaDB 검색 시도
+        if query_embedding:
+            try:
+                import chromadb
+                host = os.environ.get("CHROMA_SERVER_HOST", "localhost")
+                port = int(os.environ.get("CHROMA_SERVER_PORT", "8000"))
+                logger.info("[Dify Retrieval] Connecting to ChromaDB at %s:%d...", host, port)
                 
-                if sim >= 0.10:
-                    doc_name = metadata.get("document_name", "알수없음")
-                    cat = metadata.get("category", "기타")
-                    art_name = metadata.get("article_name", "")
-                    
-                    content = f"[{cat}] {doc_name} ({art_name})\n{document}"
+                chroma_client = chromadb.HttpClient(host=host, port=port)
+                collection = chroma_client.get_collection(name="document_chunks")
+                
+                results = collection.query(
+                    query_embeddings=[query_embedding],
+                    n_results=20
+                )
+                
+                if results and results.get('ids') and len(results['ids'][0]) > 0:
+                    for i in range(len(results['ids'][0])):
+                        metadata = results['metadatas'][0][i]
+                        document = results['documents'][0][i]
+                        distance = results['distances'][0][i]
+                        sim = 1.0 - distance
+                        
+                        if sim >= 0.10:
+                            doc_name = metadata.get("document_name", "알수없음")
+                            cat = metadata.get("category", "기타")
+                            art_name = metadata.get("article_name", "")
+                            
+                            content = f"[{cat}] {doc_name} ({art_name})\n{document}"
+                            initial_records.append({
+                                "content": content,
+                                "score": float(sim)
+                            })
+                            documents_for_rerank.append(content)
+                    logger.info("[Dify Retrieval] Retrieved %d chunks from ChromaDB.", len(initial_records))
+            except Exception as chroma_err:
+                logger.warning("[Dify Retrieval] ChromaDB connection failed, trying fallback: %s", chroma_err)
+
+        # 2. ChromaDB 결과가 없을 때 로컬 RAG Fallback 검색
+        if not initial_records:
+            logger.info("[Dify Retrieval] Fallback to core.audit_engine K-GAAP RAG...")
+            try:
+                from core.audit_engine import query_k_gaap_rag
+                fallback_docs = query_k_gaap_rag(query, limit=5)
+                for doc in fallback_docs:
+                    content = f"[{doc.get('standard_no', 'K-GAAP')}] {doc.get('title', '')}\n{doc.get('content', '')}"
                     initial_records.append({
                         "content": content,
-                        "score": float(sim)
+                        "score": float(doc.get("score", 0.5))
                     })
                     documents_for_rerank.append(content)
-                    
-            logger.info("[Dify Retrieval] Successfully retrieved %d chunks for reranking.", len(initial_records))
-        else:
-            logger.info("[Dify Retrieval] No matching results found in ChromaDB.")
-            
+                logger.info("[Dify Retrieval] Local RAG retrieved %d records.", len(initial_records))
+            except Exception as fb_err:
+                logger.error("[Dify Retrieval] Fallback RAG search failed: %s", fb_err)
+
         final_records = []
         if documents_for_rerank:
-            import cohere
             cohere_api_key = os.environ.get("COHERE_API_KEY")
             if cohere_api_key:
-                logger.info("[Dify Retrieval] Reranking results with Cohere...")
                 try:
+                    import cohere
+                    logger.info("[Dify Retrieval] Reranking results with Cohere...")
                     co_client = cohere.Client(cohere_api_key)
                     rerank_response = co_client.rerank(
                         model="rerank-multilingual-v3.0",
@@ -178,29 +274,27 @@ def dify_retrieval():
                         documents=documents_for_rerank,
                         top_n=5
                     )
-                    
                     for r_result in rerank_response.results:
                         idx = r_result.index
                         if r_result.relevance_score >= 0.3:
                             initial_records[idx]["score"] = r_result.relevance_score
                             final_records.append(initial_records[idx])
-                            
-                    logger.info("[Dify Retrieval] Reranking complete. Selected %d records.", len(final_records))
                 except Exception as ce:
-                    logger.exception("[Dify Retrieval] Cohere Rerank failed: %s", ce)
+                    logger.warning("[Dify Retrieval] Cohere Rerank failed: %s", ce)
                     initial_records.sort(key=lambda x: x["score"], reverse=True)
                     final_records = initial_records[:5]
             else:
-                logger.warning("[Dify Retrieval] No COHERE_API_KEY found, skipping rerank.")
                 initial_records.sort(key=lambda x: x["score"], reverse=True)
                 final_records = initial_records[:5]
+        else:
+            final_records = initial_records[:5]
             
-        logger.info("[Dify Retrieval] Returning %d records.", len(final_records))
+        logger.info("[API_RES] POST /api/dify/retrieval - Returning %d records.", len(final_records))
         return jsonify({"records": final_records}), 200
         
     except Exception as e:
-        logger.exception("[Dify Retrieval] Error: %s", e)
-        return jsonify({"records": []}), 500
+        logger.error("[ERROR] POST /api/dify/retrieval exception: %s", e, exc_info=True)
+        return jsonify({"records": []}), 200
 
 
 @api_bp.route('/api/financial_institutions', methods=['GET'])

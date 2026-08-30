@@ -2416,3 +2416,225 @@ document.addEventListener('DOMContentLoaded', () => {
         requestedItem.click();
     }
 });
+
+/* ==========================================================================
+   AI 회계기준 어시스턴트 전역 플로팅 팝업 위젯 컨트롤러
+   ========================================================================== */
+let globalAICpaConvId = '';
+let isAICpaStreaming = false;
+
+// 1. 위젯 열기 / 닫기
+window.toggleAICpaWidget = function (show) {
+    const card = document.getElementById('ai-cpa-widget-card');
+    const overlay = document.getElementById('ai-cpa-overlay');
+    if (!card) return;
+
+    if (show === undefined) {
+        show = !card.classList.contains('active');
+    }
+
+    if (show) {
+        console.log('[ACTION] Open AI CPA Global Widget');
+        card.classList.add('active');
+        if (overlay) overlay.classList.add('active');
+        setTimeout(() => {
+            const inputEl = document.getElementById('ai-cpa-question-input');
+            if (inputEl) inputEl.focus();
+        }, 150);
+    } else {
+        console.log('[ACTION] Close AI CPA Global Widget');
+        card.classList.remove('active');
+        if (overlay) overlay.classList.remove('active');
+    }
+};
+
+// 2. 대화 초기화
+window.resetAICpaChat = function () {
+    console.log('[ACTION] Reset AI CPA Chat Session');
+    globalAICpaConvId = '';
+    const messagesEl = document.getElementById('ai-cpa-messages');
+    if (messagesEl) {
+        messagesEl.innerHTML = `
+            <div class="chat-bubble ai-bubble">
+                <div class="bubble-avatar">🤖</div>
+                <div class="bubble-content">
+                    안녕하세요! <strong>혜안 AI 회계기준 어시스턴트</strong>입니다.<br>
+                    K-IFRS, K-GAAP, 감사기준 등 회계·세무 관련 궁금한 점을 질문해 주시면 관련 기준서를 찾아 정확하게 답변해 드립니다.
+                </div>
+            </div>
+        `;
+    }
+    const inputEl = document.getElementById('ai-cpa-question-input');
+    if (inputEl) {
+        inputEl.value = '';
+        inputEl.focus();
+    }
+};
+
+// 3. 메시지 버블 추가 헬퍼
+function appendAICpaMessage(role, text, sources = []) {
+    const messagesEl = document.getElementById('ai-cpa-messages');
+    if (!messagesEl) return null;
+
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${role}-bubble`;
+
+    const avatar = role === 'ai' ? '🤖' : '👤';
+    let formattedText = '';
+    if (text) {
+        formattedText = (role === 'ai' && typeof marked !== 'undefined') ? marked.parse(text) : text.replace(/\n/g, '<br>');
+    }
+
+    let sourcesHtml = '';
+    if (sources && sources.length > 0) {
+        sourcesHtml = '<div class="faq-sources"><div class="faq-sources-title">참조 기준:</div>';
+        sources.forEach(src => {
+            sourcesHtml += `<span class="faq-source-tag">${src}</span>`;
+        });
+        sourcesHtml += '</div>';
+    }
+
+    bubble.innerHTML = `
+        <div class="bubble-avatar">${avatar}</div>
+        <div class="bubble-content">
+            <div class="message-text-container">${formattedText}</div>
+            ${sourcesHtml}
+        </div>
+    `;
+
+    messagesEl.appendChild(bubble);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return bubble.querySelector('.message-text-container');
+}
+
+// 4. 질문 전송 및 스트리밍 수신
+window.submitAICpaQuestion = async function () {
+    if (isAICpaStreaming) return;
+
+    const inputEl = document.getElementById('ai-cpa-question-input');
+    const selectEl = document.getElementById('ai-cpa-category-select');
+    const submitBtn = document.getElementById('btn-ai-cpa-submit');
+    const messagesEl = document.getElementById('ai-cpa-messages');
+
+    if (!inputEl) return;
+    const question = inputEl.value.trim();
+    const category = selectEl ? selectEl.value : '전체';
+
+    if (!question) {
+        inputEl.focus();
+        return;
+    }
+
+    console.log(`[REQUEST] AI CPA Query: "${question}" (Category: ${category})`);
+
+    // 사용자 질문 버블 추가
+    appendAICpaMessage('user', question);
+    inputEl.value = '';
+
+    // 로딩 인디케이터 추가
+    const loadingId = 'ai-cpa-loading-' + Date.now();
+    const loadingBubble = document.createElement('div');
+    loadingBubble.id = loadingId;
+    loadingBubble.className = 'chat-bubble ai-bubble';
+    loadingBubble.innerHTML = `
+        <div class="bubble-avatar">🤖</div>
+        <div class="bubble-content" style="display: flex; align-items: center; gap: 8px;">
+            <span class="pulse-dot" style="background: #818cf8;"></span>
+            <span style="color: rgba(255,255,255,0.7); font-size: 0.9rem;">회계기준 및 RAG 데이터 검색 중...</span>
+        </div>
+    `;
+    messagesEl.appendChild(loadingBubble);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    isAICpaStreaming = true;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+    }
+
+    try {
+        const response = await fetch('/api/faq/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                question: question,
+                category: category,
+                conversation_id: globalAICpaConvId
+            })
+        });
+
+        // 로딩 제거
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+
+        if (!response.ok) {
+            console.error(`[ERROR] AI CPA API returned HTTP ${response.status}`);
+            appendAICpaMessage('ai', '서버와의 통신에 일시적인 지연이 발생했습니다. 다시 질문해 주시거나 담당 회계사 상담실을 이용해 주세요.');
+            return;
+        }
+
+        // SSE 스트리밍 읽기
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let fullText = '';
+        const contentP = appendAICpaMessage('ai', '', []);
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.substring(6).trim();
+                    if (!dataStr) continue;
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (data.event === 'message' || data.event === 'agent_message') {
+                            fullText += data.answer || '';
+                            if (contentP) {
+                                contentP.innerHTML = typeof marked !== 'undefined' ? marked.parse(fullText) : fullText.replace(/\n/g, '<br>');
+                            }
+                            messagesEl.scrollTop = messagesEl.scrollHeight;
+                        }
+                        if (data.conversation_id) {
+                            globalAICpaConvId = data.conversation_id;
+                        }
+                    } catch (pe) {
+                        // Ignore parse chunk errors
+                    }
+                }
+            }
+        }
+        console.log('[RENDER] AI CPA Answer rendering completed.');
+
+    } catch (err) {
+        console.error('[ERROR] AI CPA Fetch Error:', err);
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+        appendAICpaMessage('ai', '네트워크 통신 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+        isAICpaStreaming = false;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+        }
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+};
+
+// 5. Enter 키 전송 이벤트 리스너
+document.addEventListener('DOMContentLoaded', () => {
+    const inputEl = document.getElementById('ai-cpa-question-input');
+    if (inputEl) {
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitAICpaQuestion();
+            }
+        });
+    }
+});
+

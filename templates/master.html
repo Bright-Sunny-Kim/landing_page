@@ -92,6 +92,12 @@
                         <span>시스템 통계 & AI 파이프라인</span>
                     </a>
                 </li>
+                <li class="master-menu-item" data-menu="ai-cpa-inquiry">
+                    <a href="javascript:void(0);" onclick="toggleAICpaWidget(true)">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+                        <span>AI 회계사 문의</span>
+                    </a>
+                </li>
             </ul>
             
             <div class="master-sidebar-footer" style="display: flex; flex-direction: column; gap: 10px;">
@@ -1393,6 +1399,9 @@
         </div>
     </div>
     
+    <!-- 전역 AI 회계기준 어시스턴트 플로팅 팝업 위젯 -->
+    {% include 'components/ai_cpa_widget.html' %}
+
     <!-- Script JS -->
     <script src="{{ url_for('static', filename='js/main.js', v='20260806-progress-v2') }}"></script>
     <script src="{{ url_for('static', filename='js/master_analytics.js', v='20260817-v12') }}"></script>

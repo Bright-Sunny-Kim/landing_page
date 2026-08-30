@@ -1,0 +1,63 @@
+<!-- AI 회계기준 어시스턴트 전역 플로팅 팝업 위젯 -->
+<div id="ai-cpa-global-widget">
+    <!-- 1. 우측 하단 플로팅 버튼 (FAB) -->
+    <button type="button" id="ai-cpa-fab" class="ai-cpa-fab-btn" onclick="toggleAICpaWidget(true)" title="AI 회계기준 어시스턴트 열기">
+        <span class="ai-cpa-fab-icon">🤖</span>
+        <span>AI 회계사 문의</span>
+    </button>
+
+    <!-- 2. 배경 딤 오버레이 (모바일 및 배경 클릭 닫기용) -->
+    <div id="ai-cpa-overlay" class="ai-cpa-modal-overlay" onclick="toggleAICpaWidget(false)"></div>
+
+    <!-- 3. 플로팅 챗봇 팝업 카드 -->
+    <div id="ai-cpa-widget-card" class="ai-cpa-widget-card" role="dialog" aria-modal="true" aria-labelledby="ai-cpa-header-title">
+        <!-- 헤더 -->
+        <div class="ai-cpa-widget-header">
+            <div class="ai-cpa-header-title-box">
+                <div class="ai-cpa-header-badge">
+                    <span class="pulse-dot" style="background: #818cf8; width: 6px; height: 6px; border-radius: 50%; display: inline-block;"></span>
+                    <span>AI Assistant</span>
+                </div>
+                <h3 id="ai-cpa-header-title" class="ai-cpa-header-title">🤖 AI 회계기준 어시스턴트</h3>
+            </div>
+            <div class="ai-cpa-header-actions">
+                <button type="button" class="ai-cpa-btn-icon" onclick="resetAICpaChat()" title="대화 초기화">🔄</button>
+                <button type="button" class="ai-cpa-btn-icon" onclick="toggleAICpaWidget(false)" title="닫기">✕</button>
+            </div>
+        </div>
+
+        <!-- 바디 & 대화창 -->
+        <div class="ai-cpa-widget-body">
+            <div class="ai-cpa-widget-messages" id="ai-cpa-messages">
+                <div class="chat-bubble ai-bubble">
+                    <div class="bubble-avatar">🤖</div>
+                    <div class="bubble-content">
+                        안녕하세요! <strong>혜안 AI 회계기준 어시스턴트</strong>입니다.<br>
+                        K-IFRS, K-GAAP, 감사기준 등 회계·세무 관련 궁금한 점을 질문해 주시면 관련 기준서를 찾아 정확하게 답변해 드립니다.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 입력 영역 -->
+            <div class="ai-cpa-widget-input-area">
+                <div class="faq-input-top" style="margin-bottom: 8px;">
+                    <select id="ai-cpa-category-select" class="faq-select" style="font-size: 0.85rem; padding: 6px 10px;">
+                        <option value="전체">전체 회계 기준서</option>
+                        <option value="K-IFRS">한국채택국제회계기준 (K-IFRS)</option>
+                        <option value="K-GAAP">일반기업회계기준 (K-GAAP)</option>
+                        <option value="SME-GAAP">중소기업회계기준</option>
+                        <option value="NPO-GAAP">비영리조직회계기준</option>
+                        <option value="SPC-GAAP">특수분야회계기준</option>
+                        <option value="K-GAAS">한국회계감사기준</option>
+                    </select>
+                </div>
+                <div class="faq-input-bottom" style="gap: 8px;">
+                    <textarea id="ai-cpa-question-input" rows="1" placeholder="회계/감사 기준을 질문하세요... (예: 금융상품의 회계상 분류 방법은?)" style="flex: 1; min-height: 40px; max-height: 100px; resize: none; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; outline: none;"></textarea>
+                    <button type="button" id="btn-ai-cpa-submit" class="btn-submit" onclick="submitAICpaQuestion()" style="width: auto; padding: 0 16px; height: 40px; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+                        <span>질문</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

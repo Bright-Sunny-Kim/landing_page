@@ -739,6 +739,31 @@ textarea:focus {
     padding-top: 24px;
 }
 
+.bubble-content {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 14px 18px;
+    border-radius: 18px;
+    border-top-left-radius: 4px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    word-break: break-all;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    min-width: 0;
+}
+
+.user-bubble .bubble-content {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.3);
+    border-radius: 18px;
+    border-top-right-radius: 4px;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+}
+
 .btn-logout {
     display: inline-flex;
     align-items: center;
@@ -4162,6 +4187,232 @@ button:active,
         width: 100% !important;
         justify-content: center !important;
         padding: 10px 16px !important;
+    }
+}
+
+/* ==========================================================================
+   AI 회계기준 어시스턴트 전역 플로팅 팝업 위젯 & 모바일 반응형 최적화
+   ========================================================================== */
+
+/* 1. 우측 하단 플로팅 액션 버튼 (FAB) */
+.ai-cpa-fab-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 99999;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 22px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4), 0 0 15px rgba(99, 102, 241, 0.2);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
+}
+
+.ai-cpa-fab-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 15px 30px rgba(99, 102, 241, 0.6), 0 0 20px rgba(99, 102, 241, 0.4);
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+}
+
+.ai-cpa-fab-icon {
+    font-size: 1.3rem;
+    display: inline-block;
+    animation: fab-bounce 2s infinite ease-in-out;
+}
+
+@keyframes fab-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+/* 2. 전역 팝업 모달 배경 딤 오버레이 */
+.ai-cpa-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 99998;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.ai-cpa-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 3. 플로팅 챗봇 카드 컨테이너 */
+.ai-cpa-widget-card {
+    position: fixed;
+    bottom: 92px;
+    right: 28px;
+    width: 460px;
+    max-width: calc(100vw - 36px);
+    height: 650px;
+    max-height: calc(100vh - 120px);
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.2);
+    backdrop-filter: blur(24px);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px) scale(0.95);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ai-cpa-widget-card.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+/* 4. 위젯 헤더 */
+.ai-cpa-widget-header {
+    padding: 16px 20px;
+    background: rgba(30, 41, 59, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ai-cpa-header-title-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ai-cpa-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    font-size: 0.75rem;
+    color: #a5b4fc;
+}
+
+.ai-cpa-header-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.ai-cpa-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ai-cpa-btn-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.ai-cpa-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+/* 5. 위젯 내부 채팅 영역 */
+.ai-cpa-widget-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ai-cpa-widget-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ai-cpa-widget-input-area {
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.95);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 6. 모바일 및 스마트폰 뷰포트 반응형 최적화 */
+@media (max-width: 768px) {
+    .ai-cpa-fab-btn {
+        bottom: 18px;
+        right: 18px;
+        padding: 10px 16px;
+        font-size: 0.85rem;
+    }
+    
+    .ai-cpa-widget-card {
+        bottom: 0 !important;
+        right: 0 !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100% !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+    
+    .ai-cpa-widget-messages {
+        padding: 12px !important;
+        gap: 12px !important;
+    }
+    
+    .faq-chat-container {
+        height: 480px !important;
+    }
+
+    .chat-bubble, .chat-bubble-row {
+        max-width: 95% !important;
+        width: auto !important;
+        min-width: 0 !important;
+        flex-shrink: 0 !important;
+    }
+
+    .bubble-content, .chat-bubble-content {
+        word-break: keep-all !important;
+        overflow-wrap: break-word !important;
+        white-space: pre-wrap !important;
+        font-size: 0.88rem !important;
+        line-height: 1.55 !important;
+        padding: 10px 14px !important;
+        min-width: 0 !important;
     }
 }
 
