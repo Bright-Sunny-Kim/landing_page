@@ -5,7 +5,7 @@ import datetime
 import requests
 import pandas as pd
 from werkzeug.utils import secure_filename
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, send_file
 from core.extensions import (
     supabase, s3_client, minio_endpoint, MASTER_EMAIL,
     NOTION_API_BASE_URL, NOTION_API_VERSION, NOTION_TODO_DATABASE_ID, logger
@@ -894,11 +894,11 @@ def master_storage_status():
     return jsonify(storage_manager.get_storage_status()), 200
 
 
-def save_financial_analysis_to_local_archive(company_name, fiscal_year, payload):
+def save_financial_analysis_to_local_archive(company_name, fiscal_year, payload, raw_files=None):
     """
-    하이브리드 스토리지 어댑터를 통해 사내 로컬 보관함 및 사내 Ubuntu 서버에 동시 저장합니다.
+    하이브리드 스토리지 어댑터를 통해 사내 로컬 보관함 및 사내 Ubuntu 서버에 원본 파일과 함께 시점별 동시 저장합니다.
     """
-    return storage_manager.save_analysis(company_name, fiscal_year, payload)
+    return storage_manager.save_analysis(company_name, fiscal_year, payload, raw_files=raw_files)
 
 
 @master_bp.route('/master/api/datasets/local-list/<string:company_name>', methods=['GET'])
@@ -982,9 +982,9 @@ def master_analyze_direct():
             supabase_client=supabase
         )
         
-        # [Phase 3] 로컬 작업완료_보관함에 자동 영속화 저장 (보관 실패 시에도 분석 결과는 정상 반환)
+        # [Phase 3 & Step 4] 로컬 & Ubuntu 서버 시점별 영구 누적 보관 (원본 파일 포함)
         try:
-            save_res = save_financial_analysis_to_local_archive(company_name, fiscal_year, payload)
+            save_res = save_financial_analysis_to_local_archive(company_name, fiscal_year, payload, raw_files=files_data_list)
             payload["local_archive_info"] = save_res
         except Exception as se:
             logger.warning("[MASTER_ANALYTICS:ARCHIVE_WARNING] 로컬 보관 저장 중 경고: %s", se)
@@ -1094,9 +1094,9 @@ def master_analyze_company(company_name):
             supabase_client=supabase
         )
         
-        # [Phase 3] 로컬 작업완료_보관함에 자동 영속화 저장 (보관 실패 시에도 분석 결과는 정상 반환)
+        # [Phase 3 & Step 4] 로컬 & Ubuntu 서버 시점별 영구 누적 보관 (원본 파일 포함)
         try:
-            save_res = save_financial_analysis_to_local_archive(company_name, fiscal_year, payload)
+            save_res = save_financial_analysis_to_local_archive(company_name, fiscal_year, payload, raw_files=files_data_list)
             payload["local_archive_info"] = save_res
         except Exception as se:
             logger.warning("[MASTER_ANALYTICS:ARCHIVE_WARNING] 고객사 로컬 보관 저장 중 경고: %s", se)
@@ -1227,6 +1227,89 @@ def master_analysis_history(company_name):
         'count': len(history_list),
         'history': history_list
     }), 200
+
+
+@master_bp.route('/master/api/upload-history', methods=['GET'])
+def master_get_upload_history():
+    """
+    실시간 회계 데이터 업로드 및 시점별 아카이브 타임라인 목록을 조회합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    company_name = request.args.get('company_name', '').strip() or None
+    logger.info("[MASTER_ANALYTICS:HISTORY] 실시간 업로드 이력 조회 요청: company=%s", company_name or "ALL")
+
+    try:
+        history = storage_manager.list_upload_history(company_name=company_name)
+        logger.info("[MASTER_ANALYTICS:HISTORY] 업로드 이력 조회 성공 (건수: %d)", len(history))
+        return jsonify({
+            'success': True,
+            'count': len(history),
+            'history': history
+        }), 200
+    except Exception as e:
+        logger.error("[MASTER_ANALYTICS:ERROR] 업로드 이력 조회 오류: %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@master_bp.route('/master/api/upload-history/restore', methods=['GET'])
+def master_restore_upload_history():
+    """
+    특정 시점의 아카이브 데이터셋을 재파싱 없이 0.01초 만에 즉시 복원합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    company_name = request.args.get('company_name', '').strip()
+    session_id = request.args.get('session_id', '').strip()
+
+    if not company_name or not session_id:
+        return jsonify({'error': 'company_name 및 session_id 파라미터가 필요합니다.'}), 400
+
+    logger.info("[MASTER_ANALYTICS:RESTORE] 0.01초 즉시 복원 요청: company=%s, session_id=%s", company_name, session_id)
+
+    try:
+        payload = storage_manager.load_dataset(company_name, session_id)
+        logger.info("[MASTER_ANALYTICS:RESTORE] 0.01초 즉시 복원 성공: %s / %s", company_name, session_id)
+        return jsonify(payload), 200
+    except FileNotFoundError as fe:
+        return jsonify({'error': str(fe)}), 404
+    except Exception as e:
+        logger.error("[MASTER_ANALYTICS:ERROR] 즉시 복원 처리 실패: %s", e, exc_info=True)
+        return jsonify({'error': f'복원 실패: {str(e)}'}), 500
+
+
+@master_bp.route('/master/api/upload-history/download-raw', methods=['GET'])
+def master_download_raw_files():
+    """
+    특정 시점에 업로드되었던 원본 엑셀/CSV 파일들을 ZIP 파일로 묶어 다운로드합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    company_name = request.args.get('company_name', '').strip()
+    session_id = request.args.get('session_id', '').strip()
+
+    if not company_name or not session_id:
+        return jsonify({'error': 'company_name 및 session_id 파라미터가 필요합니다.'}), 400
+
+    logger.info("[MASTER_ANALYTICS:DOWNLOAD] 원본 엑셀 ZIP 다운로드 요청: company=%s, session_id=%s", company_name, session_id)
+
+    try:
+        zip_buf = storage_manager.get_archive_raw_files_zip(company_name, session_id)
+        download_name = f"{company_name}_{session_id}_raw_files.zip"
+        return send_file(
+            zip_buf,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=download_name
+        )
+    except FileNotFoundError as fe:
+        return jsonify({'error': str(fe)}), 404
+    except Exception as e:
+        logger.error("[MASTER_ANALYTICS:ERROR] 원본 파일 ZIP 다운로드 오류: %s", e, exc_info=True)
+        return jsonify({'error': f'다운로드 실패: {str(e)}'}), 500
 
 
 # ========================================================

@@ -1090,12 +1090,13 @@
                             <table class="master-table health-matrix-table" style="width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
                                 <thead>
                                     <tr style="background: rgba(30, 41, 59, 0.95); border-bottom: 1px solid rgba(255,255,255,0.12);">
-                                        <th style="padding: 12px 10px; width: 14%; text-align: center; color: #cbd5e1; font-weight: 700;">구분 (결산기)</th>
-                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">🏢 재무상태표 (BS)</th>
-                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">📈 손익계산서 (IS)</th>
-                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">⚖️ 시산표 (TB)</th>
-                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">📝 분개장 (Journal)</th>
-                                        <th style="padding: 12px 10px; width: 17.2%; text-align: center; color: #cbd5e1; font-weight: 700;">🤝 거래처원장 (Ledger)</th>
+                                        <th style="padding: 12px 10px; width: 13%; text-align: center; color: #cbd5e1; font-weight: 700;">구분 (결산기)</th>
+                                        <th style="padding: 12px 8px; width: 14.5%; text-align: center; color: #cbd5e1; font-weight: 700;">🏢 재무상태표 (BS)</th>
+                                        <th style="padding: 12px 8px; width: 14.5%; text-align: center; color: #cbd5e1; font-weight: 700;">📈 손익계산서 (IS)</th>
+                                        <th style="padding: 12px 8px; width: 14.5%; text-align: center; color: #cbd5e1; font-weight: 700;">⚖️ 시산표 (TB)</th>
+                                        <th style="padding: 12px 8px; width: 14.5%; text-align: center; color: #cbd5e1; font-weight: 700;">📝 분개장 (Journal)</th>
+                                        <th style="padding: 12px 8px; width: 14.5%; text-align: center; color: #cbd5e1; font-weight: 700;">🤝 거래처원장 (Ledger)</th>
+                                        <th style="padding: 12px 8px; width: 14.5%; text-align: center; color: #cbd5e1; font-weight: 700;">📒 계정별원장 (AccLedger)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1105,20 +1106,23 @@
                                             <span id="health-cur-year-label" style="display: block; font-size: 0.92rem; color: #818cf8;">당기 (2025)</span>
                                             <span style="font-size: 0.7rem; color: #94a3b8;">주요 감사 대상</span>
                                         </td>
-                                        <td id="cell-cur-bs" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                        <td id="cell-cur-bs" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-cur-bs-content">-</div>
                                         </td>
-                                        <td id="cell-cur-is" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                        <td id="cell-cur-is" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-cur-is-content">-</div>
                                         </td>
-                                        <td id="cell-cur-tb" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                        <td id="cell-cur-tb" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-cur-tb-content">-</div>
                                         </td>
-                                        <td id="cell-cur-journal" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                        <td id="cell-cur-journal" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-cur-journal-content">-</div>
                                         </td>
-                                        <td id="cell-cur-subledger" style="padding: 8px 10px; text-align: center;">
+                                        <td id="cell-cur-subledger" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-cur-subledger-content">-</div>
+                                        </td>
+                                        <td id="cell-cur-accountledger" style="padding: 8px 6px; text-align: center;">
+                                            <div id="cell-cur-accountledger-content">-</div>
                                         </td>
                                     </tr>
                                     <!-- 2행: 전기 (2024년) -->
@@ -1127,22 +1131,58 @@
                                             <span id="health-prior-year-label" style="display: block; font-size: 0.92rem; color: #cbd5e1;">전기 (2024)</span>
                                             <span style="font-size: 0.7rem; color: #64748b;">비교표시/증감분석</span>
                                         </td>
-                                        <td id="cell-prior-bs" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                        <td id="cell-prior-bs" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-prior-bs-content">-</div>
                                         </td>
-                                        <td id="cell-prior-is" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                        <td id="cell-prior-is" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-prior-is-content">-</div>
                                         </td>
-                                        <td id="cell-prior-tb" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                        <td id="cell-prior-tb" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-prior-tb-content">-</div>
                                         </td>
-                                        <td id="cell-prior-journal" style="padding: 8px 10px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
+                                        <td id="cell-prior-journal" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-prior-journal-content">-</div>
                                         </td>
-                                        <td id="cell-prior-subledger" style="padding: 8px 10px; text-align: center;">
+                                        <td id="cell-prior-subledger" style="padding: 8px 6px; text-align: center; border-right: 1px solid rgba(255,255,255,0.04);">
                                             <div id="cell-prior-subledger-content">-</div>
                                         </td>
+                                        <td id="cell-prior-accountledger" style="padding: 8px 6px; text-align: center;">
+                                            <div id="cell-prior-accountledger-content">-</div>
+                                        </td>
                                     </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 1-2. 실시간 회계 데이터 아카이브 & 업로드 이력 관리 센터 (Real-time Upload History & Archive Center) -->
+                    <div id="analytics-realtime-archive-panel" class="glass-card-nested" style="background: rgba(15,23,42,0.7); border: 1px solid rgba(99,102,241,0.25); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.15rem;">📂</span>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #a5b4fc;">실시간 회계 데이터 아카이브 & 업로드 이력 관리 센터</h3>
+                                <span style="font-size: 0.78rem; color: #94a3b8;">(시점별 영구 누적 & 0.01초 즉시 복원)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <button type="button" id="btn-refresh-upload-history" class="btn-secondary" style="padding: 5px 12px; font-size: 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                    <span>🔄 이력 새로고침</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-responsive" style="width: 100%; overflow-x: auto; max-height: 280px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+                            <table class="master-table" style="width: 100%; font-size: 0.82rem; border-collapse: collapse; text-align: left;">
+                                <thead style="background: rgba(30, 41, 59, 0.95); position: sticky; top: 0; z-index: 10;">
+                                    <tr style="color: #cbd5e1;">
+                                        <th style="padding: 10px 12px; width: 18%;">회사명</th>
+                                        <th style="padding: 10px 12px; width: 9%; text-align: center;">결산연도</th>
+                                        <th style="padding: 10px 12px; width: 17%;">업로드 일시</th>
+                                        <th style="padding: 10px 12px; width: 26%;">6대 장부 수집 현황</th>
+                                        <th style="padding: 10px 12px; width: 10%; text-align: center;">무결성</th>
+                                        <th style="padding: 10px 12px; width: 20%; text-align: center;">작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="realtime-upload-history-tbody">
+                                    <tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">업로드 보관 이력을 로드하는 중...</td></tr>
                                 </tbody>
                             </table>
                         </div>

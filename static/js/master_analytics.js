@@ -187,7 +187,8 @@
             income_statement: health.income_statement,
             trial_balance: health.trial_balance,
             journal_entries: health.journal_entries,
-            subledger: health.subledger
+            subledger: health.subledger,
+            account_ledger: health.account_ledger
         };
 
         const priorData = health.prior || {
@@ -195,7 +196,8 @@
             income_statement: { status: 'missing' },
             trial_balance: { status: 'missing' },
             journal_entries: { status: 'missing' },
-            subledger: { status: 'missing' }
+            subledger: { status: 'missing' },
+            account_ledger: { status: 'missing' }
         };
 
         // 셀 렌더러 함수
@@ -241,6 +243,7 @@
         renderCell('cell-cur-tb-content', 'trial_balance', curData.trial_balance);
         renderCell('cell-cur-journal-content', 'journal_entries', curData.journal_entries);
         renderCell('cell-cur-subledger-content', 'subledger', curData.subledger);
+        renderCell('cell-cur-accountledger-content', 'account_ledger', curData.account_ledger);
 
         // 2행: 전기 (2024년)
         renderCell('cell-prior-bs-content', 'balance_sheet', priorData.balance_sheet);
@@ -248,6 +251,7 @@
         renderCell('cell-prior-tb-content', 'trial_balance', priorData.trial_balance);
         renderCell('cell-prior-journal-content', 'journal_entries', priorData.journal_entries);
         renderCell('cell-prior-subledger-content', 'subledger', priorData.subledger);
+        renderCell('cell-prior-accountledger-content', 'account_ledger', priorData.account_ledger);
 
         // 동적으로 생성된 미리보기 버튼에 클릭 이벤트 재바인딩
         healthContainer.querySelectorAll('.btn-inspect-data').forEach(btn => {
@@ -713,7 +717,8 @@
             'income_statement': '손익계산서 (Income Statement)',
             'trial_balance': '합계잔액시산표 (Trial Balance)',
             'journal_entries': '분개장 전표 (Journal Entries - 샘플)',
-            'subledger': '거래처원장 (Subledger - 샘플)'
+            'subledger': '거래처원장 (Subledger - 샘플)',
+            'account_ledger': '계정별원장 (General Ledger - 7대 필드)'
         };
 
         const keyMap = {
@@ -721,10 +726,11 @@
             'income_statement': 'income_statement',
             'trial_balance': 'trial_balance',
             'journal_entries': 'journal_entries_sample',
-            'subledger': 'subledger_sample'
+            'subledger': 'subledger_sample',
+            'account_ledger': 'account_ledger_sample'
         };
 
-        const records = rawMap[keyMap[dataType]] || [];
+        const records = rawMap[keyMap[dataType]] || rawMap[dataType] || [];
         currentInspectorData = records;
         currentInspectorTitle = titleMap[dataType] || dataType;
 
@@ -809,7 +815,116 @@
         }
     }
 
-    // 9. 초기화 바인딩 함수
+    // 9. 실시간 회계 데이터 아카이브 & 업로드 이력 관리 센터 로직
+    async function loadRealtimeUploadHistory(companyName = '') {
+        const tbody = document.getElementById('realtime-upload-history-tbody');
+        if (!tbody) return;
+
+        let url = '/master/api/upload-history';
+        if (companyName) {
+            url += `?company_name=${encodeURIComponent(companyName)}`;
+        }
+
+        try {
+            const data = await safeFetchJson(url, {}, '업로드 이력 조회에 실패했습니다.');
+            const historyList = data.history || [];
+
+            if (historyList.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">저장된 업로드 이력이 없습니다.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            historyList.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.style.cssText = 'border-bottom: 1px solid rgba(255,255,255,0.06); transition: background 0.2s;';
+                tr.onmouseenter = () => tr.style.background = 'rgba(99,102,241,0.08)';
+                tr.onmouseleave = () => tr.style.background = 'transparent';
+
+                const cName = item.company_name || '미지정';
+                const fy = item.fiscal_year || 2025;
+                const savedAt = item.saved_at || '-';
+                const score = item.integrity_score !== undefined ? item.integrity_score : 100;
+                const sessId = item.session_id || '';
+                const ledgers = item.ledgers_collected || {};
+
+                // 6대 장부 뱃지 구성
+                const ledgerBadges = [
+                    { key: 'balance_sheet', label: 'BS', active: ledgers.balance_sheet },
+                    { key: 'income_statement', label: 'IS', active: ledgers.income_statement },
+                    { key: 'trial_balance', label: 'TB', active: ledgers.trial_balance },
+                    { key: 'journal_entries', label: '분개', active: ledgers.journal_entries },
+                    { key: 'subledger', label: '거래처', active: ledgers.subledger },
+                    { key: 'account_ledger', label: '계정원장', active: ledgers.account_ledger }
+                ].map(l => {
+                    const bg = l.active ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)';
+                    const color = l.active ? '#34d399' : '#64748b';
+                    const border = l.active ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.06)';
+                    return `<span style="display: inline-block; padding: 2px 6px; font-size: 0.7rem; font-weight: 600; border-radius: 4px; background: ${bg}; color: ${color}; border: 1px solid ${border};">${l.label}</span>`;
+                }).join(' ');
+
+                const scoreColor = score >= 90 ? '#34d399' : (score >= 70 ? '#fbbf24' : '#f87171');
+
+                tr.innerHTML = `
+                    <td style="padding: 10px 12px; font-weight: 600; color: #f8fafc;">${cName}</td>
+                    <td style="padding: 10px 12px; text-align: center; color: #a5b4fc;">${fy}년</td>
+                    <td style="padding: 10px 12px; font-size: 0.78rem; color: #94a3b8;">${savedAt}</td>
+                    <td style="padding: 10px 12px;"><div style="display: flex; gap: 4px; flex-wrap: wrap;">${ledgerBadges}</div></td>
+                    <td style="padding: 10px 12px; text-align: center; font-weight: 700; color: ${scoreColor};">${score}점</td>
+                    <td style="padding: 10px 12px; text-align: center;">
+                        <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                            <button type="button" class="btn-restore-history" data-company="${cName}" data-session="${sessId}" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); border-radius: 4px; color: #a5b4fc; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                <span>⚡ 0.01초 복원</span>
+                            </button>
+                            <button type="button" class="btn-download-history-zip" data-company="${cName}" data-session="${sessId}" style="padding: 4px 8px; font-size: 0.75rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; color: #cbd5e1; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="업로드된 원본 엑셀 ZIP 다운로드">
+                                <span>📥 ZIP</span>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // 복원 및 다운로드 이벤트 바인딩
+            tbody.querySelectorAll('.btn-restore-history').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const c = e.currentTarget.getAttribute('data-company');
+                    const s = e.currentTarget.getAttribute('data-session');
+                    if (!c || !s) return;
+                    
+                    const loading = document.getElementById('analytics-loading');
+                    const wrapper = document.getElementById('analytics-results-wrapper');
+                    if (loading) loading.style.display = 'block';
+                    if (wrapper) wrapper.style.display = 'none';
+
+                    try {
+                        const payload = await safeFetchJson(`/master/api/upload-history/restore?company_name=${encodeURIComponent(c)}&session_id=${encodeURIComponent(s)}`);
+                        renderAnalyticsPayload(payload);
+                        window.scrollTo({ top: document.getElementById('analytics-results-wrapper')?.offsetTop || 0, behavior: 'smooth' });
+                    } catch (err) {
+                        alert(`복원 실패: ${err.message}`);
+                    } finally {
+                        if (loading) loading.style.display = 'none';
+                    }
+                });
+            });
+
+            tbody.querySelectorAll('.btn-download-history-zip').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const c = e.currentTarget.getAttribute('data-company');
+                    const s = e.currentTarget.getAttribute('data-session');
+                    if (!c || !s) return;
+                    window.location.href = `/master/api/upload-history/download-raw?company_name=${encodeURIComponent(c)}&session_id=${encodeURIComponent(s)}`;
+                });
+            });
+
+        } catch (err) {
+            console.error('[MASTER_ANALYTICS:HISTORY_LOAD_ERROR]', err);
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #f87171;">이력 로드 실패: ${err.message}</td></tr>`;
+        }
+    }
+
+    // 10. 초기화 바인딩 함수
     window.initAnalyticsHub = function () {
         console.log('[MASTER_ANALYTICS] Analytics Hub 초기화 완료');
 
@@ -865,11 +980,23 @@
         document.getElementById('tab-mode-direct')?.addEventListener('click', () => window.switchAnalyticsMode('direct'));
 
         // 실행 버튼 바인딩
-        document.getElementById('btn-run-company-analysis')?.addEventListener('click', handleCompanyAnalysis);
-        document.getElementById('btn-run-direct-analysis')?.addEventListener('click', handleDirectAnalysis);
-        document.getElementById('btn-save-current-analysis')?.addEventListener('click', handleSaveAnalysis);
+        document.getElementById('btn-run-company-analysis')?.addEventListener('click', async () => {
+            await handleCompanyAnalysis();
+            loadRealtimeUploadHistory();
+        });
+        document.getElementById('btn-run-direct-analysis')?.addEventListener('click', async () => {
+            await handleDirectAnalysis();
+            loadRealtimeUploadHistory();
+        });
+        document.getElementById('btn-save-current-analysis')?.addEventListener('click', async () => {
+            await handleSaveAnalysis();
+            loadRealtimeUploadHistory();
+        });
         document.getElementById('btn-copy-report-md')?.addEventListener('click', handleCopyMarkdown);
         document.getElementById('btn-download-report-md')?.addEventListener('click', handleDownloadMarkdown);
+
+        // 실시간 이력 새로고침 버튼
+        document.getElementById('btn-refresh-upload-history')?.addEventListener('click', () => loadRealtimeUploadHistory());
 
         // [Phase 3] 로컬 보관함 불러오기 버튼 및 기업 선택 시 이력 조회 바인딩
         document.getElementById('btn-load-local-archive')?.addEventListener('click', handleLoadLocalArchive);
@@ -877,6 +1004,7 @@
         if (compSelect) {
             compSelect.addEventListener('change', () => {
                 fetchLocalArchiveHistory(compSelect.value);
+                loadRealtimeUploadHistory(compSelect.value);
             });
             if (compSelect.value) {
                 fetchLocalArchiveHistory(compSelect.value);
@@ -906,6 +1034,9 @@
                 alert(`✓ ${currentInspectorTitle} 원본 JSON이 클립보드에 복사되었습니다.`);
             });
         });
+
+        // 실시간 업로드 이력 초기 로드
+        loadRealtimeUploadHistory();
     };
 
     // DOM 로드 완료 시 바인딩
