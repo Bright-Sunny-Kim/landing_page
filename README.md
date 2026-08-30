@@ -125,9 +125,10 @@ UBUNTU_PG_PASSWORD=your_password
   - 카카오톡 스타일 1:1 실시간 자문 상담실 모바일 UI 및 터치 최적화
   - PWA (`manifest.json`, `sw.js`, 192x192/512x512 아이콘) 홈 화면 추가 지원
 - [x] **Phase 5. 전역 플로팅 AI 회계사 팝업 & 3계층 무중단 하이브리드 RAG 엔진 고도화** (완료)
-  - **전역 플로팅 팝업 위젯 (`templates/components/ai_cpa_widget.html`)**: 파트너사 포털 및 마스터 관리자 등 로그인된 모든 창에서 FAB 버튼 및 사이드바 연동을 통한 독립 모달 팝업 가동
+  - **전역 플로팅 팝업 위젯 (`templates/components/ai_cpa_widget.html`)**: 파트너사 포털(`company.html`), 마스터 관리자 7개 전 탭(`master.html`), 파트너사 상세 관리(`master_detail.html`) 등 로그인된 모든 창에서 FAB 버튼 및 사이드바 연동을 통한 독립 모달 팝업 상시 가동
   - **3단계 무중단 RAG Fallback 파이프라인 (`blueprints/api.py`)**: 사내 Ubuntu 서버(ChromaDB/Dify) 접속 불가 시에도 내부 로컬 K-GAAP 기준서 코퍼스(`core/audit_engine.py`) 및 OpenAI 모델로 자동 전환되어 '서버 에러' 없는 100% 정상 스트리밍 답변 보장
   - **모바일/앱 뷰포트 텍스트 찌그러짐 원천 차단 (`static/css/style.css`)**: 한글 단어 단위 줄바꿈(`word-break: keep-all; min-width: 0;`) 및 100% 풀스크린 반응형 오버레이 적용
+  - **레이아웃 무결성 및 탭 독립화 (`static/js/main.js`)**: 마스터 관리자 HTML DOM 중첩 버그 수정 및 사이드바 클릭 인터셉트를 통해 모든 탭 전환 시 위젯 상시 표시 보장
 - [x] **Phase 6. 6대 장부(계정별원장 7대 필드) 확장 & 실시간 업로드 이력 관리 센터 & 시점별 영구 누적 스토리지 구축** (완료)
   - **계정별원장(General Ledger) 7대 필드 전수 추출 파서**: 계정과목, 거래일자, 적요, 거래처코드, 거래처명, 차변, 대변, 잔액
   - **사내 Ubuntu & 로컬 시점별(`YYYYMMDD_HHMMSS`) 영구 보관함**: 원본 엑셀(`raw_files/`), `data.json`, `report.md`, `metadata.json`

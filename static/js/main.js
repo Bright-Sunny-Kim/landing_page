@@ -513,6 +513,15 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarMenuItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 const menu = item.getAttribute('data-menu');
+                
+                // AI 회계사 문의 클릭 시 페이지 탭 전환 없이 전역 팝업 모달만 활성화
+                if (menu === 'ai-cpa-inquiry' || menu === 'partner-inquiry') {
+                    e.preventDefault();
+                    console.log('[ACTION] Sidebar AI CPA Menu clicked -> Triggering Global Widget');
+                    window.toggleAICpaWidget?.(true);
+                    return;
+                }
+
                 const menuLabel = item.querySelector('span')?.textContent.trim() || 'Master Portal';
                 const prevMenu = currentActiveMenu;
 
