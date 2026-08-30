@@ -6,9 +6,14 @@
     <meta name="description" content="회계법인 혜안 마스터 관리자 포털입니다.">
     <title>Hyean Master Portal</title>
     <!-- PWA Settings -->
+    <meta name="theme-color" content="#09090b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="혜안 포털">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#6366f1">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-512x512.svg') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/icon-192x192.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.svg') }}">
     <!-- Google Fonts: Outfit & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,68 +45,49 @@
             </div>
             
             <ul class="master-menu-list">
-                <li class="master-menu-item active" data-menu="home">
-                    <a href="#home">
+                <!-- 3대 핵심 메인 탭 -->
+                <li class="master-menu-item active" data-menu="home" data-tab="tab-dashboard">
+                    <a href="#tab-dashboard">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
                         <span>대시보드 홈</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="partners">
-                    <a href="#partners">
+                <li class="master-menu-item" data-menu="partners" data-tab="tab-partners">
+                    <a href="#tab-partners">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 8 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                         <span>파트너사 관리</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="requests">
-                    <a href="#requests">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-                        <span>업무 요청 관리</span>
+                <li class="master-menu-item" data-menu="audit" data-tab="tab-audit">
+                    <a href="#tab-audit">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/></svg>
+                        <span>회계감사</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="finance-inquiry">
-                    <a href="#finance-inquiry">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-8.5-9L2 6v2h19V6l-9.5-5z"/></svg>
-                        <span>금융기관 조회 관리</span>
-                    </a>
-                </li>
-                <li class="master-menu-item" data-menu="repository">
-                    <a href="#repository">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z"/></svg>
-                        <span>통합 문서 보관함</span>
-                    </a>
-                </li>
-                <li class="master-menu-item" data-menu="announcements">
-                    <a href="#announcements">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-3 12H7v-2h10v2zm0-4H7V8h10v2z"/></svg>
-                        <span>공지 및 알림 관리</span>
-                    </a>
-                </li>
-                <li class="master-menu-item" data-menu="calendar">
-                    <a href="#calendar">
+
+                <!-- 부가 업무 및 유틸리티 -->
+                <li class="menu-divider" style="height: 1px; background: rgba(255,255,255,0.08); margin: 0.8rem 1rem;"></li>
+                
+                <li class="master-menu-item" data-menu="calendar" data-tab="tab-calendar">
+                    <a href="#tab-calendar">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
                         <span>세무 일정 캘린더</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="chat">
-                    <a href="#chat">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
-                        <span>실시간 자문 상담</span>
-                    </a>
-                </li>
-                <li class="master-menu-item" data-menu="billing">
-                    <a href="#billing">
+                <li class="master-menu-item" data-menu="billing" data-tab="tab-billing">
+                    <a href="#tab-billing">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
                         <span>수수료 및 청구 관리</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="analytics-hub">
-                    <a href="#analytics-hub">
+                <li class="master-menu-item" data-menu="analytics-hub" data-tab="tab-analytics-hub">
+                    <a href="#tab-analytics-hub">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                         <span>기업 정밀 분석 (Hub)</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="analytics">
-                    <a href="#analytics">
+                <li class="master-menu-item" data-menu="analytics" data-tab="tab-analytics">
+                    <a href="#tab-analytics">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                         <span>시스템 통계 & AI 파이프라인</span>
                     </a>
@@ -120,15 +106,15 @@
 
         <!-- 우측 메인 콘텐츠 영역 -->
         <main class="master-main-content" id="master-main-content">
-            <!-- 대시보드 홈 / 파트너사 관리 뷰 -->
+            <!-- 1. 🏠 [대시보드 홈 뷰] -->
             <div class="glass-card dashboard-card master-card" id="home-dashboard-view">
                 <header class="dashboard-header">
                     <div class="status-badge master-badge">
                         <span class="pulse-dot"></span>
-                        <span>마스터 관리자 권한</span>
+                        <span>마스터 관리자 통합 관제</span>
                     </div>
                     <h1 id="dashboard-heading">혜안 <span class="company-highlight">Master</span> 포털</h1>
-                    <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 통합 관리 대시보드입니다.</p>
+                    <p class="welcome-message">관리자 계정으로 보안 연결되었습니다. 실시간 전사 현황 요약 대시보드입니다.</p>
                 </header>
                 
                 <!-- 감사절차 및 AI 파이프라인 진행상황 (진도표 요약) -->
@@ -137,7 +123,7 @@
                         <h3 style="font-size: 1.1rem; font-weight: 600; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
                             <span>📍 감사절차 & AI 파이프라인 진행상황</span>
                         </h3>
-                        <a href="#analytics" onclick="document.querySelector('.master-menu-item[data-menu=\'analytics\']')?.click();" style="font-size: 0.85rem; color: #818cf8; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                        <a href="#tab-analytics" onclick="document.querySelector('.master-menu-item[data-menu=\'analytics\']')?.click();" style="font-size: 0.85rem; color: #818cf8; text-decoration: none; display: flex; align-items: center; gap: 4px;">
                             파이프라인 콘솔 관리 ›
                         </a>
                     </div>
@@ -182,10 +168,11 @@
                     </div>
                 </div>
                 
+                <!-- 최근 등록 파트너사 요약 위젯 -->
                 <section class="partners-section">
                     <div class="section-header-flex">
-                        <h2 class="section-title">가입된 파트너사 목록 (실시간 DB 조회)</h2>
-                        <span class="partner-count">총 <strong>{{ partners|length }}</strong>개 기업</span>
+                        <h2 class="section-title">최근 등록 파트너사 현황</h2>
+                        <a href="#tab-partners" onclick="document.querySelector('.master-menu-item[data-menu=\'partners\']')?.click();" style="font-size: 0.85rem; color: #818cf8; text-decoration: none;">파트너사 전체 관리 바로가기 ›</a>
                     </div>
                     <div class="table-container">
                         <table class="partners-table">
@@ -200,7 +187,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for partner in partners %}
+                                {% for partner in partners[:5] %}
                                 <tr>
                                     <td class="col-company">
                                         <a href="{{ url_for('master.master_detail', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
@@ -225,6 +212,255 @@
                         </table>
                     </div>
                 </section>
+            </div>
+
+            <!-- 2. 👥 [파트너사 관리 통합 뷰] -->
+            <div class="glass-card dashboard-card master-card" id="partners-dashboard-view" style="display: none;">
+                <header class="dashboard-header">
+                    <div class="status-badge master-badge" style="background: rgba(99,102,241,0.1); color: #818cf8;">
+                        <span class="pulse-dot"></span>
+                        <span>파트너사 통합 관리 센터</span>
+                    </div>
+                    <h2>파트너사 포털 통합 관리</h2>
+                    <p class="welcome-message">파트너사 목록, 접수된 업무 요청, 공지사항 발송 및 수발신 문서를 한 화면에서 유기적으로 관리합니다.</p>
+                </header>
+
+                <!-- 4대 서브탭 네비게이션 바 -->
+                <div class="master-subnav-container" id="partners-subnav">
+                    <button type="button" class="master-subtab-btn active" data-subtab="subtab-partner-list">
+                        <span>👥 파트너사 목록</span>
+                        <span class="badge-count">{{ partners|length }}</span>
+                    </button>
+                    <button type="button" class="master-subtab-btn" data-subtab="subtab-partner-requests">
+                        <span>📥 업무 요청 관리</span>
+                        <span class="badge-count" id="partner-requests-badge">{{ stats.pending_tasks }}</span>
+                    </button>
+                    <button type="button" class="master-subtab-btn" data-subtab="subtab-partner-notices">
+                        <span>📢 공지 및 알림 발송</span>
+                    </button>
+                    <button type="button" class="master-subtab-btn" data-subtab="subtab-partner-docs">
+                        <span>📂 파트너사 문서함</span>
+                        <span class="badge-count">{{ stats.total_files }}</span>
+                    </button>
+                </div>
+
+                <!-- [서브탭 1] 파트너사 목록 및 등록/수정 -->
+                <div class="master-subtab-pane active" id="subtab-partner-list">
+                    <section class="partners-section">
+                        <div class="section-header-flex">
+                            <h3 class="section-title" style="font-size: 1.1rem; color: #fff;">전체 파트너사 목록 (실시간 DB 조회)</h3>
+                            <span class="partner-count">총 <strong>{{ partners|length }}</strong>개 기업</span>
+                        </div>
+                        <div class="table-container">
+                            <table class="partners-table">
+                                <thead>
+                                    <tr>
+                                        <th>기업명</th>
+                                        <th>담당자</th>
+                                        <th>제출현황</th>
+                                        <th>이메일</th>
+                                        <th>가입일시</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for partner in partners %}
+                                    <tr>
+                                        <td class="col-company">
+                                            <a href="{{ url_for('master.master_detail', company_name=partner.company) }}" class="partner-link">{{ partner.company }}</a>
+                                        </td>
+                                        <td>{{ partner.name or partner.username or '-' }}</td>
+                                        <td>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                                                    <div style="width: {{ partner.upload_rate|default(0) }}%; height: 100%; background: linear-gradient(90deg, #6366f1, #10b981);"></div>
+                                                </div>
+                                                <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ partner.upload_rate|default(0) }}%</span>
+                                            </div>
+                                        </td>
+                                        <td>{{ partner.email }}</td>
+                                        <td class="col-date">{{ partner.created_at[:10] if partner.created_at is string else (partner.created_at.strftime('%Y-%m-%d') if partner.created_at else '-') }}</td>
+                                        <td>
+                                            <a href="{{ url_for('master.master_detail', company_name=partner.company) }}" class="btn-logout" style="padding: 4px 8px; font-size: 0.8rem;">상세보기</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- [서브탭 2] 업무 요청 관리 (기존 업무 요청 승인/반려/필터링 통합) -->
+                <div class="master-subtab-pane" id="subtab-partner-requests">
+                    <section class="requests-management-section">
+                        <!-- 필터 & 컨트롤 바 -->
+                        <div class="action-bar" style="display: flex; gap: 12px; margin-bottom: 20px; padding: 14px 18px; background: rgba(0,0,0,0.25); border-radius: 12px; align-items: center; flex-wrap: wrap;">
+                            <div class="requests-filter-group" style="display: flex; gap: 6px; align-items: center;">
+                                <span style="font-size: 0.85rem; color: var(--text-secondary); margin-right: 4px;">상태 필터:</span>
+                                <button type="button" class="btn-filter-req active" onclick="filterMasterRequests('')" style="padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #fff; cursor: pointer;">전체</button>
+                                <button type="button" class="btn-filter-req" onclick="filterMasterRequests('대기중')" style="padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); cursor: pointer;">대기중</button>
+                                <button type="button" class="btn-filter-req" onclick="filterMasterRequests('확인중')" style="padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); cursor: pointer;">확인중</button>
+                                <button type="button" class="btn-filter-req" onclick="filterMasterRequests('승인완료')" style="padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); cursor: pointer;">승인완료</button>
+                                <button type="button" class="btn-filter-req" onclick="filterMasterRequests('반려')" style="padding: 5px 12px; border-radius: 6px; font-size: 0.82rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); cursor: pointer;">반려</button>
+                            </div>
+                            <div style="flex: 1;"></div>
+                            <button type="button" class="btn-logout" onclick="loadMasterRequests()" style="padding: 6px 14px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                                <span>🔄 목록 새로고침</span>
+                            </button>
+                        </div>
+
+                        <!-- 업무 요청 목록 테이블 -->
+                        <div class="table-container">
+                            <table class="partners-table">
+                                <thead>
+                                    <tr>
+                                        <th>신청/제출일</th>
+                                        <th>기업명</th>
+                                        <th>항목 / 서류명</th>
+                                        <th>진행 상태</th>
+                                        <th>첨부 서류</th>
+                                        <th>관리 액션</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="master-requests-tbody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                                            요청 데이터를 불러오는 중입니다...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- [서브탭 3] 공지 및 알림 발송 관리 (기존 공지 작성/발송 이관) -->
+                <div class="master-subtab-pane" id="subtab-partner-notices">
+                    <section class="notices-management-section">
+                        <!-- 1. 새 공지 및 알림 작성 폼 -->
+                        <div class="action-bar" style="display: block; margin-bottom: 24px; padding: 20px; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                            <h3 style="font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                                <span>📢 새 공지 및 알림 발송</span>
+                            </h3>
+                            <form id="master-notice-form" onsubmit="handleSendMasterNotice(event)">
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                                    <div>
+                                        <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">공지 제목</label>
+                                        <input type="text" id="notice-input-title" placeholder="공지 및 알림 제목을 입력하세요" required style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">수신 대상 파트너사</label>
+                                        <select id="notice-input-target" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                                            <option value="all">전체 파트너사 (전체 공지)</option>
+                                            {% for partner in partners %}
+                                            <option value="{{ partner.company }}">{{ partner.company }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">중요도</label>
+                                        <select id="notice-input-importance" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                                            <option value="normal">일반 공지</option>
+                                            <option value="urgent">긴급 알림 (Urgent)</option>
+                                            <option value="popup">팝업 알림 (Popup)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="margin-bottom: 14px;">
+                                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">공지 상세 내용</label>
+                                    <textarea id="notice-input-content" rows="3" placeholder="파트너사에게 전달할 상세 공지사항 내용을 작성하세요..." required style="width: 100%; padding: 10px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem; resize: vertical;"></textarea>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end;">
+                                    <button type="submit" id="btn-submit-notice" class="btn-submit" style="width: auto; padding: 8px 24px; font-size: 0.9rem;">
+                                        <span>📨 공지 즉시 발송</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- 2. 공지 발송 내역 목록 -->
+                        <div class="section-header-flex" style="margin-bottom: 12px;">
+                            <h3 class="section-title" style="font-size: 1.05rem; color: #fff;">발송된 공지 및 알림 내역</h3>
+                            <button type="button" class="btn-logout" onclick="loadMasterNotices()" style="padding: 4px 12px; font-size: 0.8rem;">🔄 새로고침</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="partners-table">
+                                <thead>
+                                    <tr>
+                                        <th>발송일시</th>
+                                        <th>수신 대상</th>
+                                        <th>중요도</th>
+                                        <th>제목</th>
+                                        <th>내용 요약</th>
+                                        <th>관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="master-notices-tbody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                                            공지 내역을 불러오는 중입니다...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- [서브탭 4] 파트너사별 수발신 문서 이력 (문서함 분산 통합) -->
+                <div class="master-subtab-pane" id="subtab-partner-docs">
+                    <section class="partner-docs-section">
+                        <div class="action-bar" style="display: flex; gap: 12px; margin-bottom: 20px; padding: 14px 18px; background: rgba(0,0,0,0.25); border-radius: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                            <div>
+                                <h3 style="font-size: 1.05rem; font-weight: 600; color: #fff; margin: 0;">📂 기업별 전용 문서 보관함</h3>
+                                <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 4px 0 0 0;">전역 독립 탭 대신 기업별 문서 보관함 및 감사 증빙함으로 분산 연계되어 안전하게 관리됩니다.</p>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" id="filter-docs-company" placeholder="기업명 검색..." oninput="filterPartnerDocs(this.value)" style="padding: 6px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.85rem; width: 160px;">
+                                <span style="font-size: 0.85rem; color: #a5b4fc;">총 <strong>{{ stats.total_files }}</strong>개 문서</span>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="partners-table" id="partner-docs-table">
+                                <thead>
+                                    <tr>
+                                        <th>기업명</th>
+                                        <th>담당자</th>
+                                        <th>서류 제출율</th>
+                                        <th>가입일</th>
+                                        <th>문서 보관함 관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for partner in partners %}
+                                    <tr class="partner-doc-row" data-company="{{ partner.company|lower }}">
+                                        <td class="col-company">
+                                            <strong>{{ partner.company }}</strong>
+                                        </td>
+                                        <td>{{ partner.name or partner.username or '-' }}</td>
+                                        <td>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <div style="flex: 1; max-width: 120px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                                                    <div style="width: {{ partner.upload_rate|default(0) }}%; height: 100%; background: linear-gradient(90deg, #6366f1, #10b981);"></div>
+                                                </div>
+                                                <span style="font-size: 0.8rem; color: #34d399; font-weight: 600;">{{ partner.upload_rate|default(0) }}%</span>
+                                            </div>
+                                        </td>
+                                        <td class="col-date">{{ partner.created_at[:10] if partner.created_at is string else (partner.created_at.strftime('%Y-%m-%d') if partner.created_at else '-') }}</td>
+                                        <td>
+                                            <a href="{{ url_for('master.master_detail', company_name=partner.company) }}" class="btn-logout" style="padding: 5px 12px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3); color: #a5b4fc;">
+                                                <span>📁 전용 문서함 열기 ›</span>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
             </div>
 
             <!-- 시스템 통계 및 AI 파이프라인 대시보드 뷰 -->
@@ -496,53 +732,112 @@
                 </div>
             </div>
             
-            <!-- 금융기관 조회 관리 뷰 -->
-            <div class="glass-card dashboard-card master-card" id="finance-inquiry-view" style="display: none;">
+            <!-- 3. 🏛️ [회계감사 통합 관리 뷰] -->
+            <div class="glass-card dashboard-card master-card" id="audit-dashboard-view" style="display: none;">
                 <header class="dashboard-header">
-                    <div class="status-badge master-badge" style="background: rgba(99,102,241,0.1); color: #818cf8;">
+                    <div class="status-badge master-badge" style="background: rgba(99,102,241,0.15); color: #818cf8;">
                         <span class="pulse-dot"></span>
-                        <span>조회 업무 관리</span>
+                        <span>회계감사 & 외부조회 통합 관제</span>
                     </div>
-                    <h2>금융기관 외부조회 신청 현황</h2>
-                    <p class="welcome-message">고객사들이 신청한 금융기관 조회 내역을 확인하고 상태를 일괄 관리할 수 있습니다.</p>
+                    <h2>회계감사 & 금융기관 외부조회 관리</h2>
+                    <p class="welcome-message">금융기관 외부조회서 발송/회신 실시간 추적 및 감사 증빙 서류를 체계적으로 검토·관리합니다.</p>
                 </header>
+
+                <!-- 회계감사 2대 서브탭 네비게이션 바 -->
+                <div class="master-subnav-container" id="audit-subnav">
+                    <button type="button" class="master-subtab-btn active" data-subtab="subtab-audit-finance">
+                        <span>🏛️ 금융기관 조회 관리</span>
+                    </button>
+                    <button type="button" class="master-subtab-btn" data-subtab="subtab-audit-evidence">
+                        <span>📑 감사 증빙 문서 관리</span>
+                    </button>
+                </div>
                 
-                <!-- 일괄 상태 변경 액션 바 -->
-                <div class="action-bar" style="display: flex; gap: 15px; margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; align-items: center;">
-                    <span style="color: var(--text-secondary); font-size: 0.9rem;">선택한 항목 상태 변경:</span>
-                    <select id="bulk-status-select" style="padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); color: var(--text-primary); border: 1px solid var(--card-border); outline: none;">
-                        <option value="">상태 선택...</option>
-                        <option value="fee_pending">수수료입금대기</option>
-                        <option value="fee_paid">입금완료(양식개방)</option>
-                        <option value="mail_sent">발송완료</option>
-                        <option value="received">회신완료</option>
-                        <option value="completed">검토완료</option>
-                        <option value="cancelled">취소됨</option>
-                    </select>
-                    <button class="btn-submit" onclick="updateBulkStatus()" style="padding: 8px 16px; width: auto; font-size: 0.9rem;">적용</button>
-                    <div style="flex: 1;"></div>
-                                        <button class="btn-submit" onclick="exportAdminInquiry()" style="padding: 8px 16px; width: auto; font-size: 0.9rem; margin-right: 10px;">엑셀 다운로드</button>
-                    <button class="btn-logout" onclick="loadAdminInquiryStatus()" style="padding: 8px 16px; width: auto; font-size: 0.9rem;">새로고침</button>
+                <!-- [서브탭 1] 금융기관 조회 관리 (기존 로직 완벽 보존) -->
+                <div class="master-subtab-pane active" id="subtab-audit-finance">
+                    <section class="finance-inquiry-section">
+                        <!-- 일괄 상태 변경 액션 바 -->
+                        <div class="action-bar" style="display: flex; gap: 15px; margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; align-items: center; flex-wrap: wrap;">
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">선택한 항목 상태 변경:</span>
+                            <select id="bulk-status-select" style="padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); color: var(--text-primary); border: 1px solid var(--card-border); outline: none;">
+                                <option value="">상태 선택...</option>
+                                <option value="fee_pending">수수료입금대기</option>
+                                <option value="fee_paid">입금완료(양식개방)</option>
+                                <option value="mail_sent">발송완료</option>
+                                <option value="received">회신완료</option>
+                                <option value="completed">검토완료</option>
+                                <option value="cancelled">취소됨</option>
+                            </select>
+                            <button type="button" class="btn-submit" onclick="updateBulkStatus()" style="padding: 8px 16px; width: auto; font-size: 0.9rem;">적용</button>
+                            <div style="flex: 1;"></div>
+                            <button type="button" class="btn-submit" onclick="exportAdminInquiry()" style="padding: 8px 16px; width: auto; font-size: 0.9rem; margin-right: 10px;">엑셀 다운로드</button>
+                            <button type="button" class="btn-logout" onclick="loadAdminInquiryStatus()" style="padding: 8px 16px; width: auto; font-size: 0.9rem;">새로고침</button>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="partners-table">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="check-all-inquiries" onclick="toggleAllInquiries(this)"></th>
+                                        <th>신청일</th>
+                                        <th>회사명</th>
+                                        <th>신청번호</th>
+                                        <th>대상기관</th>
+                                        <th>형태</th>
+                                        <th>상태</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-inquiry-list">
+                                    <!-- JS로 실시간 렌더링 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
 
-                <div class="table-container">
-                    <table class="partners-table">
-                        <thead>
-                            <tr>
-                                <th><input type="checkbox" id="check-all-inquiries" onclick="toggleAllInquiries(this)"></th>
-                                <th>신청일</th>
-                                <th>회사명</th>
-                                <th>신청번호</th>
-                                <th>대상기관</th>
-                                <th>형태</th>
-                                <th>상태</th>
-                                <th>작업</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-inquiry-list">
-                            <!-- JS로 렌더링 -->
-                        </tbody>
-                    </table>
+                <!-- [서브탭 2] 감사 증빙 문서 관리 -->
+                <div class="master-subtab-pane" id="subtab-audit-evidence">
+                    <section class="audit-evidence-section">
+                        <div class="section-header-flex" style="margin-bottom: 15px;">
+                            <h3 class="section-title" style="font-size: 1.05rem; color: #fff;">기업별 회계감사 증빙 및 회신 문서함</h3>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Supabase & 사내 스토리지 연동</span>
+                        </div>
+                        <div class="table-container">
+                            <table class="partners-table">
+                                <thead>
+                                    <tr>
+                                        <th>기업명</th>
+                                        <th>감사 제출 서류</th>
+                                        <th>금융조회 회신본</th>
+                                        <th>감사조서 생성본</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for partner in partners %}
+                                    <tr>
+                                        <td class="col-company"><strong>{{ partner.company }}</strong></td>
+                                        <td>
+                                            <span style="color: #34d399; font-size: 0.85rem;">제출 완료 ({{ partner.upload_rate|default(0) }}%)</span>
+                                        </td>
+                                        <td>
+                                            <span style="font-size: 0.82rem; color: var(--text-secondary);">온라인 회신 연동</span>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('master.master_detail', company_name=partner.company) }}#audit-working-paper-section" class="partner-link" style="font-size: 0.82rem;">조서 확인 ›</a>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('master.master_detail', company_name=partner.company) }}" class="btn-logout" style="padding: 4px 10px; font-size: 0.8rem;">
+                                                감사 폴더 열기
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
             </div>
 

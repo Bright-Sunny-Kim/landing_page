@@ -6,9 +6,14 @@
     <meta name="description" content="TestCompany 기업 회원을 위한 개인화 웰컴 포털 페이지입니다.">
     <title>TestCompany - Welcome Portal</title>
     <!-- PWA Settings -->
+    <meta name="theme-color" content="#09090b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="혜안 포털">
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#6366f1">
-    <link rel="apple-touch-icon" href="/static/icons/icon-512x512.svg">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/icon-192x192.svg">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.svg">
     <!-- Google Fonts: Outfit & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -60,6 +65,12 @@
                     <a href="#partner-inquiry">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
                         <span>AI 회계사 문의</span>
+                    </a>
+                </li>
+                <li class="master-menu-item" data-menu="partner-consulting">
+                    <a href="#partner-consulting">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+                        <span>담당 회계사 1:1 상담</span>
                     </a>
                 </li>
                 <li class="master-menu-item" data-menu="partner-billing">
@@ -1959,6 +1970,56 @@
                 </div>
             </div>
 
+            <!-- 담당 회계사 1:1 자문 상담 뷰 (고객사 시점) -->
+            <div class="glass-card dashboard-card master-card" id="partner-consulting-view" style="display: none;">
+                <header class="dashboard-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
+                    <div class="status-badge" style="background: rgba(99, 102, 241, 0.2); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.4);">
+                        <span class="pulse-dot" style="background: #a78bfa;"></span>
+                        <span>1:1 Dedicated CPA</span>
+                    </div>
+                    <h1 id="dashboard-heading">💬 담당 회계사 1:1 자문 상담</h1>
+                    <p style="color: var(--text-secondary); margin-top: 10px; font-size: 0.95rem;">회계법인 혜안 담당 회계사에게 직접 세무 질의, 서류 검토 요청 및 자문 상담을 진행하실 수 있습니다.</p>
+                </header>
+
+                <div class="consulting-chat-container">
+                    <div class="chat-header-bar">
+                        <div class="chat-target-info">
+                            <div class="chat-avatar-icon" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3);">⚖️</div>
+                            <div>
+                                <h3 class="chat-target-name">회계법인 혜안 전담 자문팀</h3>
+                                <span class="chat-target-meta" id="client-chat-status-meta">상태: 정상 접수 및 전담 배정</span>
+                            </div>
+                        </div>
+                        <div>
+                            <button type="button" class="btn-logout" onclick="loadClientCompanyChat()" style="padding: 5px 12px; font-size: 0.82rem;">
+                                <span>🔄 새로고침</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="chat-messages-timeline" id="client-chat-timeline">
+                        <div class="chat-empty-state">
+                            <span>💬</span>
+                            <p>상담 내역을 불러오는 중입니다...</p>
+                        </div>
+                    </div>
+
+                    <form id="client-consulting-form" class="chat-input-wrapper" onsubmit="handleSendClientMessage(event)">
+                        <div class="chat-input-controls">
+                            <textarea id="client-chat-input" class="chat-textarea" placeholder="담당 회계사에게 문의할 세무·감사 내용이나 요청사항을 입력하세요..." rows="2" required></textarea>
+                            <div class="chat-actions-row">
+                                <div>
+                                    <span style="font-size: 0.8rem; color: var(--text-secondary);">신속하고 정확한 회계 자문을 제공해 드립니다.</span>
+                                </div>
+                                <button type="submit" class="btn-submit btn-chat-send">
+                                    <span>문의 전송 ✈️</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="glass-card dashboard-card master-card" id="partner-billing-view" style="display: none;">
                 <div class="mock-placeholder-card" style="padding: 60px 20px;">
                     <span class="mock-placeholder-icon">💳</span>
@@ -2246,10 +2307,120 @@
                 box.style.pointerEvents = 'none';
                 input.disabled = true;
                 input.value = '';
-                const labelText = document.querySelector('#label-' + fieldId + ' .file-text');
-                if(labelText) labelText.textContent = '파일 선택';
+        // ==========================================
+        // [고객사 포털] 담당 회계사 1:1 자문 상담 로직
+        // ==========================================
+        const currentCompanyName = document.querySelector('.company-highlight')?.innerText?.trim() || 
+                                   document.querySelector('.master-profile-name')?.innerText?.trim() || 'TestCompany';
+
+        window.loadClientCompanyChat = async function() {
+            const timeline = document.getElementById('client-chat-timeline');
+            if (!timeline) return;
+
+            try {
+                const res = await fetch(`/api/chat/${encodeURIComponent(currentCompanyName)}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || '상담 내역 로드 실패');
+
+                const messages = data.messages || [];
+                const statusMeta = document.getElementById('client-chat-status-meta');
+                if (statusMeta && data.status) {
+                    statusMeta.innerText = `진행 상태: ${data.status}`;
+                }
+
+                if (messages.length === 0) {
+                    timeline.innerHTML = `
+                        <div class="chat-empty-state">
+                            <span>💬</span>
+                            <p>아직 등록된 상담 내역이 없습니다. 회계사에게 첫 문의를 남겨보세요!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                messages.forEach(m => {
+                    const isClient = m.sender_role === 'client';
+                    const rowClass = isClient ? 'master' : 'client'; // 고객사 화면에서는 본인(client)이 우측(master CSS 적용)
+                    const avatarText = isClient ? 'C' : 'H';
+                    const senderTitle = isClient ? '고객사 (본인)' : (m.sender_name || '혜안 마스터 회계사');
+
+                    html += `
+                        <div class="chat-bubble-row ${rowClass}">
+                            <div class="chat-bubble-avatar">${avatarText}</div>
+                            <div class="chat-bubble-content-wrap">
+                                <div class="chat-bubble-meta">
+                                    <span style="font-weight:600; color:${isClient ? '#a5b4fc' : '#93c5fd'};">${senderTitle}</span>
+                                    <span>${m.created_at || ''}</span>
+                                </div>
+                                <div class="chat-bubble">${escapeHtml(m.message)}</div>
+                                ${m.file_url ? `
+                                    <a href="${m.file_url}" target="_blank" class="chat-attachment-card">
+                                        <span>📎 ${escapeHtml(m.file_name || '첨부파일 열기')}</span>
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                timeline.innerHTML = html;
+                timeline.scrollTop = timeline.scrollHeight;
+            } catch (err) {
+                console.error('[ERROR] 고객사 상담 로드 오류:', err);
             }
+        };
+
+        window.handleSendClientMessage = async function(e) {
+            e.preventDefault();
+            const input = document.getElementById('client-chat-input');
+            const message = (input.value || '').trim();
+            if (!message) return;
+
+            const payload = {
+                company_name: currentCompanyName,
+                sender_role: 'client',
+                sender_name: currentCompanyName,
+                message: message
+            };
+
+            input.disabled = true;
+            try {
+                const res = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || '전송 실패');
+
+                input.value = '';
+                await window.loadClientCompanyChat();
+            } catch (err) {
+                alert(`전송 중 오류가 발생했습니다: ${err.message}`);
+            } finally {
+                input.disabled = false;
+                input.focus();
+            }
+        };
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
+
+        // 메뉴 클릭 시 partner-consulting-view 전환 지원
+        document.addEventListener('click', (e) => {
+            const consultingMenu = e.target.closest('.master-menu-item[data-menu="partner-consulting"]');
+            if (consultingMenu) {
+                document.querySelectorAll('.master-card').forEach(c => c.style.display = 'none');
+                document.querySelectorAll('.master-menu-item').forEach(m => m.classList.remove('active'));
+                consultingMenu.classList.add('active');
+                const v = document.getElementById('partner-consulting-view');
+                if (v) v.style.display = 'block';
+                window.loadClientCompanyChat();
+            }
+        });
     </script>
     <div id="pdf-template-container" style="position: absolute; width: 0; height: 0; overflow: hidden; left: -9999px;"></div>
 

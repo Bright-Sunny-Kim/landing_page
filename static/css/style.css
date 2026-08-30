@@ -1435,6 +1435,408 @@ textarea:focus {
     flex-shrink: 0;
 }
 
+/* Sidebar Divider & Section Label */
+.menu-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    margin: 0.6rem 0.5rem;
+}
+
+.menu-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 6px 16px 2px;
+    opacity: 0.7;
+}
+
+/* Common Subtab Navigation Styles for Master Portal */
+.master-subnav-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+    padding: 6px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    backdrop-filter: blur(10px);
+}
+
+.master-subtab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.master-subtab-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.master-subtab-btn.active {
+    background: var(--primary-gradient);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+}
+
+.master-subtab-btn .badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.2);
+    color: inherit;
+}
+
+.master-subtab-pane {
+    display: none;
+    width: 100%;
+    animation: fadeInTab 0.25s ease-out;
+}
+
+.master-subtab-pane.active {
+    display: block;
+}
+
+@keyframes fadeInTab {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================================
+   1:1 실시간 자문 상담실 전용 스타일 (Consulting Chat Module)
+   ======================================================== */
+.consulting-chat-container {
+    background: rgba(15, 18, 25, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    backdrop-filter: blur(16px);
+}
+
+.chat-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.chat-target-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chat-avatar-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.chat-target-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.chat-target-meta {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    display: block;
+    margin-top: 2px;
+}
+
+.chat-status-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.consulting-status-badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    outline: none;
+    cursor: pointer;
+}
+
+/* 타임라인 영역 */
+.chat-messages-timeline {
+    min-height: 280px;
+    max-height: 480px;
+    overflow-y: auto;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.chat-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.chat-empty-state span {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.6;
+}
+
+/* 말풍선 */
+.chat-bubble-row {
+    display: flex;
+    gap: 10px;
+    max-width: 80%;
+    animation: fadeInTab 0.2s ease-out;
+}
+
+.chat-bubble-row.client {
+    align-self: flex-start;
+}
+
+.chat-bubble-row.master {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.chat-bubble-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.chat-bubble-row.client .chat-bubble-avatar {
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+}
+
+.chat-bubble-row.master .chat-bubble-avatar {
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+}
+
+.chat-bubble-content-wrap {
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-bubble-row.master .chat-bubble-content-wrap {
+    align-items: flex-end;
+}
+
+.chat-bubble-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.chat-bubble {
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: pre-wrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-bubble-row.client .chat-bubble {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    border-top-left-radius: 2px;
+}
+
+.chat-bubble-row.master .chat-bubble {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.85), rgba(79, 70, 229, 0.9));
+    border: 1px solid rgba(165, 180, 252, 0.3);
+    color: #ffffff;
+    border-top-right-radius: 2px;
+}
+
+.chat-attachment-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #93c5fd;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.chat-attachment-card:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.chat-delete-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-top: 2px;
+    padding: 0;
+}
+
+.chat-delete-btn:hover {
+    color: #f87171;
+}
+
+/* 빠른 답변 템플릿 */
+.quick-reply-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.quick-reply-label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.quick-reply-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 5px 12px;
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.quick-reply-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+}
+
+/* 입력 폼 */
+.chat-input-wrapper {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.chat-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 0.92rem;
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+.chat-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 10px;
+}
+
+.btn-file-attach {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-file-attach:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.attached-filename-indicator {
+    font-size: 0.8rem;
+    color: #34d399;
+    margin-left: 8px;
+}
+
+.btn-chat-send {
+    padding: 8px 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
 .master-sidebar-footer {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding-top: 20px;
@@ -1522,41 +1924,81 @@ textarea:focus {
     line-height: 1.6;
 }
 
-/* Responsive design for Master Portal Layout */
+/* Responsive design for Master & Partner Portal Layout */
 @media (max-width: 992px) {
-    .master-container {
-        flex-direction: column;
-        gap: 24px;
-        padding: 16px;
+    .master-container,
+    .company-container {
+        flex-direction: column !important;
+        gap: 20px !important;
+        padding: 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
     
     .master-sidebar {
-        width: 100%;
-        height: auto;
-        position: static;
-        padding: 24px;
-        gap: 20px;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        position: static !important;
+        padding: 16px !important;
+        gap: 14px !important;
+        box-sizing: border-box !important;
+        border-radius: 16px !important;
+    }
+    
+    .master-sidebar-header {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        margin-bottom: 0 !important;
+    }
+
+    .master-sidebar-header .logo {
+        margin-bottom: 0 !important;
     }
     
     .master-profile-box {
-        display: none; /* 태블릿/모바일에서는 프로필 간략화 */
+        display: flex !important;
+        padding: 4px 10px !important;
+        gap: 8px !important;
+        border-radius: 10px !important;
+    }
+    
+    .master-profile-avatar {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 12px !important;
+    }
+
+    .master-profile-name {
+        font-size: 13px !important;
+    }
+
+    .master-profile-role {
+        font-size: 11px !important;
     }
     
     .master-menu-list {
-        flex-direction: row;
-        overflow-x: auto;
-        padding-bottom: 8px;
-        gap: 10px;
-        width: 100%;
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px !important;
+        gap: 8px !important;
+        width: 100% !important;
+        scrollbar-width: thin;
     }
     
     .master-menu-list::-webkit-scrollbar {
-        height: 4px;
+        height: 3px;
+    }
+    
+    .master-menu-item {
+        flex-shrink: 0 !important;
     }
     
     .master-menu-item a {
-        white-space: nowrap;
-        padding: 8px 14px;
         font-size: 13px;
     }
     
@@ -3340,4 +3782,386 @@ textarea:focus {
 
 
 
+
+/* ==========================================================================
+   PWA & Mobile Touch Enhancement Styles
+   ========================================================================== */
+
+/* Universal Touch & Safe Area Fixes */
+html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile Button Touch Target & Active Feedback */
+button, 
+.btn-submit, 
+.btn-primary, 
+.btn-secondary, 
+.tab-btn, 
+.btn-mode-tab,
+.btn-inspect-data,
+.portal-card-btn,
+a.btn-submit {
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform 0.1s ease, background 0.2s ease, opacity 0.2s ease;
+}
+
+button:active, 
+.btn-submit:active, 
+.btn-primary:active, 
+.tab-btn:active {
+    transform: scale(0.97) !important;
+    opacity: 0.9;
+}
+
+/* PWA Mobile Floating Install Banner */
+#pwa-install-banner {
+    position: fixed;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%) translateY(150%);
+    width: calc(100% - 32px);
+    max-width: 440px;
+    background: rgba(18, 18, 24, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(167, 139, 250, 0.35);
+    border-radius: 18px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.25);
+    z-index: 99999;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#pwa-install-banner.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.pwa-banner-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.pwa-banner-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.pwa-banner-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f4f4f5;
+    margin-bottom: 2px;
+    font-family: var(--font-header);
+}
+
+.pwa-banner-desc {
+    font-size: 0.78rem;
+    color: #a1a1aa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pwa-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.pwa-btn-install {
+    background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pwa-btn-close {
+    background: transparent;
+    color: #71717a;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pwa-btn-close:hover {
+    color: #f4f4f5;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Mobile Viewport Optimizations (<= 768px) */
+@media (max-width: 768px) {
+    /* Touch friendly input & button sizing */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    select,
+    textarea {
+        font-size: 16px !important; /* Prevents iOS auto-zoom */
+        min-height: 46px;
+    }
+
+    button,
+    .btn-submit,
+    .btn-primary {
+        min-height: 48px !important;
+        font-size: 1rem !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Tab navigation scrolling on small screens */
+    .tab-navigation,
+    .tabs-container,
+    .filter-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 6px;
+    }
+    
+    .tab-navigation::-webkit-scrollbar,
+    .tabs-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab-btn {
+        min-height: 42px;
+        white-space: nowrap;
+        padding: 8px 16px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Card padding adjustment */
+    .glass-card {
+        padding: 24px 18px !important;
+        border-radius: 18px !important;
+    }
+}
+
+/* ==========================================================
+   Mobile & Responsive Overrides for Master & Partner Portals
+   ========================================================== */
+@media screen and (max-width: 992px) {
+    .master-container,
+    .company-container,
+    div.company-container {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        gap: 16px !important;
+        padding: 12px !important;
+        box-sizing: border-box !important;
+    }
+
+    .master-sidebar {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        position: static !important;
+        padding: 14px !important;
+        gap: 12px !important;
+        box-sizing: border-box !important;
+        border-radius: 16px !important;
+    }
+
+    .master-sidebar-header {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        margin-bottom: 0 !important;
+    }
+
+    .master-sidebar-header .logo {
+        margin-bottom: 0 !important;
+    }
+
+    .master-profile-box {
+        display: flex !important;
+        padding: 4px 8px !important;
+        gap: 6px !important;
+        border-radius: 8px !important;
+    }
+
+    .master-profile-avatar {
+        width: 26px !important;
+        height: 26px !important;
+        font-size: 11px !important;
+    }
+
+    .master-profile-name {
+        font-size: 12px !important;
+    }
+
+    .master-profile-role {
+        font-size: 10px !important;
+    }
+
+    .master-menu-list {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px !important;
+        gap: 8px !important;
+        width: 100% !important;
+        scrollbar-width: thin;
+    }
+
+    .master-menu-list::-webkit-scrollbar {
+        height: 3px;
+    }
+
+    .master-menu-item {
+        flex-shrink: 0 !important;
+    }
+
+    .master-menu-item a {
+        white-space: nowrap !important;
+        padding: 8px 12px !important;
+        font-size: 12.5px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
+    .master-sidebar-footer {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+        width: 100% !important;
+        margin-top: 4px !important;
+    }
+
+    .master-sidebar-footer .btn-logout {
+        flex: 1 !important;
+        text-align: center !important;
+        justify-content: center !important;
+        padding: 8px 10px !important;
+        font-size: 11.5px !important;
+    }
+
+    .master-main-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .dashboard-card,
+    .master-card {
+        padding: 16px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        border-radius: 16px !important;
+    }
+
+    .dashboard-header h1 {
+        font-size: 1.2rem !important;
+        word-break: keep-all !important;
+        line-height: 1.4 !important;
+    }
+
+    .dashboard-header p {
+        font-size: 0.85rem !important;
+        word-break: keep-all !important;
+    }
+
+    /* 1:1 자문 상담 모바일 최적화 */
+    .consulting-chat-container {
+        padding: 12px !important;
+        gap: 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        border-radius: 12px !important;
+    }
+
+    .chat-header-bar {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding-bottom: 12px !important;
+    }
+
+    .chat-target-info {
+        gap: 8px !important;
+        min-width: 0 !important;
+    }
+
+    .chat-target-name {
+        font-size: 0.95rem !important;
+        white-space: nowrap !important;
+    }
+
+    .chat-target-meta {
+        font-size: 0.75rem !important;
+    }
+
+    .chat-messages-timeline {
+        min-height: 280px !important;
+        max-height: 380px !important;
+        padding: 12px !important;
+        gap: 10px !important;
+    }
+
+    .chat-bubble-row {
+        max-width: 92% !important;
+        gap: 8px !important;
+    }
+
+    .chat-bubble-content {
+        word-break: keep-all !important;
+        overflow-wrap: break-word !important;
+        font-size: 0.88rem !important;
+        line-height: 1.5 !important;
+        padding: 10px 12px !important;
+    }
+
+    .chat-actions-row {
+        flex-direction: column !important;
+        gap: 8px !important;
+        align-items: stretch !important;
+    }
+
+    .btn-chat-send {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 10px 16px !important;
+    }
+}
 

@@ -11,6 +11,39 @@
     let currentAnalyticsData = null;
     let selectedDirectFiles = [];
 
+    // 안전한 JSON fetch 파서 (HTML 500 에러 페이지 반환 시 SyntaxError 방지)
+    async function safeFetchJson(url, options = {}, fallbackErrorMsg = '요청 처리에 실패했습니다.') {
+        const response = await fetch(url, options);
+        const contentType = response.headers.get('content-type') || '';
+        
+        let data = null;
+        if (contentType.includes('application/json')) {
+            try {
+                data = await response.json();
+            } catch (e) {
+                console.warn('[SAFE_FETCH] JSON 파싱 실패:', e);
+            }
+        } else {
+            const rawText = await response.text();
+            console.warn('[SAFE_FETCH] Non-JSON 응답 수신 (상태코드: ' + response.status + '):', rawText.slice(0, 200));
+        }
+
+        if (!response.ok) {
+            const errMsg = (data && data.error) 
+                ? data.error 
+                : (response.status === 500 
+                    ? '서버 내부 오류(500)가 발생했습니다. 서버 로그 또는 권한/용량 설정을 확인해 주세요.' 
+                    : `${fallbackErrorMsg} (상태코드: ${response.status})`);
+            throw new Error(errMsg);
+        }
+
+        if (!data) {
+            throw new Error('서버로부터 올바른 JSON 응답을 수신하지 못했습니다.');
+        }
+
+        return data;
+    }
+
     // 유틸리티: 숫자 3자리 콤마 및 억/만원 포맷
     function formatCurrency(amount) {
         if (amount === undefined || amount === null || isNaN(amount)) return '-';
@@ -461,16 +494,15 @@
         if (statusEl) statusEl.textContent = `'${companyName}'의 ${fy}년도 회계 엑셀 자료를 취합하여 분석 중...`;
 
         try {
-            const response = await fetch(`/master/api/analyze-company/${encodeURIComponent(companyName)}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fiscal_year: fy })
-            });
-
-            const result = await response.json();
-            if (!response.ok) {
-                throw new Error(result.error || '분석 요청에 실패했습니다.');
-            }
+            const result = await safeFetchJson(
+                `/master/api/analyze-company/${encodeURIComponent(companyName)}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fiscal_year: fy })
+                },
+                '기업 분석 요청에 실패했습니다.'
+            );
 
             if (statusEl) statusEl.textContent = `✓ '${companyName}' (${fy}년) 분석 완료 (${(result.analyzed_files || []).length}개 파일 처리됨)`;
             renderAnalyticsPayload(result);
@@ -510,15 +542,14 @@
         });
 
         try {
-            const response = await fetch('/master/api/analyze-direct', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-            if (!response.ok) {
-                throw new Error(result.error || '직접 파일 분석에 실패했습니다.');
-            }
+            const result = await safeFetchJson(
+                '/master/api/analyze-direct',
+                {
+                    method: 'POST',
+                    body: formData
+                },
+                '직접 파일 분석에 실패했습니다.'
+            );
 
             renderAnalyticsPayload(result);
 
@@ -543,19 +574,20 @@
         const fy = document.getElementById('analytics-fiscal-year')?.value || 2025;
 
         try {
-            const response = await fetch('/master/api/save-analysis', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    company_name: currentAnalyticsData.company_name,
-                    fiscal_year: parseInt(fy, 10),
-                    analysis_data: currentAnalyticsData,
-                    report_md: currentAnalyticsData.report_md
-                })
-            });
-
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || '저장에 실패했습니다.');
+            const result = await safeFetchJson(
+                '/master/api/save-analysis',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        company_name: currentAnalyticsData.company_name,
+                        fiscal_year: parseInt(fy, 10),
+                        analysis_data: currentAnalyticsData,
+                        report_md: currentAnalyticsData.report_md
+                    })
+                },
+                '저장에 실패했습니다.'
+            );
 
             alert(`✓ ${result.message || '분석 결과가 안전하게 저장되었습니다.'}`);
             // 저장 이력 목록 자동 갱신
@@ -577,8 +609,11 @@
         if (!sel || !companyName) return;
 
         try {
-            const resp = await fetch(`/master/api/datasets/local-list/${encodeURIComponent(companyName)}`);
-            const res = await resp.json();
+            const res = await safeFetchJson(
+                `/master/api/datasets/local-list/${encodeURIComponent(companyName)}`,
+                {},
+                '로컬 데이터셋 목록 조회 실패'
+            );
             sel.innerHTML = '';
 
             if (res.success && res.datasets && res.datasets.length > 0) {
@@ -616,10 +651,7 @@
 
         try {
             const url = `/master/api/datasets/local-load?company_name=${encodeURIComponent(companyName)}&filename=${encodeURIComponent(filename)}`;
-            const resp = await fetch(url);
-            const payload = await resp.json();
-
-            if (!resp.ok) throw new Error(payload.error || '데이터 로드에 실패했습니다.');
+            const payload = await safeFetchJson(url, {}, '데이터 복원에 실패했습니다.');
 
             // 화면에 0.01초 즉시 복원
             renderAnalyticsPayload(payload);

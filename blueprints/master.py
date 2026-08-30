@@ -21,9 +21,16 @@ from core.storage_manager import storage_manager
 master_bp = Blueprint('master', __name__)
 
 @master_bp.route('/master')
+@master_bp.route('/master/partners')
+@master_bp.route('/master/audit')
 def master_page():
+    logger.info("[ROUTE] %s %s - Master Admin Main Loaded", request.method, request.path)
     if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[AUTH] Unauthorized access to master page from %s", request.remote_addr)
         return redirect(url_for('auth.login_page'))
+    
+    # 만약 JSON API 요청으로 호출된 경우 (비동기 탭 데이터 페치 지원)
+    wants_json = request.accept_mimetypes.best == 'application/json' or request.args.get('format') == 'json'
     
     partners = []
     stats = {
@@ -34,12 +41,13 @@ def master_page():
     
     if supabase:
         try:
+            logger.info("[ACTION] Fetching users and company files from Supabase DB")
             response = supabase.table('users').select('*').neq('email', MASTER_EMAIL).order('created_at', desc=True).execute()
-            partners = response.data
+            partners = response.data or []
             stats['total_partners'] = len(partners)
             
             files_response = supabase.table('company_files').select('company_name, file_url, file_name, status').execute()
-            all_files = files_response.data
+            all_files = files_response.data or []
             stats['total_files'] = len(all_files)
             stats['pending_tasks'] = sum(1 for f in all_files if f.get('status') == '대기중' or not f.get('status'))
 
@@ -51,9 +59,14 @@ def master_page():
                 if rate > 100: rate = 100
                 p['upload_rate'] = rate
             
+            logger.info("[API_RES] Master stats computed: partners=%d, files=%d, pending=%d", 
+                        stats['total_partners'], stats['total_files'], stats['pending_tasks'])
         except Exception as e:
-            logger.exception("Master page error: %s", e)
+            logger.error("[ERROR] Master page data loading error: %s", e, exc_info=True)
             
+    if wants_json:
+        return jsonify({'success': True, 'partners': partners, 'stats': stats})
+
     return render_template('master.html', partners=partners, stats=stats)
 
 
@@ -176,9 +189,12 @@ def master_calendar_api():
         return jsonify({'error': '일정 조회 중 예기치 않은 오류가 발생했습니다.'}), 500
 
 
-@master_bp.route('/master/<company_name>')
+@master_bp.route('/master/<string:company_name>')
+@master_bp.route('/master/detail/<string:company_name>')
 def master_detail(company_name):
+    logger.info("[ROUTE] GET /master/%s - Master Detail Page Loaded", company_name)
     if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[AUTH] Unauthorized access to master_detail from %s", request.remote_addr)
         return redirect(url_for('auth.login_page'))
         
     company_info = None
@@ -192,47 +208,195 @@ def master_detail(company_name):
             
             files_res = supabase.table('company_files').select('*').eq('company_name', company_name).order('created_at', desc=True).execute()
             
-            for f in files_res.data:
-                file_url_path = f.get('file_url')
-                if file_url_path:
-                    if file_url_path.startswith('http'):
-                        f['public_url'] = file_url_path
+            if files_res.data:
+                for f in files_res.data:
+                    file_url_path = f.get('file_url')
+                    if file_url_path:
+                        if file_url_path.startswith('http'):
+                            f['public_url'] = file_url_path
+                        else:
+                            f['public_url'] = supabase.storage.from_('company-uploads').get_public_url(file_url_path)
                     else:
-                        f['public_url'] = supabase.storage.from_('company-uploads').get_public_url(file_url_path)
-                else:
-                    f['public_url'] = '#'
-                if not f.get('status'):
-                    f['status'] = '대기중'
-                files.append(f)
+                        f['public_url'] = '#'
+                    if not f.get('status'):
+                        f['status'] = '대기중'
+                    files.append(f)
                 
         except Exception as e:
-            logger.exception("Master detail error: %s", e)
+            logger.error("[ERROR] Master detail data load error: %s", e, exc_info=True)
             
     if not company_info:
-        return redirect(url_for('master.master_page'))
+        # DB에 없을 경우 기본 더미 객체 fallback
+        company_info = {
+            'company': company_name,
+            'username': '담당자',
+            'email': f"{company_name.lower()}@partner.com",
+            'task_type': '회계감사',
+            'created_at': datetime.datetime.now().strftime('%Y-%m-%d')
+        }
         
     return render_template('master_detail.html', company_info=company_info, files=files)
 
+@master_bp.route('/api/requests', methods=['GET'])
+def get_all_requests():
+    """모든 파트너사의 업무 요청/제출 서류 목록 조회"""
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[API_REQ] /api/requests - Unauthorized access attempt")
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    status_filter = request.args.get('status', '').strip()
+    company_filter = request.args.get('company', '').strip()
+    logger.info("[API_REQ] GET /api/requests - status_filter: %s, company_filter: %s", status_filter, company_filter)
+    
+    requests_list = []
+    if supabase:
+        try:
+            query = supabase.table('company_files').select('*').order('created_at', desc=True)
+            if status_filter:
+                query = query.eq('status', status_filter)
+            if company_filter:
+                query = query.eq('company_name', company_filter)
+                
+            res = query.execute()
+            requests_list = res.data or []
+            logger.info("[API_RES] GET /api/requests - Total records fetched: %d", len(requests_list))
+            return jsonify({'success': True, 'requests': requests_list, 'count': len(requests_list)})
+        except Exception as e:
+            logger.error("[ERROR] GET /api/requests failed: %s", e, exc_info=True)
+            return jsonify({'error': str(e)}), 500
+            
+    return jsonify({'success': True, 'requests': requests_list, 'count': 0})
+
+
+@master_bp.route('/api/requests/update-status', methods=['POST'])
 @master_bp.route('/update-status', methods=['POST'])
 def update_status():
     if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[API_REQ] update_status - Unauthorized access attempt")
         return jsonify({'error': 'Unauthorized'}), 401
         
-    data = request.get_json()
+    data = request.get_json() or {}
     file_id = data.get('id')
     new_status = data.get('status')
+    remark = data.get('remark', '')
+    
+    logger.info("[API_REQ] POST /update-status - file_id: %s, new_status: %s, remark: %s", file_id, new_status, remark)
     
     if not file_id or not new_status:
+        logger.warning("[API_RES] POST /update-status - Missing required parameters (id, status)")
         return jsonify({'error': 'Missing parameters'}), 400
         
     if supabase:
         try:
-            supabase.table('company_files').update({'status': new_status}).eq('id', file_id).execute()
-            return jsonify({'success': True})
+            update_payload = {'status': new_status}
+            supabase.table('company_files').update(update_payload).eq('id', file_id).execute()
+            logger.info("[API_RES] POST /update-status - Successfully updated file_id: %s to %s", file_id, new_status)
+            return jsonify({'success': True, 'id': file_id, 'status': new_status})
         except Exception as e:
-            logger.exception("Update status error: %s", e)
+            logger.error("[ERROR] POST /update-status failed for file_id %s: %s", file_id, e, exc_info=True)
             return jsonify({'error': str(e)}), 500
+            
     return jsonify({'error': 'Supabase not configured'}), 500
+
+
+# 인메모리/캐시 공지사항 Fallback 저장소
+_in_memory_notices = [
+    {
+        'id': 'notice-demo-1',
+        'title': '2025년 1분기 법인세 중간예납 및 회계감사 일정 안내',
+        'target_company': 'all',
+        'target_company_name': '전체 파트너사',
+        'importance': 'urgent',
+        'content': '2025년도 1분기 법인세 중간예납 신고 및 외부 회계감사 사전 서류 제출 마감일은 3월 31일까지입니다.',
+        'created_at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    },
+    {
+        'id': 'notice-demo-2',
+        'title': '통합 문서 보관함 및 AI 자동 분석 시스템 업데이트 완료',
+        'target_company': 'all',
+        'target_company_name': '전체 파트너사',
+        'importance': 'normal',
+        'content': '재무제표 및 합계잔액시산표 엑셀 업로드 시 0.01초 만에 자동 정밀 분석을 제공합니다.',
+        'created_at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    }
+]
+
+@master_bp.route('/api/notices', methods=['GET', 'POST'])
+def master_notices_api():
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[API_REQ] /api/notices - Unauthorized access attempt")
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    if request.method == 'GET':
+        logger.info("[API_REQ] GET /api/notices")
+        if supabase:
+            try:
+                res = supabase.table('notices').select('*').order('created_at', desc=True).execute()
+                notices_list = res.data or []
+                logger.info("[API_RES] GET /api/notices - Found %d DB records", len(notices_list))
+                return jsonify({'success': True, 'notices': notices_list})
+            except Exception as e:
+                logger.warning("[WARN] Supabase notices query fallback to in-memory: %s", e)
+                
+        logger.info("[API_RES] GET /api/notices - Returning in-memory records (%d)", len(_in_memory_notices))
+        return jsonify({'success': True, 'notices': _in_memory_notices})
+
+    # POST (새 공지/알림 등록)
+    data = request.get_json() or {}
+    title = data.get('title', '').strip()
+    target = data.get('target_company', 'all')
+    importance = data.get('importance', 'normal')
+    content = data.get('content', '').strip()
+    
+    logger.info("[API_REQ] POST /api/notices - Title: %s, Target: %s, Importance: %s", title, target, importance)
+    
+    if not title or not content:
+        logger.warning("[API_RES] POST /api/notices - Missing title or content")
+        return jsonify({'error': '제목과 내용을 모두 입력해 주세요.'}), 400
+        
+    new_notice = {
+        'id': f"notice-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}",
+        'title': title,
+        'target_company': target,
+        'target_company_name': '전체 파트너사' if target == 'all' else target,
+        'importance': importance,
+        'content': content,
+        'created_at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    }
+    
+    if supabase:
+        try:
+            supabase.table('notices').insert(new_notice).execute()
+            logger.info("[API_RES] POST /api/notices - Saved to Supabase DB successfully")
+        except Exception as e:
+            logger.warning("[WARN] Failed to insert to DB, saving to in-memory: %s", e)
+            _in_memory_notices.insert(0, new_notice)
+    else:
+        _in_memory_notices.insert(0, new_notice)
+        
+    logger.info("[API_RES] POST /api/notices - Notice created successfully: %s", new_notice['id'])
+    return jsonify({'success': True, 'notice': new_notice})
+
+
+@master_bp.route('/api/notices/<notice_id>', methods=['DELETE'])
+def delete_notice_api(notice_id):
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[API_REQ] DELETE /api/notices/%s - Unauthorized", notice_id)
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    logger.info("[API_REQ] DELETE /api/notices/%s", notice_id)
+    global _in_memory_notices
+    _in_memory_notices = [n for n in _in_memory_notices if n.get('id') != notice_id]
+    
+    if supabase:
+        try:
+            supabase.table('notices').delete().eq('id', notice_id).execute()
+            logger.info("[API_RES] DELETE /api/notices/%s - Deleted from Supabase", notice_id)
+        except Exception as e:
+            logger.warning("[WARN] Supabase delete error: %s", e)
+            
+    logger.info("[API_RES] DELETE /api/notices/%s - Completed", notice_id)
+    return jsonify({'success': True, 'id': notice_id})
 
 @master_bp.route('/submit-request', methods=['POST'])
 def submit_request():
@@ -818,9 +982,13 @@ def master_analyze_direct():
             supabase_client=supabase
         )
         
-        # [Phase 3] 로컬 작업완료_보관함에 자동 영속화 저장
-        save_res = save_financial_analysis_to_local_archive(company_name, fiscal_year, payload)
-        payload["local_archive_info"] = save_res
+        # [Phase 3] 로컬 작업완료_보관함에 자동 영속화 저장 (보관 실패 시에도 분석 결과는 정상 반환)
+        try:
+            save_res = save_financial_analysis_to_local_archive(company_name, fiscal_year, payload)
+            payload["local_archive_info"] = save_res
+        except Exception as se:
+            logger.warning("[MASTER_ANALYTICS:ARCHIVE_WARNING] 로컬 보관 저장 중 경고: %s", se)
+            payload["local_archive_info"] = {"success": False, "error": str(se)}
 
         logger.info("[MASTER_ANALYTICS:SUCCESS] 직접 분석 완료: company=%s, files=%s", 
                     company_name, payload.get('analyzed_files'))
@@ -926,9 +1094,13 @@ def master_analyze_company(company_name):
             supabase_client=supabase
         )
         
-        # [Phase 3] 로컬 작업완료_보관함에 자동 영속화 저장
-        save_res = save_financial_analysis_to_local_archive(company_name, fiscal_year, payload)
-        payload["local_archive_info"] = save_res
+        # [Phase 3] 로컬 작업완료_보관함에 자동 영속화 저장 (보관 실패 시에도 분석 결과는 정상 반환)
+        try:
+            save_res = save_financial_analysis_to_local_archive(company_name, fiscal_year, payload)
+            payload["local_archive_info"] = save_res
+        except Exception as se:
+            logger.warning("[MASTER_ANALYTICS:ARCHIVE_WARNING] 고객사 로컬 보관 저장 중 경고: %s", se)
+            payload["local_archive_info"] = {"success": False, "error": str(se)}
 
         logger.info("[MASTER_ANALYTICS:SUCCESS] 고객사 분석 완료: company=%s, files=%s", 
                     company_name, payload.get('analyzed_files'))
@@ -1054,6 +1226,176 @@ def master_analysis_history(company_name):
         'company_name': company_name,
         'count': len(history_list),
         'history': history_list
+    }), 200
+
+
+# ========================================================
+# [Phase 4] 파트너사별 1:1 실시간 자문 상담 모듈 API
+# ========================================================
+_in_memory_chat_messages = []
+_in_memory_chat_statuses = {}
+
+@master_bp.route('/api/chat/<string:company_name>', methods=['GET'])
+def get_company_chat(company_name):
+    """
+    특정 파트너사와의 1:1 자문 상담 메시지 이력 및 현재 상담 상태를 반환합니다.
+    """
+    logger.info("[ROUTE] GET /api/chat/%s - Loading consulting chat messages", company_name)
+    if 'email' not in session:
+        logger.warning("[AUTH] Unauthorized access to /api/chat/%s", company_name)
+        return jsonify({'error': '로그인이 필요합니다.'}), 401
+
+    messages = []
+    status = _in_memory_chat_statuses.get(company_name, '대기중')
+
+    if supabase:
+        try:
+            logger.info("[ACTION] Querying consulting_messages for company=%s from DB", company_name)
+            res = supabase.table('consulting_messages').select('*').eq('company_name', company_name).order('created_at', desc=False).execute()
+            if res.data:
+                messages = res.data
+        except Exception as e:
+            logger.warning("[WARN] Supabase consulting_messages query fallback to in-memory: %s", e)
+            messages = [m for m in _in_memory_chat_messages if m.get('company_name') == company_name]
+    else:
+        messages = [m for m in _in_memory_chat_messages if m.get('company_name') == company_name]
+
+    # 기본 샘플 메시지가 없을 경우 안내 환영 메시지 생성 (최초 1회)
+    if not messages:
+        welcome_msg = {
+            'id': f"chat-welcome-{company_name}",
+            'company_name': company_name,
+            'sender_role': 'master',
+            'sender_name': '마스터 회계사',
+            'message': f"안녕하세요, {company_name} 담당자님. 회계법인 혜안 세무·감사 자문 상담실입니다. 업무 관련 문의사항이나 자료 검토 요청을 자유롭게 남겨주세요.",
+            'file_url': None,
+            'file_name': None,
+            'created_at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+        }
+        messages.append(welcome_msg)
+
+    logger.info("[API_RES] GET /api/chat/%s - Total %d messages returned, status=%s", company_name, len(messages), status)
+    return jsonify({
+        'success': True,
+        'company_name': company_name,
+        'status': status,
+        'messages': messages,
+        'count': len(messages)
+    }), 200
+
+
+@master_bp.route('/api/chat/send', methods=['POST'])
+def send_company_chat():
+    """
+    특정 파트너사에게 자문 상담 메시지를 등록 및 전송합니다.
+    """
+    logger.info("[ROUTE] POST /api/chat/send - Sending consulting chat message")
+    if 'email' not in session:
+        logger.warning("[AUTH] Unauthorized access to POST /api/chat/send")
+        return jsonify({'error': '로그인이 필요합니다.'}), 401
+
+    data = request.get_json() or {}
+    company_name = data.get('company_name', '').strip()
+    message = data.get('message', '').strip()
+    sender_role = data.get('sender_role', 'master') # 'master' or 'client'
+    sender_name = data.get('sender_name', '마스터 회계사' if sender_role == 'master' else session.get('name', '파트너사'))
+    file_url = data.get('file_url')
+    file_name = data.get('file_name')
+
+    logger.info("[API_REQ] POST /api/chat/send - company=%s, role=%s, msg_len=%d, file=%s", 
+                company_name, sender_role, len(message), file_name)
+
+    if not company_name or not message:
+        logger.warning("[ERROR] Missing required fields in POST /api/chat/send")
+        return jsonify({'error': '회사명과 메시지 내용은 필수입니다.'}), 400
+
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    msg_id = f"chat-{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')[:17]}"
+
+    new_message = {
+        'id': msg_id,
+        'company_name': company_name,
+        'sender_role': sender_role,
+        'sender_name': sender_name,
+        'message': message,
+        'file_url': file_url,
+        'file_name': file_name,
+        'created_at': now_str
+    }
+
+    # DB 저장 시도
+    saved_to_db = False
+    if supabase:
+        try:
+            insert_res = supabase.table('consulting_messages').insert(new_message).execute()
+            if insert_res.data:
+                saved_to_db = True
+                logger.info("[ACTION] Chat message inserted to Supabase DB: %s", msg_id)
+        except Exception as e:
+            logger.warning("[WARN] Failed to insert chat message to DB, saving to in-memory: %s", e)
+
+    _in_memory_chat_messages.append(new_message)
+
+    # 마스터가 답변을 보낸 경우 상태를 자동으로 '답변완료'로 갱신
+    if sender_role == 'master':
+        _in_memory_chat_statuses[company_name] = '답변완료'
+
+    logger.info("[API_RES] POST /api/chat/send - Message sent successfully (ID: %s, DB: %s)", msg_id, saved_to_db)
+    return jsonify({
+        'success': True,
+        'message': '상담 메시지가 성공적으로 전송되었습니다.',
+        'chat': new_message
+    }), 200
+
+
+@master_bp.route('/api/chat/status', methods=['POST'])
+def update_chat_status():
+    """
+    특정 파트너사의 자문 상담 상태(대기중/검토중/답변완료)를 변경합니다.
+    """
+    logger.info("[ROUTE] POST /api/chat/status - Updating consulting status")
+    if 'email' not in session:
+        return jsonify({'error': '로그인이 필요합니다.'}), 401
+
+    data = request.get_json() or {}
+    company_name = data.get('company_name', '').strip()
+    status = data.get('status', '대기중').strip()
+
+    if not company_name:
+        return jsonify({'error': '회사명이 필요합니다.'}), 400
+
+    _in_memory_chat_statuses[company_name] = status
+    logger.info("[API_RES] POST /api/chat/status - Status updated to '%s' for company=%s", status, company_name)
+    return jsonify({
+        'success': True,
+        'message': f"상담 상태가 '{status}'(으)로 변경되었습니다.",
+        'company_name': company_name,
+        'status': status
+    }), 200
+
+
+@master_bp.route('/api/chat/<string:message_id>', methods=['DELETE'])
+def delete_chat_message(message_id):
+    """
+    등록된 자문 상담 메시지를 삭제합니다.
+    """
+    global _in_memory_chat_messages
+    logger.info("[ROUTE] DELETE /api/chat/%s - Deleting consulting message", message_id)
+    if 'email' not in session:
+        return jsonify({'error': '로그인이 필요합니다.'}), 401
+
+    if supabase:
+        try:
+            supabase.table('consulting_messages').delete().eq('id', message_id).execute()
+        except Exception as e:
+            logger.warning("[WARN] Supabase delete chat error: %s", e)
+
+    _in_memory_chat_messages = [m for m in _in_memory_chat_messages if str(m.get('id')) != str(message_id)]
+    logger.info("[API_RES] DELETE /api/chat/%s - Message deleted successfully", message_id)
+    return jsonify({
+        'success': True,
+        'message': '상담 메시지가 삭제되었습니다.',
+        'deleted_id': message_id
     }), 200
 
 

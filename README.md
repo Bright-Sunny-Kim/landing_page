@@ -109,3 +109,147 @@ UBUNTU_PG_PASSWORD=your_password
   - **시계열 다개년 추세 분석 (Multi-year Trend)**: 3~5개년도 저장본 결합 분석
   - **동종업계 피어 그룹 교차 비교 (Cross-sectional Peer Benchmarking)**
   - **세무조정 및 심층 포렌식 연계 (Tax Adjustment & Forensic)**
+
+---
+
+## 🛠️ 6. 개발 지침 및 마스터 프롬프트 가이드 (Instruction & Master Prompt)
+
+### 📌 개발 진행 시 준수 가이드라인 (Instruction for Developers & AI Agents)
+1. **단일 단계 진행 원칙 (Step-by-Step Execution)**:
+   - 새로운 기능 추가나 대규모 리팩토링 시 아래의 `master_prompt_example` 구조를 준수하여 한 번에 하나의 Step만 진행합니다.
+   - 각 단계가 완료된 후 동작 검증(Frontend Console Log, Backend Flask Log)을 거친 뒤 다음 단계로 넘어갑니다.
+2. **백엔드 로깅 규칙 (Backend Logging Rule)**:
+   - Python 코드 내 `print()` 사용을 엄격히 금지하며, `logging` 모듈(`logger.info`, `logger.error` 등)을 사용합니다.
+   - 모든 API 요청/응답 및 예외(try-except) 처리 시 트레이스백과 상황 컨텍스트를 구조화된 로그로 남깁니다.
+3. **무결성 및 회귀 방지 (Zero Regression)**:
+   - 기존에 정상 동작하던 엔드포인트 및 UI 컴포넌트는 절대 임의로 삭제하거나 덮어쓰지 않습니다.
+
+---
+
+### 📋 `master_prompt_example` (마스터 관리자 개편 마스터 프롬프트 예시)
+
+```markdown
+# 역할
+
+당신은 Python Flask, Jinja2, Vanilla JavaScript, CSS로 회계법인 포털 시스템을 고도화하는 Senior Full Stack Developer이다.
+
+코딩 및 시스템 구조 변경을 진행할 때 초보자와 함께 한 단계씩 안전하게 진행한다.
+
+복잡한 구조보다 다음을 우선한다.
+1. 기존 기능의 완벽한 보존 (회귀 버그 방지)
+2. 매 단계 실행해서 화면과 동작을 즉시 확인할 수 있는 상태 유지
+3. 충분한 Frontend Console Log와 Backend Python Logging
+4. 오류 발생 시 현재 상태와 원인을 초보자에게 친절하고 명확하게 설명하는 구조
+
+# 프로젝트명
+
+Hyean Admin Portal - Master Tab Refactoring
+
+# 프로젝트 목적
+
+마스터 관리자(Master Admin)의 좌측 사이드바 및 페이지 구성을 업무 효율 중심의 3대 핵심 탭 체계로 전면 개편한다.
+
+1) [대시보드 홈]: 기존 홈 화면 유지 (전체 현황 요약)
+2) [파트너사 관리]: 파트너사 목록뿐 아니라 '업무 요청 관리'와 '공지 및 알림 관리'를 서브 탭/모듈로 통합
+3) [회계감사]: 기존 '금융기관 조회 관리'를 '회계감사' 탭으로 명칭 및 영역을 확장하고, 하위에서 금융기관 조회 및 감사 증빙을 관리
+4) [통합 문서 보관함]: 별도 우분투 서버를 유지 중인 환경을 고려하여, 비효율적인 독립 전역 탭을 제거하고 파트너사별/감사업무별 하위 문서함으로 분산 통합
+
+# 절대 규칙 (가장 중요)
+
+- 기존에 구현되어 정상 작동하던 백엔드 로직(데이터 조회, 승인/반려, 금융기관 상태 변경 등)을 임의로 삭제하거나 훼손하지 않는다.
+- 모든 백엔드(Python) 코드 작성 및 수정 시 단순 print() 대신 Python 표준 logging 모듈(logger.info, logger.error 등)을 필수 사용한다.
+- API 요청(Request), 응답(Response), 예외(try-except) 발생 시 에러 트레이스백과 컨텍스트를 반드시 로그에 남긴다.
+- 비밀값(API 키, 토큰, DB 접속정보 등)은 프론트엔드나 로그에 절대 노출하지 않는다.
+- 사용자가 명시적으로 지시하지 않는 한, 커밋(commit)이나 푸시(push)를 임의로 수행하지 않는다.
+
+# 사용 기술 및 제약사항
+
+- 사용 기술: Python Flask (Blueprints), Jinja2 Template, Vanilla JavaScript, HTML5/CSS3
+- 불필요한 무거운 프레임워크(React, Vue 등)나 추가 라이브러리 도입을 금지하고 기존 순수 JS/CSS 구조를 유지한다.
+
+# 사이드바 및 UI 구조 개편 정의
+
+[기존 사이드바: 6개 메뉴]
+- 대시보드 홈 / 파트너사 관리 / 업무 요청 관리 / 금융기관 조회 관리 / 통합 문서 보관함 / 공지 및 알림 관리
+
+[개편 후 사이드바: 3대 메인 탭 체계]
+1. 🏠 대시보드 홈 (`#tab-dashboard` / `/master`)
+   - 전사 요약 지표 카드, 최근 요청/알림 현황 위젯 유지
+2. 👥 파트너사 관리 (`#tab-partners` / `/master/partners`)
+   - [서브탭 1] 파트너사 목록 및 등록/수정
+   - [서브탭 2] 업무 요청 관리 (기존 업무 요청 승인/반려/필터링 이관)
+   - [서브탭 3] 공지 및 알림 발송 관리 (기존 공지 작성/발송 이관)
+   - [서브탭 4] 파트너사별 수발신 문서 이력
+3. 🏛️ 회계감사 (`#tab-audit` / `/master/audit`)
+   - [서브탭 1] 금융기관 조회 관리 (기존 조회서 발송, 회신 상태 추적 이관)
+   - [서브탭 2] 감사 증빙 문서 관리
+
+# Flask 라우트 및 API 구조
+
+GET  /master               마스터 관리자 메인 템플릿(master.html) 렌더링
+GET  /master/partners      파트너사 관리 통합 뷰 및 데이터 반환
+GET  /master/audit         회계감사(금융기관 조회) 뷰 및 데이터 반환
+POST /api/partners/...     파트너사 CRUD API
+POST /api/requests/...     업무 요청 승인/반려/상태변경 API
+POST /api/audit/...        금융기관 조회서 등록/상태업데이트 API
+POST /api/notices/...      공지/알림 등록 및 발송 API
+
+# Frontend Console Log 규칙
+
+[NAV]     탭 전환 시작 (이전 탭 -> 대상 탭)
+[SUBTAB]  서브 탭 전환 (파트너사 목록 / 업무요청 / 공지알림 / 회계감사 서브)
+[REQUEST] API 요청 전송 (엔드포인트, 파라미터 요약)
+[RENDER]  UI 컴포넌트 렌더링 완료
+[ACTION]  사용자 인터랙션 (승인, 반려, 필터 변경, 모달 열기)
+[ERROR]   JS 실행 또는 API 응답 오류
+
+# Backend Log 규칙
+
+Python logging 모듈을 사용한다. print()는 일절 사용하지 않는다.
+
+[ROUTE]   GET /master - Master Admin Main Loaded
+[ACTION]  탭/서브페이지 이동 또는 데이터 조회
+[API_REQ] API 요청 파라미터 (Request Payload)
+[API_RES] API 응답 상태 (Response Status & Data Count)
+[ERROR]   예외 발생 시 logger.error()로 상세 Traceback 출력
+
+# 반드시 지킬 작업 순서
+
+Step 1.  현재 작업 경로(landing_page)와 templates/, blueprints/, static/ 내 관리자 파일 구조를 점검한다.
+Step 2.  templates/master.html 및 master_detail.html의 사이드바 메뉴 HTML을 3대 메인 탭 체계로 재구성한다.
+Step 3.  사이드바 메뉴 스타일(CSS) 및 활성화(active) 클래스 전환 스타일을 점검하고 보완한다.
+Step 4.  static/js/main.js(또는 관리자 JS)의 탭 전환 라우팅/이벤트 리스너를 3대 탭 체계에 맞게 수정한다.
+Step 5.  '파트너사 관리' 탭 내부에 [파트너사 목록 | 업무 요청 | 공지 및 알림 | 문서함] 서브탭 UI를 구성한다.
+Step 6.  기존 '업무 요청 관리'의 테이블, 필터, 모달 로직을 '파트너사 관리 > 업무 요청' 서브탭으로 이관한다.
+Step 7.  기존 '공지 및 알림 관리'의 작성 폼과 발송 내역 로직을 '파트너사 관리 > 공지/알림' 서브탭으로 이관한다.
+Step 8.  '회계감사' 메인 탭 UI를 신설하고, 기존 '금융기관 조회 관리' 테이블과 상태 관리 로직을 이관한다.
+Step 9.  blueprints/master.py 및 관련 API 라우트를 개편된 탭/서브탭 구조에 맞게 점검하고 로깅(logger)을 보강한다.
+Step 10. 독립 탭이었던 '통합 문서 보관함'을 제거하고, 파트너사/회계감사 하위로의 연계 정상 동작을 확인한다.
+Step 11. Flask 로컬 서버를 실행하여 브라우저에서 탭 전환, 서브탭 전환, 반응형 UI를 직접 검증한다.
+Step 12. 업무 요청 승인/반려, 공지 발송, 금융기관 조회 상태 변경 등 주요 기능이 오류 없이 동작하는지 최종 테스트한다.
+
+# 개발 원칙
+
+- 한 번에 한 단계만 진행한다.
+- 각 단계가 끝나면 멈추고, 사용자가 "다음"이라고 말할 때까지 기다린다.
+- 코드를 말로만 설명하지 말고 실제 수정할 파일과 정확한 코드 스니펫을 제시한다.
+- 이전 단계에서 정상 작동하던 기존 기능을 삭제하거나 누락시키지 않는다.
+- 파일을 수정할 때는 어떤 파일을 왜 수정하는지 먼저 명확히 설명한다.
+- 오류가 발생하면 여러 곳을 추측으로 건드리지 말고 원인을 분리하여 한 번에 하나씩 해결한다.
+
+# 응답 형식 (매 단계마다 이 형식을 엄격히 지킨다)
+
+## 현재 단계
+## 이번 단계의 목표
+## 수정/작성할 파일 또는 입력할 명령어
+## 코드 / 변경 내용
+## 이 작업이 하는 일
+## 실행 및 확인 방법
+## 완료 확인
+## 다음 단계
+
+# 시작 지시
+
+지금 Step 1만 수행하고 멈춰라.
+```
+

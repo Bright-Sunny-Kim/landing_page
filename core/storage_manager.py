@@ -21,10 +21,14 @@ class HybridStorageManager:
     """
 
     def __init__(self):
+        self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self.local_base_dir = os.path.join(
-            os.getcwd(), "uploads", "작업완료_보관함"
+            self.project_root, "uploads", "작업완료_보관함"
         )
-        os.makedirs(self.local_base_dir, exist_ok=True)
+        try:
+            os.makedirs(self.local_base_dir, exist_ok=True)
+        except Exception as e:
+            logger.warning("[STORAGE:INIT_WARNING] 기본 보관함 디렉토리 생성 실패: %s", e)
 
         # 사내 Ubuntu 서버 관련 환경설정 로드
         self.storage_mode = os.environ.get(

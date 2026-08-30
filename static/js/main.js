@@ -411,230 +411,675 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 4. 마스터 관리자 사이드바 클릭 상호작용 및 Mock 화면 렌더링
+    // 4. 마스터 관리자 사이드바 클릭 상호작용 및 3대 메인 탭 전환 로직
     const sidebarMenuItems = document.querySelectorAll('.master-menu-item');
     const masterMainContent = document.getElementById('master-main-content');
     const homeDashboardView = document.getElementById('home-dashboard-view');
     const detailDashboardView = document.getElementById('detail-dashboard-view');
 
-    // 각 메뉴명에 대응하는 한글 정보 및 설명 정의
+    // 각 메뉴명에 대응하는 한글 정보 및 설명 정의 (부가 기능용)
     const menuMockData = {
-        requests: {
-            title: '📥 업무 요청 관리',
-            desc: '모든 파트너사에서 요청한 실시간 감사, 세무 자문 및 기장 대행 건을 진행 상태별로 필터링하고 일괄 관리할 수 있는 통합 관리 보드입니다. 실시간 업무 현황을 간편하게 제어하세요.',
-            icon: '📥',
-            placeholder: '모든 파트너사 요청 실시간 모니터링 준비 중'
-        },
-        repository: {
-            title: '📂 통합 문서 보관함',
-            desc: '각 기업 파트너사가 업로드한 증빙 서류 파일 및 세무조정계산서, 재무제표 등 완료 보고서를 Supabase Storage 버킷과 동기화하여 보안 보관하고 다운로드할 수 있는 문서 전용 드라이브 공간입니다.',
-            icon: '📂',
-            placeholder: '기업별 보안 문서 보관 및 공유 드라이브 준비 중'
-        },
-        announcements: {
-            title: '📢 공지 및 알림 관리',
-            desc: '회계법인 혜안 파트너 포털에 접속하는 기업 회원들을 대상으로 긴급 세무 일정 알림, 시스템 공지사항, 팝업 메시지를 등록하고 우선순위별로 편집하여 일괄 게시하는 중앙 알림 컨트롤러입니다.',
-            icon: '📢',
-            placeholder: '파트너사 타겟팅 긴급 공지 등록기 준비 중'
-        },
         calendar: {
             title: '📅 세무 일정 캘린더',
             desc: '법인세, 부가가치세, 원천세 신고 등 월별 주요 국가 세무 일정표와 각 파트너사 담당자와의 세무 대면 상담 및 법인 회계 감사 방문 실사 스케줄을 한눈에 관리하는 통합 세무 캘린더입니다.',
             icon: '📅',
-            placeholder: '국세청 세무 신고 스케줄러 & 방문 상담 캘린더 준비 중'
+            placeholder: '국세청 세무 신고 스케줄러 & 방문 상담 캘린더'
         },
         chat: {
             title: '💬 실시간 자문 상담',
             desc: '비즈니스 파트너사 담당자가 실시간으로 문의하는 세무/회계 관련 일상 자문 건에 대해 회계사가 즉시 답변하고 자료 조회를 제공하는 실시간 질의응답 아카이브 및 채팅 관리 패널입니다.',
             icon: '💬',
-            placeholder: '1:1 파트너사 실시간 세무 자문 채팅창 준비 중'
+            placeholder: '1:1 파트너사 실시간 세무 자문 채팅창'
         },
         billing: {
             title: '💳 수수료 및 청구 관리',
             desc: '매월 발생하는 기장 서비스 수수료, 연간 세무조정 수수료, 인수합병(M&A) 및 재무 감사 실사 용역 비용 청구서를 안전하게 발행하고 완납/미납 결제 여부를 통합 대조하는 빌링 대시보드입니다.',
             icon: '💳',
-            placeholder: '기업 수수료 청구서 및 정기 기장료 수납 추적기 준비 중'
-        },
-        analytics: {
-            title: '📈 시스템 통계 및 리포트',
-            desc: '연도별/월별 신규 파트너사 유치 통계, 누적 파일 전송 데이터 사용량, 기장 대리 수요 추이 분석 그래프 및 월별 업무 처리 효율성을 다각도로 시각화하여 경영 분석을 돕는 통합 리포트 화면입니다.',
-            icon: '📈',
-            placeholder: '통합 경영 통계 시각화 및 리포팅 모듈 준비 중'
+            placeholder: '기업 수수료 청구서 및 정기 기장료 수납 추적기'
         },
         settings: {
             title: '⚙️ 포털 시스템 설정',
             desc: '최고 관리자(Master) 계정 관리 및 추가 부회계사 권한 부여, 파트너사 포털 접근 차단/해제 IP 제어, 시스템 보안 감사 로그 모니터링 및 PWA 설치형 웹 사이트의 캐시 리프레시 설정을 관리하는 시스템 패널입니다.',
             icon: '⚙️',
-            placeholder: '보안 접근 제어 및 서브 관리자 권한 설정 센터 준비 중'
+            placeholder: '보안 접근 제어 및 서브 관리자 권한 설정 센터'
         }
     };
 
+    // 서브탭 전환 공통 함수
+    window.switchMasterSubtab = function(containerId, targetSubtabId) {
+        try {
+            const container = document.getElementById(containerId) || document;
+            const subtabBtns = container.querySelectorAll('.master-subtab-btn');
+            const subtabPanes = container.querySelectorAll('.master-subtab-pane');
+
+            subtabBtns.forEach(btn => {
+                const target = btn.getAttribute('data-subtab');
+                if (target === targetSubtabId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            subtabPanes.forEach(pane => {
+                if (pane.id === targetSubtabId) {
+                    pane.classList.add('active');
+                    pane.style.display = 'block';
+                } else {
+                    pane.classList.remove('active');
+                    pane.style.display = 'none';
+                }
+            });
+
+            console.log(`[SUBTAB] 서브 탭 전환 완료 -> (${containerId} > ${targetSubtabId})`);
+        } catch (err) {
+            console.error('[ERROR] 서브탭 전환 중 오류:', err);
+        }
+    };
+
+    // 서브탭 클릭 이벤트 위임
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.master-subtab-btn');
+        if (btn) {
+            e.preventDefault();
+            const targetSubtab = btn.getAttribute('data-subtab');
+            const navContainer = btn.closest('.master-subnav-container');
+            const parentView = btn.closest('.master-card') || document;
+            
+            console.log(`[SUBTAB] 서브 탭 전환 시도: ${targetSubtab}`);
+            
+            if (navContainer) {
+                navContainer.querySelectorAll('.master-subtab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            
+            if (parentView && targetSubtab) {
+                parentView.querySelectorAll('.master-subtab-pane').forEach(p => {
+                    if (p.id === targetSubtab) {
+                        p.classList.add('active');
+                        p.style.display = 'block';
+                    } else {
+                        p.classList.remove('active');
+                        p.style.display = 'none';
+                    }
+                });
+            }
+        }
+    });
+
     if (sidebarMenuItems.length > 0 && masterMainContent) {
+        let currentActiveMenu = 'home';
+
         sidebarMenuItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 const menu = item.getAttribute('data-menu');
                 const menuLabel = item.querySelector('span')?.textContent.trim() || 'Master Portal';
+                const prevMenu = currentActiveMenu;
 
-                // Keep the URL and browser-tab title in sync with the active sidebar tab.
-                history.replaceState(null, '', `#${menu}`);
+                console.log(`[NAV] 탭 전환 시작 (${prevMenu} -> ${menu})`);
+
+                // URL 해시 및 브라우저 타이틀 동기화
+                history.replaceState(null, '', `#tab-${menu}`);
                 document.title = `${menuLabel} | Hyean Master Portal`;
                 sidebarMenuItems.forEach(i => i.removeAttribute('aria-current'));
                 item.setAttribute('aria-current', 'page');
                 
-                // 만약 상세 페이지(master_detail.html)에서 홈이 아닌 다른 Mock 메뉴를 클릭했을 때는 목록 페이지(/master)로 넘어가서 탭이 열리도록 링크 이동 허용
+                // 상세 페이지(master_detail.html)에서 다른 메뉴 클릭 시 /master 로 이동
                 if (detailDashboardView && menu !== 'partners') {
-                    // detail view가 켜져 있으면, href 경로를 타서 목록 페이지로 이동하게 둠 (e.preventDefault 하지 않음)
                     return;
                 }
                 
-                // 1. 홈 대시보드 탭 활성화 처리
-                if (menu === 'home' || menu === 'partners') {
-                    // 기본 상세 뷰 또는 홈 뷰 활성화
-                    const currentHomeView = document.getElementById('home-dashboard-view') || homeDashboardView;
-                    if (currentHomeView) {
-                        e.preventDefault();
+                e.preventDefault();
+                currentActiveMenu = menu;
 
-                        masterMainContent.querySelectorAll('.master-card').forEach(card => {
-                            card.style.display = 'none';
-                        });
-                        
-                        // 사이드바 active 갱신
-                        sidebarMenuItems.forEach(i => i.classList.remove('active'));
-                        item.classList.add('active');
-                        
-                        // 기존에 로드된 Mock 뷰들 다 제거
-                        const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
-                        activeMocks.forEach(m => m.remove());
-                        
-                        // 타 대시보드 숨기기
-                        const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
-                        if (analyticsDashboardView) analyticsDashboardView.style.display = 'none';
-                        const calendarDashboardView = document.getElementById('calendar-dashboard-view');
-                        if (calendarDashboardView) calendarDashboardView.style.display = 'none';
-                        
-                        // 홈 보이기
-                        currentHomeView.style.display = 'block';
+                // 사이드바 active 갱신
+                sidebarMenuItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // 모든 마스터 카드 및 mock 뷰 숨김/제거
+                masterMainContent.querySelectorAll('.master-card').forEach(card => {
+                    card.style.display = 'none';
+                });
+                const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
+                activeMocks.forEach(m => m.remove());
+
+                // 1. [대시보드 홈]
+                if (menu === 'home') {
+                    const homeView = document.getElementById('home-dashboard-view');
+                    if (homeView) {
+                        homeView.style.display = 'block';
+                        console.log('[RENDER] 대시보드 홈 UI 컴포넌트 렌더링 완료');
                     }
                     return;
                 }
-                
-                // 2. Notion 세무 일정 캘린더
+
+                // 2. [파트너사 관리]
+                if (menu === 'partners') {
+                    const partnersView = document.getElementById('partners-dashboard-view') || document.getElementById('home-dashboard-view');
+                    if (partnersView) {
+                        partnersView.style.display = 'block';
+                        console.log('[RENDER] 파트너사 관리 뷰 렌더링 완료');
+                    }
+                    return;
+                }
+
+                // 3. [회계감사] (기존 finance-inquiry 포함)
+                if (menu === 'audit' || menu === 'finance-inquiry') {
+                    const auditView = document.getElementById('audit-dashboard-view') || document.getElementById('finance-dashboard-view');
+                    if (auditView) {
+                        auditView.style.display = 'block';
+                        console.log('[RENDER] 회계감사 관리 뷰 렌더링 완료');
+                    }
+                    return;
+                }
+
+                // 4. [세무 일정 캘린더]
                 if (menu === 'calendar') {
-                    e.preventDefault();
-                    sidebarMenuItems.forEach(i => i.classList.remove('active'));
-                    item.classList.add('active');
-                    masterMainContent.querySelectorAll('.master-card').forEach(card => {
-                        card.style.display = 'none';
-                    });
-                    const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
-                    activeMocks.forEach(m => m.remove());
                     const calendarDashboardView = document.getElementById('calendar-dashboard-view');
                     if (calendarDashboardView) {
                         calendarDashboardView.style.display = 'block';
                         window.loadNotionCalendar?.();
+                        console.log('[RENDER] 세무 일정 캘린더 렌더링 완료');
                     }
                     return;
                 }
 
-                // 2-1. 기업 정밀 분석 허브 (analytics-hub) 분기 처리
+                // 5. [기업 정밀 분석 허브]
                 if (menu === 'analytics-hub') {
-                    e.preventDefault();
-                    sidebarMenuItems.forEach(i => i.classList.remove('active'));
-                    item.classList.add('active');
-                    
-                    masterMainContent.querySelectorAll('.master-card').forEach(card => {
-                        card.style.display = 'none';
-                    });
-                    
-                    const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
-                    activeMocks.forEach(m => m.remove());
-                    
                     const hubView = document.getElementById('analytics-hub-view');
                     if (hubView) {
                         hubView.style.display = 'block';
                         window.initAnalyticsHub?.();
+                        console.log('[RENDER] 기업 정밀 분석 허브 렌더링 완료');
                     }
                     return;
                 }
 
-                // 3. 시스템 통계 및 리포트 (analytics) 분기 처리
+                // 6. [시스템 통계 및 리포트]
                 if (menu === 'analytics') {
-                    e.preventDefault();
-                    
-                    sidebarMenuItems.forEach(i => i.classList.remove('active'));
-                    item.classList.add('active');
-                    
-                    masterMainContent.querySelectorAll('.master-card').forEach(card => {
-                        card.style.display = 'none';
-                    });
-                    
-                    // 기존 Mock 뷰들 다 제거
-                    const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
-                    activeMocks.forEach(m => m.remove());
-                    
-                    // analytics 뷰 보이기
                     const analyticsDashboardView = document.getElementById('analytics-dashboard-view');
                     if (analyticsDashboardView) {
                         analyticsDashboardView.style.display = 'block';
+                        console.log('[RENDER] 시스템 통계 리포트 렌더링 완료');
                     }
                     return;
                 }
-                
-                // 3. Mock 나머지 7개 메뉴 탭 클릭 시 (e.preventDefault로 가상 렌더링)
-                e.preventDefault();
-                
-                // 사이드바 active 클래스 토글
-                sidebarMenuItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                
-                // 기존 대시보드 뷰 숨기기
-                masterMainContent.querySelectorAll('.master-card').forEach(card => {
-                    card.style.display = 'none';
-                });
-                
-                // 기존에 열려있던 다른 Mock 뷰 제거
-                const activeMocks = masterMainContent.querySelectorAll('.mock-dashboard');
-                activeMocks.forEach(m => m.remove());
-                
-                // 새 Mock HTML 생성 및 인젝션
+
+                // 7. 기타 Mock 화면 렌더링
                 const data = menuMockData[menu];
-                if (data && menu !== 'analytics') {
+                if (data) {
                     const mockHtml = `
                         <div class="mock-dashboard">
                             <header class="mock-header">
                                 <h1 class="mock-title">${data.title}</h1>
                             </header>
                             
-                            <div class="glass-card dashboard-card master-card mock-placeholder-card">
+                            <div class="glass-card dashboard-card master-card mock-placeholder-card" style="display:block;">
                                 <span class="mock-placeholder-icon">${data.icon}</span>
                                 <h3 class="mock-placeholder-title">${data.placeholder}</h3>
                                 <p class="mock-placeholder-desc">${data.desc}</p>
                                 <div class="status-badge" style="background: rgba(167, 139, 250, 0.08); border-color: rgba(167, 139, 250, 0.2); color: #a78bfa; margin-top: 10px; margin-bottom: 0;">
                                     <span class="pulse-dot" style="background: #a78bfa; box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.4);"></span>
-                                    <span>회계법인 혜안 IT 지원팀 개발 예정인 화면입니다</span>
+                                    <span>회계법인 혜안 통합 포털에서 제공 중인 기능입니다</span>
                                 </div>
                             </div>
                         </div>
                     `;
                     masterMainContent.insertAdjacentHTML('beforeend', mockHtml);
+                    console.log(`[RENDER] Mock View (${menu}) 렌더링 완료`);
                 }
             });
         });
     }
 });
 
-// PWA Service Worker Registration
+// ==========================================
+// [Step 6] 파트너사 관리 > 업무 요청 관리 모듈 로직
+// ==========================================
+let allMasterRequestsCache = [];
+let currentRequestStatusFilter = '';
+
+window.loadMasterRequests = async function() {
+    const tbody = document.getElementById('master-requests-tbody');
+    if (!tbody) return;
+
+    try {
+        console.log('[REQUEST] GET /api/requests 요청 전송 (모든 파트너사 업무 요청 목록)');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                    <span class="pulse-dot" style="display:inline-block; margin-right:6px;"></span>
+                    데이터를 실시간 동기화 중입니다...
+                </td>
+            </tr>
+        `;
+
+        const res = await fetch('/api/requests');
+        const data = await res.json();
+        
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || '요청 목록을 불러오지 못했습니다.');
+        }
+
+        allMasterRequestsCache = data.requests || [];
+        console.log(`[RENDER] 업무 요청 데이터 ${allMasterRequestsCache.length}건 수신 완료`);
+        renderMasterRequestsTable();
+    } catch (err) {
+        console.error('[ERROR] 업무 요청 목록 로딩 실패:', err);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 25px; color: #f87171;">
+                    ⚠️ 데이터를 불러오는 중 오류가 발생했습니다: ${err.message}
+                </td>
+            </tr>
+        `;
+    }
+};
+
+window.filterMasterRequests = function(status) {
+    currentRequestStatusFilter = status;
+    console.log(`[ACTION] 업무 요청 상태 필터 변경 -> '${status || '전체'}'`);
+    
+    // 필터 버튼 active 상태 갱신
+    document.querySelectorAll('.btn-filter-req').forEach(btn => {
+        if ((status === '' && btn.textContent.trim() === '전체') || btn.textContent.trim() === status) {
+            btn.classList.add('active');
+            btn.style.background = 'rgba(99,102,241,0.2)';
+            btn.style.borderColor = 'rgba(99,102,241,0.4)';
+            btn.style.color = '#fff';
+        } else {
+            btn.classList.remove('active');
+            btn.style.background = 'rgba(255,255,255,0.05)';
+            btn.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn.style.color = 'var(--text-secondary)';
+        }
+    });
+
+    renderMasterRequestsTable();
+};
+
+function renderMasterRequestsTable() {
+    const tbody = document.getElementById('master-requests-tbody');
+    if (!tbody) return;
+
+    let filtered = allMasterRequestsCache;
+    if (currentRequestStatusFilter) {
+        filtered = filtered.filter(item => {
+            const st = (item.status || '대기중').trim();
+            return st === currentRequestStatusFilter;
+        });
+    }
+
+    // 대기 건수 배지 갱신
+    const pendingCount = allMasterRequestsCache.filter(item => (item.status || '대기중') === '대기중').length;
+    const reqBadge = document.getElementById('partner-requests-badge');
+    if (reqBadge) reqBadge.textContent = pendingCount;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                    조회된 업무 요청 내역이 없습니다.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const statusColors = {
+        '대기중': 'background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3);',
+        '확인중': 'background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3);',
+        '승인완료': 'background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);',
+        '반려': 'background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);'
+    };
+
+    tbody.innerHTML = filtered.map(req => {
+        const curStatus = req.status || '대기중';
+        const stStyle = statusColors[curStatus] || 'background: rgba(255,255,255,0.05); color: #e2e8f0;';
+        const dateStr = req.created_at ? req.created_at.slice(0, 10) : '-';
+        const fileLink = req.file_url ? 
+            `<a href="${req.file_url}" target="_blank" class="partner-link" style="font-size:0.85rem;">📥 다운로드</a>` : 
+            `<span style="color:var(--text-secondary); font-size:0.8rem;">-</span>`;
+
+        return `
+            <tr>
+                <td class="col-date">${dateStr}</td>
+                <td class="col-company">
+                    <strong>${req.company_name || '-'}</strong>
+                </td>
+                <td>${req.file_name || req.category || '기본 서류'}</td>
+                <td>
+                    <span style="display:inline-block; padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600; ${stStyle}">
+                        ${curStatus}
+                    </span>
+                </td>
+                <td>${fileLink}</td>
+                <td>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button type="button" class="btn-logout" onclick="updateMasterRequestStatus('${req.id}', '승인완료')" style="padding: 3px 8px; font-size: 0.78rem; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #34d399;">승인</button>
+                        <button type="button" class="btn-logout" onclick="updateMasterRequestStatus('${req.id}', '확인중')" style="padding: 3px 8px; font-size: 0.78rem; background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.3); color: #818cf8;">확인중</button>
+                        <button type="button" class="btn-logout" onclick="updateMasterRequestStatus('${req.id}', '반려')" style="padding: 3px 8px; font-size: 0.78rem; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171;">반려</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    console.log(`[RENDER] 업무 요청 테이블 렌더링 완료 (${filtered.length}건 표시)`);
+}
+
+window.updateMasterRequestStatus = async function(requestId, newStatus) {
+    if (!requestId) return;
+    
+    console.log(`[ACTION] 업무 요청 상태 변경 시도 (ID: ${requestId} -> ${newStatus})`);
+    
+    try {
+        console.log(`[REQUEST] POST /api/requests/update-status (id: ${requestId}, status: ${newStatus})`);
+        const res = await fetch('/api/requests/update-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: requestId, status: newStatus })
+        });
+        
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+            throw new Error(result.error || '상태 변경에 실패했습니다.');
+        }
+
+        console.log(`[ACTION] 업무 요청 상태 변경 성공 (ID: ${requestId} -> ${newStatus})`);
+        
+        // 캐시 업데이트 및 재렌더링
+        const target = allMasterRequestsCache.find(r => String(r.id) === String(requestId));
+        if (target) target.status = newStatus;
+        renderMasterRequestsTable();
+    } catch (err) {
+        console.error('[ERROR] 업무 요청 상태 업데이트 오류:', err);
+        alert(`상태 변경 중 오류가 발생했습니다: ${err.message}`);
+    }
+};
+
+// 파트너사 관리 탭 진입 시 초기 요청 목록 로드 트리거
+document.addEventListener('click', (e) => {
+    const subtabBtn = e.target.closest('.master-subtab-btn[data-subtab="subtab-partner-requests"]');
+    if (subtabBtn) {
+        window.loadMasterRequests();
+    }
+});
+
+// ==========================================
+// [Step 7] 파트너사 관리 > 공지 및 알림 관리 모듈 로직
+// ==========================================
+let allMasterNoticesCache = [];
+
+window.loadMasterNotices = async function() {
+    const tbody = document.getElementById('master-notices-tbody');
+    if (!tbody) return;
+
+    try {
+        console.log('[REQUEST] GET /api/notices (공지 및 알림 목록 조회)');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                    <span class="pulse-dot" style="display:inline-block; margin-right:6px;"></span>
+                    공지 데이터를 실시간 동기화 중입니다...
+                </td>
+            </tr>
+        `;
+
+        const res = await fetch('/api/notices');
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || '공지 목록을 불러오지 못했습니다.');
+        }
+
+        allMasterNoticesCache = data.notices || [];
+        console.log(`[RENDER] 공지 및 알림 데이터 ${allMasterNoticesCache.length}건 수신 완료`);
+        renderMasterNoticesTable();
+    } catch (err) {
+        console.error('[ERROR] 공지 목록 로딩 실패:', err);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 25px; color: #f87171;">
+                    ⚠️ 공지 내역을 불러오지 못했습니다: ${err.message}
+                </td>
+            </tr>
+        `;
+    }
+};
+
+function renderMasterNoticesTable() {
+    const tbody = document.getElementById('master-notices-tbody');
+    if (!tbody) return;
+
+    if (allMasterNoticesCache.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                    등록된 공지 및 알림 내역이 없습니다.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const badgeStyles = {
+        'urgent': 'background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);',
+        'popup': 'background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3);',
+        'normal': 'background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);'
+    };
+    const badgeLabels = { 'urgent': '🚨 긴급', 'popup': '🔔 팝업', 'normal': '📢 일반' };
+
+    tbody.innerHTML = allMasterNoticesCache.map(notice => {
+        const imp = notice.importance || 'normal';
+        const stStyle = badgeStyles[imp] || badgeStyles.normal;
+        const impLabel = badgeLabels[imp] || '📢 일반';
+        const targetLabel = notice.target_company_name || (notice.target_company === 'all' ? '전체 파트너사' : notice.target_company);
+        const dateStr = notice.created_at || '-';
+
+        return `
+            <tr>
+                <td class="col-date">${dateStr}</td>
+                <td><strong>${targetLabel}</strong></td>
+                <td>
+                    <span style="display:inline-block; padding:3px 8px; border-radius:12px; font-size:0.75rem; font-weight:600; ${stStyle}">
+                        ${impLabel}
+                    </span>
+                </td>
+                <td><strong>${notice.title || '-'}</strong></td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 0.85rem;">
+                    ${notice.content || '-'}
+                </td>
+                <td>
+                    <button type="button" class="btn-logout" onclick="deleteMasterNotice('${notice.id}')" style="padding: 3px 8px; font-size: 0.78rem; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171;">삭제</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    console.log(`[RENDER] 공지 및 알림 테이블 렌더링 완료 (${allMasterNoticesCache.length}건 표시)`);
+}
+
+window.handleSendMasterNotice = async function(event) {
+    event.preventDefault();
+
+    const titleInput = document.getElementById('notice-input-title');
+    const targetInput = document.getElementById('notice-input-target');
+    const impInput = document.getElementById('notice-input-importance');
+    const contentInput = document.getElementById('notice-input-content');
+    const submitBtn = document.getElementById('btn-submit-notice');
+
+    const payload = {
+        title: titleInput.value.trim(),
+        target_company: targetInput.value,
+        importance: impInput.value,
+        content: contentInput.value.trim()
+    };
+
+    console.log('[ACTION] 공지 및 알림 발송 시도:', payload);
+
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.7';
+        }
+
+        console.log('[REQUEST] POST /api/notices 요청 전송');
+        const res = await fetch('/api/notices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+            throw new Error(result.error || '공지 발송에 실패했습니다.');
+        }
+
+        console.log('[ACTION] 공지 및 알림 발송 성공:', result.notice);
+        alert('공지 및 알림이 성공적으로 등록/발송되었습니다.');
+
+        // 폼 초기화 및 목록 갱신
+        titleInput.value = '';
+        contentInput.value = '';
+        allMasterNoticesCache.unshift(result.notice);
+        renderMasterNoticesTable();
+    } catch (err) {
+        console.error('[ERROR] 공지 발송 오류:', err);
+        alert(`공지 발송 중 오류가 발생했습니다: ${err.message}`);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+        }
+    }
+};
+
+window.deleteMasterNotice = async function(noticeId) {
+    if (!noticeId || !confirm('이 공지사항을 삭제하시겠습니까?')) return;
+
+    console.log(`[ACTION] 공지 삭제 시도 (ID: ${noticeId})`);
+
+    try {
+        console.log(`[REQUEST] DELETE /api/notices/${noticeId}`);
+        const res = await fetch(`/api/notices/${noticeId}`, { method: 'DELETE' });
+        const result = await res.json();
+
+        if (!res.ok || !result.success) {
+            throw new Error(result.error || '공지 삭제에 실패했습니다.');
+        }
+
+        console.log(`[ACTION] 공지 삭제 완료 (ID: ${noticeId})`);
+        allMasterNoticesCache = allMasterNoticesCache.filter(n => String(n.id) !== String(noticeId));
+        renderMasterNoticesTable();
+    } catch (err) {
+        console.error('[ERROR] 공지 삭제 오류:', err);
+        alert(`삭제 중 오류가 발생했습니다: ${err.message}`);
+    }
+};
+
+// 공지/알림 서브탭 클릭 시 데이터 로드 트리거
+document.addEventListener('click', (e) => {
+    const subtabBtn = e.target.closest('.master-subtab-btn[data-subtab="subtab-partner-notices"]');
+    if (subtabBtn) {
+        window.loadMasterNotices();
+    }
+});
+
+// ==========================================
+// [Step 10] 파트너사 문서함 기업 검색 필터 함수
+// ==========================================
+window.filterPartnerDocs = function(keyword) {
+    const term = (keyword || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#partner-docs-table .partner-doc-row');
+    rows.forEach(row => {
+        const company = row.getAttribute('data-company') || '';
+        if (!term || company.includes(term)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+};
+
+// PWA Service Worker Registration & Install Prompt Logic
+let deferredPrompt = null;
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/static/sw.js')
             .then(registration => {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                console.log('PWA ServiceWorker registered with scope: ', registration.scope);
             })
             .catch(err => {
-                console.log('ServiceWorker registration failed: ', err);
+                console.warn('PWA ServiceWorker registration failed: ', err);
             });
     });
 }
+
+// Handle PWA Install Prompt for Mobile & Desktop
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    // Check if user already dismissed install banner in this session
+    if (sessionStorage.getItem('pwa-dismissed')) {
+        return;
+    }
+
+    // Create & Inject Install Banner if not exists
+    let banner = document.getElementById('pwa-install-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'pwa-install-banner';
+        banner.innerHTML = `
+            <div class="pwa-banner-icon">✨</div>
+            <div class="pwa-banner-text">
+                <div class="pwa-banner-title">혜안 앱 설치하기</div>
+                <div class="pwa-banner-desc">스마트폰 홈 화면에서 앱처럼 편리하게 이용하세요</div>
+            </div>
+            <div class="pwa-banner-actions">
+                <button class="pwa-btn-install" id="pwa-btn-install-trigger">설치</button>
+                <button class="pwa-btn-close" id="pwa-btn-install-close" aria-label="닫기">✕</button>
+            </div>
+        `;
+        document.body.appendChild(banner);
+
+        const installBtn = document.getElementById('pwa-btn-install-trigger');
+        const closeBtn = document.getElementById('pwa-btn-install-close');
+
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`PWA install choice: ${outcome}`);
+                    deferredPrompt = null;
+                }
+                banner.classList.remove('show');
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                banner.classList.remove('show');
+                sessionStorage.setItem('pwa-dismissed', 'true');
+            });
+        }
+    }
+
+    // Trigger animation
+    setTimeout(() => {
+        banner.classList.add('show');
+    }, 1500);
+});
+
+window.addEventListener('appinstalled', () => {
+    console.log('PWA was successfully installed.');
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.classList.remove('show');
+    deferredPrompt = null;
+});
 
 // ==========================================
 // Master Portal Sub-tabs & Pipeline Interactions
@@ -711,6 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'partner-home-view',
         'partner-history-view',
         'partner-inquiry-view',
+        'partner-consulting-view',
         'partner-billing-view',
         'partner-settings-view'
     ];
@@ -735,6 +1181,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const targetView = document.getElementById(menu + '-view');
                 if (targetView) {
                     targetView.style.display = 'block';
+                    if (menu === 'partner-consulting' && typeof window.loadClientCompanyChat === 'function') {
+                        window.loadClientCompanyChat();
+                    }
                 }
             });
         });
@@ -1238,39 +1687,37 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 관리자 (Admin) - 금융기관 외부조회 신청 관리
+// 관리자 (Admin) - 회계감사 & 금융기관 외부조회 신청 관리
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    const adminFinanceMenu = document.querySelector('.master-menu-item[data-menu="finance-inquiry"]');
-    const adminFinanceView = document.getElementById('finance-inquiry-view');
+    const adminAuditMenu = document.querySelector('.master-menu-item[data-menu="audit"]') || 
+                           document.querySelector('.master-menu-item[data-menu="finance-inquiry"]');
+    const adminAuditView = document.getElementById('audit-dashboard-view') || 
+                           document.getElementById('finance-inquiry-view');
     const homeDashboardView = document.getElementById('home-dashboard-view');
     
-    if (adminFinanceMenu && adminFinanceView) {
-        // 메뉴 클릭 시 화면 전환 처리 (기존 메뉴 클릭 이벤트에 기능 추가)
-        adminFinanceMenu.addEventListener('click', (e) => {
+    if (adminAuditMenu && adminAuditView) {
+        adminAuditMenu.addEventListener('click', (e) => {
             e.preventDefault();
-            // 모든 뷰 숨기기
             const allCards = document.querySelectorAll('.master-card');
             allCards.forEach(c => c.style.display = 'none');
             document.querySelectorAll('.mock-dashboard').forEach(view => view.remove());
             
-            // 모든 메뉴 active 제거
             const allMenus = document.querySelectorAll('.master-menu-item');
             allMenus.forEach(m => m.classList.remove('active'));
             
-            // 대상 뷰 보이기
-            adminFinanceView.style.display = 'block';
-            adminFinanceMenu.classList.add('active');
+            adminAuditView.style.display = 'block';
+            adminAuditMenu.classList.add('active');
             
-            window.loadAdminInquiryStatus();
+            console.log('[ACTION] 회계감사 탭 클릭 -> 금융기관 조회 데이터 로딩 시작');
+            window.loadAdminInquiryStatus?.();
         });
         
-        // 홈 메뉴 클릭 시 조치 (다른 메뉴 클릭 처리 확장)
         const homeMenu = document.querySelector('.master-menu-item[data-menu="home"]');
-        if(homeMenu) {
+        if (homeMenu) {
             homeMenu.addEventListener('click', () => {
-                if(adminFinanceView) adminFinanceView.style.display = 'none';
-                if(homeDashboardView) currentHomeView.style.display = 'block';
+                if (adminAuditView) adminAuditView.style.display = 'none';
+                if (homeDashboardView) homeDashboardView.style.display = 'block';
             });
         }
         
@@ -1955,7 +2402,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Restore any sidebar tab from its URL hash and set the initial browser title.
 document.addEventListener('DOMContentLoaded', () => {
-    const requestedMenu = window.location.hash.slice(1) || 'home';
-    const requestedItem = document.querySelector(`.master-menu-item[data-menu="${CSS.escape(requestedMenu)}"]`);
-    requestedItem?.click();
+    let hash = window.location.hash.slice(1);
+    if (!hash) hash = 'home';
+    
+    // tab- prefix 제거 및 alias 매핑
+    let requestedMenu = hash.replace(/^tab-/, '');
+    if (requestedMenu === 'dashboard') requestedMenu = 'home';
+    if (requestedMenu === 'finance-inquiry') requestedMenu = 'audit';
+
+    const requestedItem = document.querySelector(`.master-menu-item[data-menu="${CSS.escape(requestedMenu)}"]`) ||
+                          document.querySelector(`.master-menu-item[data-tab="tab-${CSS.escape(requestedMenu)}"]`);
+    if (requestedItem) {
+        requestedItem.click();
+    }
 });

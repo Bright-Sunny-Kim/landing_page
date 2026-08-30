@@ -6,9 +6,14 @@
     <meta name="description" content="{{ company_info.company }} 상세 관리 포털">
     <title>{{ company_info.company }} - Master Detail</title>
     <!-- PWA Settings -->
+    <meta name="theme-color" content="#09090b">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="혜안 포털">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#6366f1">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-512x512.svg') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/icon-192x192.svg') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.svg') }}">
     <!-- Google Fonts: Outfit & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -123,63 +128,49 @@
             </div>
             
             <ul class="master-menu-list">
+                <!-- 3대 핵심 메인 탭 -->
                 <li class="master-menu-item" data-menu="home">
-                    <!-- 상세 관리에서는 홈 선택 시 메인 대시보드 목록으로 이동 -->
-                    <a href="/master">
+                    <a href="/master#tab-dashboard">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
                         <span>대시보드 홈</span>
                     </a>
                 </li>
                 <li class="master-menu-item active" data-menu="partners">
-                    <a href="/master#partners">
+                    <a href="/master#tab-partners">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 8 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                         <span>파트너사 관리</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="requests">
-                    <a href="/master#requests">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-                        <span>업무 요청 관리</span>
+                <li class="master-menu-item" data-menu="audit">
+                    <a href="/master#tab-audit">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 6h2v2h-2V7zm0 4h2v6h-2v-6z"/></svg>
+                        <span>회계감사</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="repository">
-                    <a href="/master#repository">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6 10H6v-2h8v2zm4-4H6v-2h12v2z"/></svg>
-                        <span>통합 문서 보관함</span>
-                    </a>
-                </li>
-                <li class="master-menu-item" data-menu="announcements">
-                    <a href="/master#announcements">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-3 12H7v-2h10v2zm0-4H7V8h10v2z"/></svg>
-                        <span>공지 및 알림 관리</span>
-                    </a>
-                </li>
+
+                <!-- 부가 업무 및 유틸리티 -->
+                <li class="menu-divider" style="height: 1px; background: rgba(255,255,255,0.08); margin: 0.8rem 1rem;"></li>
+
                 <li class="master-menu-item" data-menu="calendar">
-                    <a href="/master#calendar">
+                    <a href="/master#tab-calendar">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
                         <span>세무 일정 캘린더</span>
                     </a>
                 </li>
-                <li class="master-menu-item" data-menu="chat">
-                    <a href="/master#chat">
-                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
-                        <span>실시간 자문 상담</span>
-                    </a>
-                </li>
                 <li class="master-menu-item" data-menu="billing">
-                    <a href="/master#billing">
+                    <a href="/master#tab-billing">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
                         <span>수수료 및 청구 관리</span>
                     </a>
                 </li>
                 <li class="master-menu-item" data-menu="analytics">
-                    <a href="/master#analytics">
+                    <a href="/master#tab-analytics">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                         <span>시스템 통계 및 리포트</span>
                     </a>
                 </li>
                 <li class="master-menu-item" data-menu="settings">
-                    <a href="/master#settings">
+                    <a href="/master#tab-settings">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3-1.07-3-3s1.07-3 3-3 3 1.07 3 3-1.07 3-3 3z"/></svg>
                         <span>포털 시스템 설정</span>
                     </a>
@@ -226,33 +217,30 @@
                     <div class="info-item">
                         <h3>최초 가입일</h3>
                         <p>{{ company_info.created_at[:10] }}</p>
-                    </div>
                 </div>
 
-                {% if company_info.task_type == '회계감사' %}
-                <!-- 회사 종합 AI 감사 위험 분석 패널 -->
-                <div class="glass-card" style="margin-bottom: 2.5rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); padding: 1.5rem 2rem; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; text-align: left;">
-                    <div style="flex: 1; min-width: 300px;">
-                        <h2 style="color: #a78bfa; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <span>📊</span> 회사 종합 AI 감사 자동화 엔진
-                        </h2>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin: 0;">
-                            피감사인(<strong>{{ company_info.company }}</strong>)이 업로드한 모든 재무 파일을 일괄 취합하고 연계 분석하여 통합 감사 위험 식별 및 표준 K-GAAP 근거 중심의 감사 조서(Working Paper) 초안을 원클릭으로 일괄 작성합니다.
-                        </p>
-                    </div>
-                    <div>
-                        <button id="btn-comprehensive-audit" class="btn-download" style="background: linear-gradient(135deg, #a78bfa, #6366f1); border: none; cursor: pointer; padding: 0.8rem 1.6rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: transform 0.2s ease;">
-                            <span>⚡</span> 회사 종합 AI 감사 조서 생성
-                        </button>
-                    </div>
+                <!-- 3대 서브탭 네비게이션 바 -->
+                <div class="master-subnav-container" id="company-detail-subnav">
+                    <button type="button" class="master-subtab-btn active" data-subtab="subtab-detail-files">
+                        <span>📂 제출 서류 관리</span>
+                        <span class="badge-count">{{ files|length }}</span>
+                    </button>
+                    <button type="button" class="master-subtab-btn" data-subtab="subtab-detail-analysis">
+                        <span>📊 기업 정밀 분석 & 조서</span>
+                    </button>
+                    <button type="button" class="master-subtab-btn" data-subtab="subtab-detail-chat">
+                        <span>💬 1:1 실시간 자문 상담</span>
+                        <span class="badge-count" id="detail-chat-badge">0</span>
+                    </button>
                 </div>
-                {% endif %}
 
-                <section class="partners-section">
-                    <div class="section-header-flex">
-                        <h2 class="section-title">업로드된 파일 및 업무 진행 상태</h2>
-                        <span class="partner-count">총 <strong>{{ files|length }}</strong>건</span>
-                    </div>
+                <!-- [서브탭 1] 📂 제출 서류 관리 패널 -->
+                <div class="master-subtab-pane active" id="subtab-detail-files">
+                    <section class="partners-section">
+                        <div class="section-header-flex">
+                            <h2 class="section-title">업로드된 파일 및 업무 진행 상태</h2>
+                            <span class="partner-count">총 <strong>{{ files|length }}</strong>건</span>
+                        </div>
                     
                     {% if files %}
                     <div class="table-container">
@@ -298,10 +286,31 @@
                         해당 파트너사가 아직 업로드한 파일이 없습니다.
                     </div>
                     {% endif %}
+                    </section>
+                </div>
 
+                <!-- [서브탭 2] 📊 기업 정밀 분석 & 조서 패널 -->
+                <div class="master-subtab-pane" id="subtab-detail-analysis">
                     {% if company_info.task_type == '회계감사' %}
+                    <!-- 회사 종합 AI 감사 위험 분석 패널 -->
+                    <div class="glass-card" style="margin-bottom: 2rem; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); padding: 1.5rem 2rem; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem; text-align: left;">
+                        <div style="flex: 1; min-width: 300px;">
+                            <h2 style="color: #a78bfa; font-size: 1.25rem; font-weight: 600; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <span>📊</span> 회사 종합 AI 감사 자동화 엔진
+                            </h2>
+                            <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin: 0;">
+                                피감사인(<strong>{{ company_info.company }}</strong>)이 업로드한 모든 재무 파일을 일괄 취합하고 연계 분석하여 통합 감사 위험 식별 및 표준 K-GAAP 근거 중심의 감사 조서(Working Paper) 초안을 원클릭으로 일괄 작성합니다.
+                            </p>
+                        </div>
+                        <div>
+                            <button id="btn-comprehensive-audit" class="btn-download" style="background: linear-gradient(135deg, #a78bfa, #6366f1); border: none; cursor: pointer; padding: 0.8rem 1.6rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: transform 0.2s ease;">
+                                <span>⚡</span> 회사 종합 AI 감사 조서 생성
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- AI 감사 자동화 보고서 섹션 -->
-                    <section id="audit-report-section" style="display: none; margin-top: 3.5rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2.5rem; text-align: left;">
+                    <section id="audit-report-section" style="display: none; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem; text-align: left;">
                         <div class="section-header-flex" style="margin-bottom: 1.5rem;">
                             <h2 class="section-title" style="font-size: 1.5rem; display: flex; align-items: center; gap: 0.6rem;">
                                 <span style="font-size: 1.8rem;">📊</span> AI 감사 위험 변동성 분석 & 조서 초안
@@ -379,19 +388,25 @@
                             </div>
                         </div>
 
-                        <!-- 시산표-재무제표 대사 결과 (P1: 회사 제시 재무상태표/손익계산서가 있을 때만 표출) -->
+                        <!-- 시산표-재무제표 원본 대사 (Reconciliation) 섹션 -->
                         <div class="glass-card" id="audit-reconciliation-section" style="display: none; background: rgba(20,20,20,0.3); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 2.5rem;">
-                            <h3 style="color: var(--text-primary); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">🧮 시산표 ↔ 재무상태표 대사 (대차평형 검증 + Delta 비교)</h3>
-                            <div id="audit-balance-check" style="margin-bottom: 1.2rem;"><!-- 동적 삽입 --></div>
+                            <div class="section-header-flex" style="margin-bottom: 1rem;">
+                                <h3 style="color: var(--text-primary); font-size: 1.1rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
+                                    <span>⚖️</span> T/B ↔ 재무제표 원본 자동 대사 및 대차평형 검증
+                                </h3>
+                                <div id="audit-balance-check">
+                                    <!-- 대차평형 상태 배지 -->
+                                </div>
+                            </div>
                             <div class="table-container">
                                 <table class="partners-table" style="font-size: 0.9rem;">
                                     <thead>
                                         <tr>
-                                            <th>계정과목</th>
-                                            <th style="text-align: right;">재무제표 금액</th>
-                                            <th style="text-align: right;">시산표 잔액</th>
-                                            <th style="text-align: right;">차이</th>
-                                            <th>상태</th>
+                                            <th>재무상태표 항목</th>
+                                            <th style="text-align: right;">제시 재무제표 금액</th>
+                                            <th style="text-align: right;">T/B 합산 금액</th>
+                                            <th style="text-align: right;">차이 (Delta)</th>
+                                            <th>검증 결과</th>
                                         </tr>
                                     </thead>
                                     <tbody id="audit-reconciliation-table-body">
@@ -399,16 +414,16 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <p id="audit-is-reconciliation-note" style="margin-top: 1rem; font-size: 0.82rem; color: var(--text-secondary);"></p>
+                            <p id="audit-is-reconciliation-note" style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.8rem; line-height: 1.4;"></p>
                         </div>
 
-                        <!-- 조서 에디터/렌더러 -->
+                        <!-- 생성된 감사 조서 마크다운 미리보기 -->
                         <div class="glass-card" style="background: rgba(15,15,15,0.6); padding: 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
-                            <h3 style="color: var(--text-primary); margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.7rem;">
-                                <span>📝</span> 최종 감사 조서 초안 (Audit Working Paper Draft)
+                            <h3 style="color: #6ee7b7; margin-bottom: 1.5rem; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.7rem;">
+                                <span>📝</span> 생성된 감사 조서 초안 (Working Paper Preview)
                             </h3>
-                            <div id="audit-working-paper-content" style="background: rgba(5,5,5,0.75); color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.95rem; line-height: 1.65; padding: 2rem; border-radius: 10px; overflow-x: auto; white-space: pre-wrap; max-height: 600px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); text-align: left;">
-                                <!-- 동적 삽입 -->
+                            <div id="audit-working-paper-container" style="background: #000; padding: 1.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); max-height: 500px; overflow-y: auto;">
+                                <pre id="audit-working-paper-content" style="color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; margin: 0;"></pre>
                             </div>
                         </div>
 
@@ -422,14 +437,300 @@
                             </div>
                         </div>
                     </section>
+                    {% else %}
+                    <div class="empty-state" style="padding: 3rem 1rem; text-align: center;">
+                        <p style="color: var(--text-secondary);">해당 기업은 '{{ company_info.task_type }}' 업무 타입으로 등록되어 있습니다.<br>AI 감사 분석 기능은 회계감사 대상 파트너사에 제공됩니다.</p>
+                    </div>
                     {% endif %}
-                </section>
+                </div>
+
+                <!-- [서브탭 3] 💬 1:1 실시간 자문 상담 패널 -->
+                <div class="master-subtab-pane" id="subtab-detail-chat">
+                    <div class="consulting-chat-container">
+                        <!-- 1. 상담 제어 헤더 바 -->
+                        <div class="chat-header-bar">
+                            <div class="chat-target-info">
+                                <div class="chat-avatar-icon">🏢</div>
+                                <div>
+                                    <h3 class="chat-target-name">{{ company_info.company }} 1:1 세무·감사 자문 상담실</h3>
+                                    <span class="chat-target-meta">담당자: {{ company_info.username }} ({{ company_info.email }})</span>
+                                </div>
+                            </div>
+                            <div class="chat-status-control">
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">상담 처리 상태:</span>
+                                <select id="consulting-status-select" class="consulting-status-badge status-pending" onchange="updateConsultingStatus(this.value)">
+                                    <option value="대기중">⏳ 답변 대기</option>
+                                    <option value="검토중">🔍 검토 중</option>
+                                    <option value="답변완료">✅ 답변 완료</option>
+                                </select>
+                                <button type="button" class="btn-logout" onclick="loadCompanyChat()" style="padding: 5px 12px; font-size: 0.82rem; margin-left: 6px;">
+                                    <span>🔄 새로고침</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2. 메시지 타임라인 영역 -->
+                        <div class="chat-messages-timeline" id="chat-messages-timeline">
+                            <div class="chat-empty-state" id="chat-empty-state">
+                                <span>💬</span>
+                                <p>등록된 상담 내역을 불러오는 중입니다...</p>
+                            </div>
+                        </div>
+
+                        <!-- 3. 빠른 답변 템플릿 추천 바 -->
+                        <div class="quick-reply-bar">
+                            <span class="quick-reply-label">⚡ 빠른 템플릿:</span>
+                            <button type="button" class="quick-reply-btn" onclick="insertQuickReply('안녕하세요. 요청하신 사항 확인하였으며 검토 후 회신드리겠습니다.')">확인 및 검토 안내</button>
+                            <button type="button" class="quick-reply-btn" onclick="insertQuickReply('정확한 회계 처리를 위해 추가 증빙 서류(세금계산서/통장내역) 업로드를 부탁드립니다.')">추가 서류 요청</button>
+                            <button type="button" class="quick-reply-btn" onclick="insertQuickReply('문의하신 세무/감사 질의에 대한 검토가 완료되었습니다.')">검토 완료 통보</button>
+                        </div>
+
+                        <!-- 4. 메시지 작성 및 파일 첨부 폼 -->
+                        <form id="consulting-chat-form" class="chat-input-wrapper" onsubmit="handleSendConsultingMessage(event)">
+                            <div class="chat-input-controls">
+                                <textarea id="consulting-chat-input" class="chat-textarea" placeholder="파트너사에게 보낼 자문 답변 또는 안내 메시지를 입력하세요... (Shift+Enter 줄바꿈, Enter 전송)" rows="2" required></textarea>
+                                
+                                <div class="chat-actions-row">
+                                    <div class="file-attach-wrapper">
+                                        <label for="consulting-file-attach" class="btn-file-attach">
+                                            <span>📎 서식/참고자료 첨부</span>
+                                        </label>
+                                        <input type="file" id="consulting-file-attach" style="display: none;" onchange="handleChatFileSelect(this)">
+                                        <span id="chat-attached-filename" class="attached-filename-indicator"></span>
+                                    </div>
+                                    <button type="submit" class="btn-submit btn-chat-send">
+                                        <span>전송하기 ✈️</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // [서브탭 전환 핸들러]
+            const subtabContainer = document.getElementById('company-detail-subnav');
+            if (subtabContainer) {
+                const subtabBtns = subtabContainer.querySelectorAll('.master-subtab-btn');
+                const subtabPanes = document.querySelectorAll('.master-subtab-pane');
+
+                subtabBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const targetId = btn.getAttribute('data-subtab');
+                        subtabBtns.forEach(b => b.classList.remove('active'));
+                        subtabPanes.forEach(p => p.classList.remove('active'));
+
+                        btn.classList.add('active');
+                        const targetPane = document.getElementById(targetId);
+                        if (targetPane) {
+                            targetPane.classList.add('active');
+                        }
+                        console.log(`[SUBTAB] 파트너사 상세 서브탭 전환: ${targetId}`);
+
+                        // 자문 상담 서브탭 진입 시 자동 로드
+                        if (targetId === 'subtab-detail-chat') {
+                            window.loadCompanyChat();
+                        }
+                    });
+                });
+            }
+
+            // ==========================================
+            // [Phase 4] 1:1 실시간 자문 상담 클라이언트 로직
+            // ==========================================
+            const clientCompanyName = "{{ company_info.company }}";
+            let selectedChatFile = null;
+
+            // 1. 상담 내역 로드 함수
+            window.loadCompanyChat = async function() {
+                console.log(`[REQUEST] GET /api/chat/${clientCompanyName} - 상담 내역 로드`);
+                const timeline = document.getElementById('chat-messages-timeline');
+                const badge = document.getElementById('detail-chat-badge');
+                const statusSelect = document.getElementById('consulting-status-select');
+
+                try {
+                    const res = await fetch(`/api/chat/${encodeURIComponent(clientCompanyName)}`);
+                    const data = await res.json();
+                    if (!data.success) {
+                        throw new Error(data.error || '상담 내역을 불러오지 못했습니다.');
+                    }
+
+                    if (statusSelect && data.status) {
+                        statusSelect.value = data.status;
+                    }
+
+                    const messages = data.messages || [];
+                    if (badge) {
+                        badge.innerText = messages.length;
+                    }
+
+                    if (messages.length === 0) {
+                        timeline.innerHTML = `
+                            <div class="chat-empty-state">
+                                <span>💬</span>
+                                <p>등록된 상담 내역이 없습니다. 첫 메시지를 남겨보세요.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let html = '';
+                    messages.forEach(m => {
+                        const isMaster = m.sender_role === 'master';
+                        const rowClass = isMaster ? 'master' : 'client';
+                        const avatarText = isMaster ? 'H' : (m.company_name ? m.company_name[0] : 'C');
+                        const senderTitle = isMaster ? '혜안 마스터 회계사' : (m.sender_name || m.company_name || '고객사');
+
+                        html += `
+                            <div class="chat-bubble-row ${rowClass}" id="msg-row-${m.id}">
+                                <div class="chat-bubble-avatar">${avatarText}</div>
+                                <div class="chat-bubble-content-wrap">
+                                    <div class="chat-bubble-meta">
+                                        <span style="font-weight:600; color:${isMaster ? '#a5b4fc' : '#93c5fd'};">${senderTitle}</span>
+                                        <span>${m.created_at || ''}</span>
+                                    </div>
+                                    <div class="chat-bubble">${escapeHtml(m.message)}</div>
+                                    ${m.file_url ? `
+                                        <a href="${m.file_url}" target="_blank" class="chat-attachment-card">
+                                            <span>📎 ${escapeHtml(m.file_name || '첨부파일 열기')}</span>
+                                        </a>
+                                    ` : ''}
+                                    ${isMaster ? `
+                                        <button type="button" class="chat-delete-btn" onclick="deleteConsultingMessage('${m.id}')">삭제</button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    timeline.innerHTML = html;
+                    timeline.scrollTop = timeline.scrollHeight;
+                    console.log(`[RENDER] 상담 메시지 ${messages.length}건 타임라인 렌더링 완료`);
+                } catch (err) {
+                    console.error('[ERROR] 상담 내역 로드 오류:', err);
+                    timeline.innerHTML = `
+                        <div class="chat-empty-state" style="color:#f87171;">
+                            <span>⚠️</span>
+                            <p>상담 내역 로드 중 오류가 발생했습니다: ${err.message}</p>
+                        </div>
+                    `;
+                }
+            };
+
+            // 2. 메시지 전송 핸들러
+            window.handleSendConsultingMessage = async function(e) {
+                e.preventDefault();
+                const input = document.getElementById('consulting-chat-input');
+                const message = (input.value || '').trim();
+                if (!message) return;
+
+                console.log(`[ACTION] 1:1 자문 상담 메시지 전송: company=${clientCompanyName}`);
+                const payload = {
+                    company_name: clientCompanyName,
+                    sender_role: 'master',
+                    sender_name: '마스터 회계사',
+                    message: message,
+                    file_url: selectedChatFile ? selectedChatFile.url : null,
+                    file_name: selectedChatFile ? selectedChatFile.name : null
+                };
+
+                input.disabled = true;
+                try {
+                    const res = await fetch('/api/chat/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (!data.success) {
+                        throw new Error(data.error || '전송에 실패했습니다.');
+                    }
+
+                    input.value = '';
+                    selectedChatFile = null;
+                    const fileIndicator = document.getElementById('chat-attached-filename');
+                    if (fileIndicator) fileIndicator.innerText = '';
+
+                    await window.loadCompanyChat();
+                } catch (err) {
+                    console.error('[ERROR] 메시지 전송 실패:', err);
+                    alert(`메시지 전송 중 오류가 발생했습니다: ${err.message}`);
+                } finally {
+                    input.disabled = false;
+                    input.focus();
+                }
+            };
+
+            // 3. 빠른 템플릿 삽입
+            window.insertQuickReply = function(text) {
+                const input = document.getElementById('consulting-chat-input');
+                if (input) {
+                    input.value = text;
+                    input.focus();
+                }
+            };
+
+            // 4. 상담 처리 상태 변경
+            window.updateConsultingStatus = async function(newStatus) {
+                console.log(`[ACTION] 상담 상태 변경 요청 -> ${newStatus}`);
+                try {
+                    const res = await fetch('/api/chat/status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ company_name: clientCompanyName, status: newStatus })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        console.log(`[ACTION] 상태 변경 완료: ${newStatus}`);
+                    }
+                } catch (err) {
+                    console.error('[ERROR] 상담 상태 변경 오류:', err);
+                }
+            };
+
+            // 5. 메시지 삭제
+            window.deleteConsultingMessage = async function(msgId) {
+                if (!confirm('이 상담 메시지를 삭제하시겠습니까?')) return;
+                console.log(`[ACTION] 상담 메시지 삭제: ${msgId}`);
+                try {
+                    const res = await fetch(`/api/chat/${encodeURIComponent(msgId)}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        const el = document.getElementById(`msg-row-${msgId}`);
+                        if (el) el.remove();
+                    }
+                } catch (err) {
+                    console.error('[ERROR] 메시지 삭제 오류:', err);
+                    alert('삭제 중 오류가 발생했습니다.');
+                }
+            };
+
+            // 6. 첨부 파일 선택 핸들러
+            window.handleChatFileSelect = function(input) {
+                if (input.files && input.files[0]) {
+                    const f = input.files[0];
+                    selectedChatFile = { name: f.name, url: '#' };
+                    const indicator = document.getElementById('chat-attached-filename');
+                    if (indicator) indicator.innerText = `📎 ${f.name}`;
+                }
+            };
+
+            // XSS 방지 유틸
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            }
+
+            // 페이지 로드 시 해시가 #subtab-detail-chat 인 경우 자동 전환
+            if (window.location.hash === '#subtab-detail-chat' || window.location.hash === '#tab-chat') {
+                const chatSubBtn = document.querySelector('.master-subtab-btn[data-subtab="subtab-detail-chat"]');
+                if (chatSubBtn) chatSubBtn.click();
+            }
+
             const selects = document.querySelectorAll('.status-select');
             selects.forEach(select => {
                 select.addEventListener('change', async (e) => {
