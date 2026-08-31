@@ -87,18 +87,24 @@ landing_page/
 
 ---
 
-## 💾 4. 하이브리드 스토리지 확장 가이드 (사내 Ubuntu Server)
+## 💾 4. 하이브리드 스토리지 확장 가이드 (사내 Ubuntu Server & MinIO S3)
 
-사내 별도의 Ubuntu 서버로 확장을 원할 경우, `.env` 파일에 다음 항목을 지정하기만 하면 즉시 연동됩니다:
+사내 별도의 Ubuntu 서버 및 MinIO 오브젝트 스토리지로 확장을 원할 경우, `.env` 파일에 다음 항목을 지정하기만 하면 즉시 연동됩니다:
 
 ```bash
-# STORAGE_MODE: 'local' (로컬 전용), 'ubuntu_server' (Ubuntu 전용), 'hybrid' (로컬+Ubuntu 동시 저장)
+# STORAGE_MODE: 'local' (로컬 전용), 'ubuntu_server' (Ubuntu 전용), 'hybrid' (로컬+MinIO S3+Ubuntu 동시 저장)
 STORAGE_MODE=hybrid
 
-# 방안 1) 사내 Ubuntu 서버 마운트 경로 지정 (NFS / Samba / SFTP)
-UBUNTU_ARCHIVE_PATH=/mnt/audit_lakehouse/uploads
+# 방안 1) 사내 Ubuntu MinIO S3 오브젝트 스토리지 연동 (Boto3 API Lakehouse Bronze Layer)
+MINIO_ENDPOINT=https://s3.hyean-dskim.com
+MINIO_ACCESS_KEY=hyean_dskim
+MINIO_SECRET_KEY=your_password
+MINIO_BUCKET_NAME=audit-lakehouse
 
-# 방안 2) 사내 Ubuntu PostgreSQL Database 연결 (선택 사항)
+# 방안 2) 사내 Ubuntu 서버 마운트 경로 지정 (NFS / Samba / SFTP)
+UBUNTU_ARCHIVE_PATH=/mnt/storage/minio_data
+
+# 방안 3) 사내 Ubuntu PostgreSQL Database 연결 (선택 사항)
 UBUNTU_PG_HOST=192.168.1.100
 UBUNTU_PG_PORT=5432
 UBUNTU_PG_DB=audit_lakehouse
@@ -114,6 +120,7 @@ UBUNTU_PG_PASSWORD=your_password
 - [x] **Phase 2. 수집 현황 5-Pill 그리드 & 데이터 원본 인스펙터 모달 UI 신설** (완료)
 - [x] **Phase 3. 사내 폐쇄형 로컬 보관함 자동 저장 & 0.01초 초고속 복원 허브 구축** (완료)
 - [x] **사내 Ubuntu 서버 확장용 하이브리드 스토리지 어댑터 (`core/storage_manager.py`) 구축** (완료)
+- [x] **사내 Ubuntu MinIO S3 오브젝트 스토리지 (Boto3 API) 자동 적재 & 버킷 관리 & S3 스트리밍 복원 연동** (완료)
 - [x] **Phase 4. 모바일/태블릿 반응형 최적화 & PWA 웹앱 환경 및 1:1 상담 메신저 구축** (완료)
   - 스마트폰 뷰포트 Single-Column 스택 레이아웃 및 상단 가로 스크롤 탭 바
   - 카카오톡 스타일 1:1 실시간 자문 상담실 모바일 UI 및 터치 최적화
@@ -127,6 +134,7 @@ UBUNTU_PG_PASSWORD=your_password
   - **계정별원장(General Ledger) 7대 필드 전수 추출 파서**: 계정과목, 거래일자, 적요, 거래처코드, 거래처명, 차변, 대변, 잔액
   - **사내 Ubuntu & 로컬 시점별(`YYYYMMDD_HHMMSS`) 영구 보관함**: 원본 엑셀(`raw_files/`), `data.json`, `report.md`, `metadata.json`
   - **실시간 업로드 이력 관리 센터 UI**: 실시간 타임라인, 0.01초 즉시 복원, 원본 ZIP 압축 다운로드
+  - **MinIO S3(Boto3) 3중 자동 영속화**: `s3://audit-lakehouse/bronze/...` 실시간 적재 및 S3 기반 0.01초 복원/ZIP 다운로드
 - [ ] **Phase 7. 향후 다각적 분석 허브 로드맵**:
   - **마스터 관리자 사이드바 3대 탭 체계(대시보드 / 파트너사 관리 / 회계감사) 리팩토링**
   - **시계열 다개년 추세 분석 (Multi-year Trend)**: 3~5개년도 저장본 결합 분석

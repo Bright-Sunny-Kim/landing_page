@@ -5,13 +5,15 @@ import logging
 import os
 import re
 import zipfile
+import boto3
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
 
 class HybridStorageManager:
     """
-    로컬 파일 보관함 및 사내 Ubuntu 서버(PostgreSQL / Network Mount / SFTP)
+    로컬 파일 보관함 및 사내 Ubuntu 서버(MinIO S3 / PostgreSQL / Network Mount)
     이중화 영속화를 관리하는 스토리지 관리자
     """
 
@@ -36,8 +38,45 @@ class HybridStorageManager:
         self.ubuntu_pg_user = os.environ.get("UBUNTU_PG_USER", "postgres").strip()
         self.ubuntu_pg_password = os.environ.get("UBUNTU_PG_PASSWORD", "").strip()
 
+        # MinIO S3 환경설정 로드
+        self.minio_endpoint = os.environ.get("MINIO_ENDPOINT", "https://s3.hyean-dskim.com").strip()
+        self.minio_access_key = os.environ.get("MINIO_ACCESS_KEY", "").strip()
+        self.minio_secret_key = os.environ.get("MINIO_SECRET_KEY", "").strip()
+        self.minio_bucket = os.environ.get("MINIO_BUCKET_NAME", "audit-lakehouse").strip()
+
+        self.s3_client = None
+        self._init_s3_client()
+
+    def _init_s3_client(self):
+        """MinIO S3 클라이언트를 초기화하고 필요시 기본 버킷을 생성합니다."""
+        if self.minio_access_key and self.minio_secret_key:
+            try:
+                self.s3_client = boto3.client(
+                    "s3",
+                    endpoint_url=self.minio_endpoint,
+                    aws_access_key_id=self.minio_access_key,
+                    aws_secret_access_key=self.minio_secret_key,
+                    region_name="us-east-1"
+                )
+                # 버킷 존재 여부 확인 및 자동 생성
+                try:
+                    self.s3_client.head_bucket(Bucket=self.minio_bucket)
+                    logger.info("[STORAGE:MINIO_INIT] MinIO S3 버킷 연결 확인: %s (%s)", self.minio_bucket, self.minio_endpoint)
+                except ClientError as e:
+                    error_code = e.response.get("Error", {}).get("Code")
+                    if error_code in ["404", "NoSuchBucket"]:
+                        self.s3_client.create_bucket(Bucket=self.minio_bucket)
+                        logger.info("[STORAGE:MINIO_BUCKET_CREATED] MinIO S3 버킷 신규 생성: %s", self.minio_bucket)
+                    else:
+                        logger.warning("[STORAGE:MINIO_HEAD_WARNING] 버킷 상태 확인 중 경고: %s", e)
+            except Exception as se:
+                logger.error("[STORAGE:MINIO_INIT_ERROR] MinIO S3 클라이언트 초기화 실패: %s", se, exc_info=True)
+                self.s3_client = None
+        else:
+            logger.info("[STORAGE:MINIO_NOTICE] MINIO credentials 미설정 (로컬 스토리지 모드 활성)")
+
     def get_storage_status(self):
-        """현재 스토리지 모드 및 사내 Ubuntu 서버 연결 상태를 점검하여 반환합니다."""
+        """현재 스토리지 모드 및 사내 Ubuntu 서버 / MinIO S3 연결 상태를 점검하여 반환합니다."""
         status = {
             "mode": self.storage_mode,
             "local_storage": {
@@ -52,6 +91,13 @@ class HybridStorageManager:
                 "connected": False,
                 "message": "로컬 보관함 활성 (Ubuntu 서버 환경설정 대기 중)",
             },
+            "minio_s3": {
+                "configured": bool(self.minio_access_key and self.minio_secret_key),
+                "endpoint": self.minio_endpoint,
+                "bucket": self.minio_bucket,
+                "connected": False,
+                "message": "MinIO S3 인증 정보 대기 중"
+            }
         }
 
         # 1. Ubuntu 마운트 경로 연결 점검
@@ -66,14 +112,24 @@ class HybridStorageManager:
                 "message"
             ] = f"사내 Ubuntu PostgreSQL 서버 연동 모드 ({self.ubuntu_pg_host})"
 
+        # 2. MinIO S3 버킷 통신 점검
+        if self.s3_client:
+            try:
+                self.s3_client.head_bucket(Bucket=self.minio_bucket)
+                status["minio_s3"]["connected"] = True
+                status["minio_s3"]["message"] = f"MinIO S3 정상 연결 ({self.minio_endpoint} / {self.minio_bucket})"
+            except Exception as me:
+                status["minio_s3"]["message"] = f"MinIO S3 연결 실패: {me}"
+
         return status
 
     def save_analysis(self, company_name, fiscal_year, payload, raw_files=None):
         """
         분석 완료된 정규화 JSON, 감사조서(.md), 원본 엑셀/CSV(raw_files) 및 메타데이터를
         1) 사내 로컬 시점별(Timestamp) 타임시리즈 보관함
-        2) 사내 Ubuntu 서버 (설정된 경우)
-        에 1초 만에 안전하게 자동 영구 보관합니다.
+        2) 사내 Ubuntu 마운트 서버 (설정된 경우)
+        3) 사내 Ubuntu MinIO S3 오브젝트 스토리지 (설정된 경우)
+        에 안전하게 자동 영구 보관합니다.
         """
         fy = (
             int(fiscal_year)
@@ -121,33 +177,36 @@ class HybridStorageManager:
             "metadata": metadata
         }
 
-        # 대상 디렉토리 목록 (로컬 + Ubuntu 마운트)
+        payload_json_bytes = json.dumps(payload, ensure_ascii=False, indent=2, default=str).encode("utf-8")
+        meta_json_bytes = json.dumps(metadata, ensure_ascii=False, indent=2, default=str).encode("utf-8")
+        report_md = payload.get("report_md", "")
+        report_md_bytes = report_md.encode("utf-8") if report_md else b""
+
+        # [1] 로컬 및 Ubuntu 마운트 디렉토리 저장
         target_base_dirs = [("local", self.local_base_dir)]
         if self.ubuntu_mount_path and os.path.exists(self.ubuntu_mount_path):
             target_base_dirs.append(("ubuntu_server", self.ubuntu_mount_path))
 
         for target_type, base_path in target_base_dirs:
             try:
-                # 1. 회사 루트 및 연도별 시점 타임스탬프 세션 디렉토리 생성
                 company_root_dir = os.path.join(base_path, safe_company)
                 session_dir = os.path.join(company_root_dir, str(fy), session_id)
                 raw_files_dir = os.path.join(session_dir, "raw_files")
                 os.makedirs(raw_files_dir, exist_ok=True)
 
-                # 2. 세션 디렉토리에 data.json 및 metadata.json 저장
-                with open(os.path.join(session_dir, "data.json"), "w", encoding="utf-8") as jf:
-                    json.dump(payload, jf, ensure_ascii=False, indent=2, default=str)
+                # data.json 및 metadata.json
+                with open(os.path.join(session_dir, "data.json"), "wb") as jf:
+                    jf.write(payload_json_bytes)
 
-                with open(os.path.join(session_dir, meta_fn), "w", encoding="utf-8") as mf:
-                    json.dump(metadata, mf, ensure_ascii=False, indent=2, default=str)
+                with open(os.path.join(session_dir, meta_fn), "wb") as mf:
+                    mf.write(meta_json_bytes)
 
-                # 3. 마크다운 조서 저장
-                report_md = payload.get("report_md", "")
-                if report_md:
-                    with open(os.path.join(session_dir, "report.md"), "w", encoding="utf-8") as rf:
-                        rf.write(report_md)
+                # report.md
+                if report_md_bytes:
+                    with open(os.path.join(session_dir, "report.md"), "wb") as rf:
+                        rf.write(report_md_bytes)
 
-                # 4. 원본 엑셀/CSV 바이너리 파일 영구 보존
+                # 원본 파일
                 if raw_files:
                     for rf_item in raw_files:
                         rf_name = rf_item.get("filename", "")
@@ -157,16 +216,16 @@ class HybridStorageManager:
                             with open(os.path.join(raw_files_dir, safe_rf_name), "wb") as rbf:
                                 rbf.write(rf_content)
 
-                # 5. 기존 호환성 및 0.01초 빠른 조회를 위한 회사 루트 백업 포인터 갱신
-                with open(os.path.join(company_root_dir, data_fn), "w", encoding="utf-8") as cjf:
-                    json.dump(payload, cjf, ensure_ascii=False, indent=2, default=str)
+                # 루트 백업 포인터
+                with open(os.path.join(company_root_dir, data_fn), "wb") as cjf:
+                    cjf.write(payload_json_bytes)
 
-                if report_md:
-                    with open(os.path.join(company_root_dir, report_fn), "w", encoding="utf-8") as crf:
-                        crf.write(report_md)
+                if report_md_bytes:
+                    with open(os.path.join(company_root_dir, report_fn), "wb") as crf:
+                        crf.write(report_md_bytes)
 
-                with open(os.path.join(company_root_dir, f"latest_{fy}_data.json"), "w", encoding="utf-8") as lf:
-                    json.dump(payload, lf, ensure_ascii=False, indent=2, default=str)
+                with open(os.path.join(company_root_dir, f"latest_{fy}_data.json"), "wb") as lf:
+                    lf.write(payload_json_bytes)
 
                 results["locations"].append({
                     "type": target_type,
@@ -178,6 +237,72 @@ class HybridStorageManager:
             except Exception as le:
                 logger.error("[STORAGE:%s_ERROR] 영구 보관함 저장 실패: %s", target_type.upper(), le, exc_info=True)
                 results["locations"].append({"type": target_type, "status": "failed", "error": str(le)})
+
+        # [2] MinIO S3 오브젝트 스토리지 업로드 (Lakehouse Bronze Layer)
+        if self.s3_client:
+            try:
+                s3_prefix = f"bronze/{safe_company}/{fy}/{session_id}"
+                
+                # 1) data.json
+                self.s3_client.put_object(
+                    Bucket=self.minio_bucket,
+                    Key=f"{s3_prefix}/data.json",
+                    Body=payload_json_bytes,
+                    ContentType="application/json; charset=utf-8"
+                )
+
+                # 2) metadata.json
+                self.s3_client.put_object(
+                    Bucket=self.minio_bucket,
+                    Key=f"{s3_prefix}/metadata.json",
+                    Body=meta_json_bytes,
+                    ContentType="application/json; charset=utf-8"
+                )
+
+                # 3) report.md
+                if report_md_bytes:
+                    self.s3_client.put_object(
+                        Bucket=self.minio_bucket,
+                        Key=f"{s3_prefix}/report.md",
+                        Body=report_md_bytes,
+                        ContentType="text/markdown; charset=utf-8"
+                    )
+
+                # 4) raw_files (원본 파일들)
+                if raw_files:
+                    for rf_item in raw_files:
+                        rf_name = rf_item.get("filename", "")
+                        rf_content = rf_item.get("content", b"")
+                        if rf_name and rf_content:
+                            safe_rf_name = re.sub(r'[\\/:*?"<>|]', "_", os.path.basename(rf_name))
+                            self.s3_client.put_object(
+                                Bucket=self.minio_bucket,
+                                Key=f"{s3_prefix}/raw_files/{safe_rf_name}",
+                                Body=rf_content,
+                                ContentType="application/octet-stream"
+                            )
+
+                # 5) 최신 포인터 (latest_{fy}_data.json)
+                self.s3_client.put_object(
+                    Bucket=self.minio_bucket,
+                    Key=f"bronze/{safe_company}/latest_{fy}_data.json",
+                    Body=payload_json_bytes,
+                    ContentType="application/json; charset=utf-8"
+                )
+
+                results["locations"].append({
+                    "type": "minio_s3",
+                    "bucket": self.minio_bucket,
+                    "s3_prefix": s3_prefix,
+                    "status": "saved"
+                })
+                logger.info("[STORAGE:MINIO_SAVE] MinIO S3 자동 적재 성공: s3://%s/%s", self.minio_bucket, s3_prefix)
+
+            except Exception as me:
+                logger.error("[STORAGE:MINIO_ERROR] MinIO S3 적재 실패: %s", me, exc_info=True)
+                results["locations"].append({"type": "minio_s3", "status": "failed", "error": str(me)})
+
+        return results
 
         return results
 
@@ -309,6 +434,27 @@ class HybridStorageManager:
                 target_dir = r_dir
                 break
 
+        # MinIO S3에서 원본 파일 가져오기 시도 (로컬에 없는 경우)
+        if not target_dir and self.s3_client:
+            try:
+                s3_raw_prefix = f"bronze/{safe_company}/{fy}/{safe_session}/raw_files/"
+                resp = self.s3_client.list_objects_v2(Bucket=self.minio_bucket, Prefix=s3_raw_prefix)
+                contents = resp.get("Contents", [])
+                if contents:
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+                        for obj in contents:
+                            obj_key = obj.get("Key", "")
+                            fname = os.path.basename(obj_key)
+                            if fname:
+                                obj_resp = self.s3_client.get_object(Bucket=self.minio_bucket, Key=obj_key)
+                                zf.writestr(fname, obj_resp["Body"].read())
+                    zip_buffer.seek(0)
+                    logger.info("[STORAGE:MINIO_ZIP_SUCCESS] MinIO S3에서 원본 파일 압축 다운로드 완료: %s / %s (파일 수: %d)", safe_company, safe_session, len(contents))
+                    return zip_buffer
+            except Exception as me:
+                logger.warning("[STORAGE:MINIO_ZIP_WARNING] MinIO S3 원본 파일 압축 시도 중 경고: %s", me)
+
         if not target_dir:
             raise FileNotFoundError(f"'{company_name}' ({session_id})의 원본 업로드 파일을 찾을 수 없습니다.")
 
@@ -366,7 +512,7 @@ class HybridStorageManager:
         return sorted(datasets, key=lambda x: x["saved_at"], reverse=True)
 
     def load_dataset(self, company_name, filename=None, session_id=None):
-        """선택된 과거 데이터셋 JSON을 로컬 또는 Ubuntu 서버에서 0.01초 만에 로드합니다."""
+        """선택된 과거 데이터셋 JSON을 로컬, Ubuntu 서버 또는 MinIO S3에서 0.01초 만에 로드합니다."""
         safe_company = re.sub(r'[\\/:*?"<>|]', "_", company_name).strip()
         target_id = session_id or filename or "latest"
 
@@ -408,11 +554,36 @@ class HybridStorageManager:
                 with open(fp, "r", encoding="utf-8") as jf:
                     data = json.load(jf)
                 logger.info(
-                    "[STORAGE:LOAD_SUCCESS] 데이터셋 로드 성공: %s (경로: %s)",
+                    "[STORAGE:LOAD_SUCCESS] 로컬/마운트 데이터셋 로드 성공: %s (경로: %s)",
                     target_id,
                     fp,
                 )
                 return data
+
+        # 3. MinIO S3 폴백 로딩 시도
+        if self.s3_client:
+            try:
+                s3_keys_to_try = []
+                if target_id and target_id != "latest":
+                    safe_fn = os.path.basename(target_id)
+                    sess_str = safe_fn.replace("_data.json", "")
+                    parts = sess_str.split("_")
+                    fy = parts[0] if len(parts) > 0 else "2025"
+                    s3_keys_to_try.append(f"bronze/{safe_company}/{fy}/{sess_str}/data.json")
+                else:
+                    for default_fy in ["2025", "2024", "2026"]:
+                        s3_keys_to_try.append(f"bronze/{safe_company}/latest_{default_fy}_data.json")
+
+                for s3_key in s3_keys_to_try:
+                    try:
+                        resp = self.s3_client.get_object(Bucket=self.minio_bucket, Key=s3_key)
+                        data = json.loads(resp["Body"].read().decode("utf-8"))
+                        logger.info("[STORAGE:MINIO_LOAD_SUCCESS] MinIO S3 데이터셋 로드 성공: s3://%s/%s", self.minio_bucket, s3_key)
+                        return data
+                    except ClientError:
+                        continue
+            except Exception as se:
+                logger.warning("[STORAGE:MINIO_LOAD_WARNING] MinIO S3 로드 시도 중 에러: %s", se)
 
         raise FileNotFoundError(
             f"'{safe_company}' 기업의 '{target_id}' 데이터를 찾을 수 없습니다."
