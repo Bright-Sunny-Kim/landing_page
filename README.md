@@ -135,7 +135,9 @@ UBUNTU_PG_PASSWORD=your_password
   - **사내 Ubuntu & 로컬 시점별(`YYYYMMDD_HHMMSS`) 영구 보관함**: 원본 엑셀(`raw_files/`), `data.json`, `report.md`, `metadata.json`
   - **실시간 업로드 이력 관리 센터 UI**: 실시간 타임라인, 0.01초 즉시 복원, 원본 ZIP 압축 다운로드
   - **MinIO S3(Boto3) 3중 자동 영속화**: `s3://audit-lakehouse/bronze/...` 실시간 적재 및 S3 기반 0.01초 복원/ZIP 다운로드
-- [ ] **Phase 7. 향후 다각적 분석 허브 로드맵**:
+  - **스토리지 헬스 모니터링**: 로컬 파일 시스템, Ubuntu 원격 마운트, 사내 MinIO S3 연결 상태 통합 점검 API 연동
+- [ ] **Phase 7. 향후 다각적 분석 허브 및 운영 최적화 로드맵**:
+  - **서버 환경 실운영 안정화 (500 에러 및 패키지/권한 정밀 진단)**
   - **마스터 관리자 사이드바 3대 탭 체계(대시보드 / 파트너사 관리 / 회계감사) 리팩토링**
   - **시계열 다개년 추세 분석 (Multi-year Trend)**: 3~5개년도 저장본 결합 분석
   - **동종업계 피어 그룹 교차 비교 (Cross-sectional Peer Benchmarking)**
