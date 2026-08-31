@@ -14,7 +14,8 @@ from core.audit_engine import (
     parse_tb_file, run_variance_analysis, retrieve_k_gaap, generate_working_paper,
     classify_source_file, parse_trial_balance_structured, parse_financial_statement,
     financial_statement_to_variance_input, build_standard_statements,
-    run_comprehensive_enterprise_analysis
+    run_comprehensive_enterprise_analysis,
+    ingest_accounting_files_to_bundle, run_analysis_from_normalized_bundle
 )
 from core.storage_manager import storage_manager
 
@@ -937,9 +938,130 @@ def master_load_local_dataset():
         return jsonify(payload), 200
     except FileNotFoundError as fe:
         return jsonify({'error': str(fe)}), 404
+@master_bp.route('/master/api/ingest-files', methods=['POST'])
+def master_ingest_files():
+    """
+    [1단계 전담 API: 자료 수집 & 스마트 파싱 & 우분투/로컬 시점별 영구 저장]
+    6대 회계자료(재무상태표, 손익계산서, 시산표, 분개장, 거래처원장, 계정별원장) 파일을 수신하여
+    결정론적 파싱 및 무결성 검증을 거친 후 raw_files 및 data.json으로 영구 저장합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[MASTER_INGEST:REQUEST] 비인가 접근 차단: %s", session.get('email'))
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    company_name = request.form.get('company_name', '').strip() or '미지정 기업'
+    fiscal_year = request.form.get('fiscal_year', '').strip() or '2025'
+    uploaded_files = request.files.getlist('files')
+
+    if not uploaded_files or (len(uploaded_files) == 1 and uploaded_files[0].filename == ''):
+        logger.warning("[MASTER_INGEST:REQUEST] 업로드된 파일 없음")
+        return jsonify({'error': '수집할 엑셀/CSV 파일을 최소 1개 이상 업로드해 주세요.'}), 400
+
+    logger.info("[MASTER_INGEST:REQUEST] 자료 수집 요청 수신: company=%s, fiscal_year=%s, file_count=%d", 
+                company_name, fiscal_year, len(uploaded_files))
+
+    files_data_list = []
+    for f in uploaded_files:
+        if f and f.filename:
+            raw_fname = os.path.basename(f.filename).strip()
+            fname = re.sub(r'[\\/:*?"<>|]', '_', raw_fname) or f.filename
+            content = f.read()
+            files_data_list.append({
+                'filename': fname,
+                'content': content
+            })
+
+    try:
+        # 1. 6대 장부 스마트 파싱 및 정규화 번들 생성
+        normalized_bundle, parsed_filenames, all_errors = ingest_accounting_files_to_bundle(
+            company_name=company_name,
+            files_data_list=files_data_list,
+            fiscal_year=fiscal_year
+        )
+
+        initial_payload = {
+            "success": True,
+            "company_name": company_name,
+            "fiscal_year": fiscal_year,
+            "analyzed_files": parsed_filenames,
+            "ingestion_health": normalized_bundle.get("ingestion_health", {}),
+            "normalized_bundle": normalized_bundle,
+            "errors": all_errors
+        }
+
+        # 2. 로컬 및 Ubuntu 서버 시점별 영구 누적 저장
+        save_res = storage_manager.save_analysis(
+            company_name=company_name,
+            fiscal_year=fiscal_year,
+            payload=initial_payload,
+            raw_files=files_data_list
+        )
+
+        logger.info("[MASTER_INGEST:SUCCESS] 자료 수집 및 영구 저장 완료: company=%s, session_id=%s, health_score=%s", 
+                    company_name, save_res.get("session_id"), normalized_bundle.get("ingestion_health", {}).get("integrity_score"))
+
+        return jsonify({
+            "success": True,
+            "message": f"'{company_name}' 기업의 6대 회계자료가 성공적으로 수집되어 영구 저장소에 보관되었습니다.",
+            "company_name": company_name,
+            "fiscal_year": fiscal_year,
+            "session_id": save_res.get("session_id"),
+            "ingestion_health": normalized_bundle.get("ingestion_health", {}),
+            "normalized_bundle": normalized_bundle,
+            "archive_info": save_res,
+            "analyzed_files": parsed_filenames,
+            "errors": all_errors
+        }), 200
+
     except Exception as e:
-        logger.error("[MASTER_ANALYTICS:ERROR] 데이터셋 로드 실패: %s", e, exc_info=True)
-        return jsonify({'error': f'데이터 로드 실패: {str(e)}'}), 500
+        logger.error("[MASTER_INGEST:ERROR] 자료 수집/저장 중 오류 발생: %s", e, exc_info=True)
+        return jsonify({'error': f'회계자료 수집 처리 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@master_bp.route('/master/api/analyze-stored-dataset', methods=['POST'])
+def master_analyze_stored_dataset():
+    """
+    [2단계 전담 API: 저장본 기반 0.01초 초고속 정밀 분석 & AI 조서 산출]
+    우분투 서버 또는 로컬에 이미 저장된 data.json을 읽어 재파싱 없이
+    4대 재무비율, 변동분석, ISA 240 JET 이상전표 전수 스캔 및 K-GAAP RAG 감사 조서를 연산합니다.
+    """
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        logger.warning("[MASTER_ANALYTICS:REQUEST] 비인가 접근 차단: %s", session.get('email'))
+        return jsonify({'error': '관리자 권한이 필요합니다.'}), 401
+
+    req_data = request.get_json(silent=True) or {}
+    company_name = req_data.get('company_name', '').strip()
+    fiscal_year = req_data.get('fiscal_year', '').strip()
+    session_id = req_data.get('session_id', '').strip()
+
+    if not company_name:
+        return jsonify({'error': 'company_name 파라미터가 필요합니다.'}), 400
+
+    logger.info("[MASTER_ANALYTICS:STORED_REQ] 저장본 기반 정밀 분석 요청: company=%s, fiscal_year=%s, session_id=%s", 
+                company_name, fiscal_year, session_id or "LATEST")
+
+    try:
+        # 1. 서버에 저장된 정규화 데이터셋 로드 (0.01초)
+        stored_payload = storage_manager.load_dataset(company_name, session_id=session_id if session_id else None)
+        bundle = stored_payload.get("normalized_bundle") or stored_payload
+
+        # 2. 정규화 번들 기반 분석 엔진 실행
+        analysis_payload = run_analysis_from_normalized_bundle(
+            normalized_bundle=bundle,
+            company_name=company_name,
+            fiscal_year=fiscal_year or stored_payload.get("fiscal_year"),
+            supabase_client=supabase
+        )
+
+        logger.info("[MASTER_ANALYTICS:STORED_SUCCESS] 정밀 분석 연산 완료: company=%s", company_name)
+        return jsonify(analysis_payload), 200
+
+    except FileNotFoundError as fe:
+        logger.warning("[MASTER_ANALYTICS:NOT_FOUND] 저장된 데이터셋 없음: %s", fe)
+        return jsonify({'error': f"'{company_name}' 기업의 저장된 회계 데이터셋을 찾을 수 없습니다. 먼저 '회계자료 수집 & 보관소' 탭에서 자료를 업로드해 주세요."}), 404
+    except Exception as e:
+        logger.error("[MASTER_ANALYTICS:STORED_ERROR] 저장본 분석 중 예외 발생: %s", e, exc_info=True)
+        return jsonify({'error': f'정밀 분석 연산 중 오류가 발생했습니다: {str(e)}'}), 500
 
 
 @master_bp.route('/master/api/analyze-direct', methods=['POST'])

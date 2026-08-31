@@ -1,35 +1,36 @@
 # 🏢 HEYAN 마스터 기업 정밀 분석 시스템 (Enterprise Financial Analytics & Audit Hub)
 
-> **고객이 제출한 6대 회계자료(재무상태표, 손익계산서, 합계잔액시산표, 분개장, 거래처원장, 계정별원장)를 기반으로 100% 결정론적 정규화 파싱, 4대 재무비율 벤치마크, ISA 240 JET 이상전표 전수 스캔, 거래처 리스크 분석, 사내 로컬/Ubuntu 서버 시점별 영구 누적 보관, 0.01초 즉시 복원 & 원본 ZIP 다운로드 및 K-GAAP RAG 감사 조서(Working Paper)를 자동 산출하는 차세대 종합 분석 솔루션**
+> **고객이 제출한 6대 회계자료(재무상태표, 손익계산서, 합계잔액시산표, 분개장, 거래처원장, 계정별원장)를 [1단계: 자료 수집 & 우분투 서버 영구 보관]과 [2단계: 저장본 기반 0.01초 정밀 분석 & K-GAAP RAG 감사 조서 산출]로 탭 및 파이프라인을 원천 분리하여 초고속·무장애 안정성을 보장하는 차세대 종합 재무분석 솔루션**
 
 ---
 
 ## 📌 1. 시스템 개요 및 주요 기능
 
-본 시스템은 공인회계사 및 세무 전문가가 기업의 결산 서류와 회계 원장을 원클릭으로 정밀 진단할 수 있도록 구축된 **풀스택 감사/분석 엔진**입니다.
+본 시스템은 공인회계사 및 세무 전문가가 기업의 결산 서류와 회계 원장을 원클릭으로 정밀 진단할 수 있도록 구축된 **풀스택 감사/분석 엔진**입니다. 대용량 파일 파싱과 복합 AI 분석의 단일 동기 처리로 인한 브라우저 타임아웃(500 에러)을 방지하기 위해 **2대 전담 탭 원천 분리 아키텍처(Decoupled Ingestion & Analytics Architecture)**를 적용하였습니다.
 
 ### 🌟 핵심 역량 및 고도화 완료 기능
-1. **100% Python 결정론적 정규화 파싱 엔진 (Zero-Hallucination Parser)**:
+1. **🚀 2대 전담 탭 원천 분리 아키텍처 (Decoupled Pipeline)**:
+   - **`[📂 회계자료 수집 & 보관소]` (#tab-data-ingestion)**: 6대 장부 드래그앤드롭 업로드, 100% Python 결정론적 파싱, 대차 무결성 검증, 우분투/로컬 스토리지 시점별 영구 저장, 실시간 업로드 이력 관리 및 원본 ZIP 일괄 다운로드
+   - **`[🧠 기업 정밀 분석 (Hub)]` (#tab-analytics-hub)**: 슬림 분석 컨트롤 바(`기업 선택 ➔ 결산연도 ➔ 시점 선택 ➔ 0.01초 분석 실행`), 4대 재무비율, 변동분석, ISA 240 JET 이상전표 탐지, K-GAAP RAG 감사 조서 뷰어, 클립보드 복사 및 다운로드
+2. **100% Python 결정론적 정규화 파싱 엔진 (Zero-Hallucination Parser)**:
    - LLM AI의 추론에 의존하지 않고 순수 파이썬 알고리즘으로 **6대 회계장부(재무상태표, 손익계산서, 시산표, 분개장, 거래처원장, 계정별원장)** 전수 파싱
    - ERP(더존 Smart A, 세무사랑, 위하고, 이카운트 등)의 복합 서식 엑셀(`.xlsx`, `.xls`) 및 `.csv` 자동 인식
    - 차감계정(대손충당금, 감누액) 자동 음수화, 괄호 번호(`(1)`, `(2)`) 및 주석행 완벽 필터링
-2. **📒 계정별원장(General Ledger) 7대 핵심 필드 정밀 파싱 엔진**:
+3. **📒 계정별원장(General Ledger) 7대 핵심 필드 정밀 파싱 엔진**:
    - `[계정과목 Header] ➔ [일자별 상세 거래 Rows]` 블록 서식 전수 파싱
    - **7대 필드**: `계정코드`, `계정과목명`, `거래일자`, `적요`, `거래처코드`, `거래처명`, `차변/대변/잔액` 완벽 추출
    - 요약행(`월계`, `누계`, `전기이월`) 스마트 제외 및 대차 무결성 검증
-3. **수집 현황 및 대차 무결성 가로형 2행(당기/전기) Health Matrix Dashboard**:
-   - 상단 분석 컨트롤 패널과 동일한 가로 Full-Width 레이아웃으로 당기(2025년)와 전기(2024년) 2개 행 매트릭스 표출
+4. **수집 현황 및 대차 무결성 가로형 2행(당기/전기) Health Matrix Dashboard**:
+   - 수집 전용 탭에서 당기(2025년)와 전기(2024년) 2개 행 매트릭스 표출
    - 6대 장부별 수집 상태(`🟢 정상 126건`), 연도별 파일명, 대차평형 여부, 수집 무결성 점수(`100점`) 실시간 표출
    - **데이터 원본 인스펙터 모달**: 6대 장부별 표(Table) 뷰와 JSON 원본 뷰 전환 열람 및 [📋 JSON 복사] 지원
-4. **📂 실시간 회계 데이터 아카이브 & 업로드 이력 관리 센터**:
+5. **📂 실시간 회계 데이터 아카이브 & 업로드 이력 관리 센터**:
    - 기업별, 결산연도별, 시점별(Timestamp) 영구 누적 보관 타임라인 테이블 표출
    - **⚡ 0.01초 즉시 복원**: 과거 분석 데이터를 재파싱 없이 0.01초 만에 화면 전체로 복원
    - **📥 원본 ZIP 일괄 다운로드**: 특정 시점에 업로드되었던 원본 엑셀/CSV 파일들을 인메모리 압축 ZIP 파일로 제공
-5. **사내 폐쇄형 로컬 보관함 & 사내 Ubuntu 서버 확장 하이브리드 스토리지**:
+6. **사내 폐쇄형 로컬 보관함 & 사내 Ubuntu 서버 확장 하이브리드 스토리지**:
    - 외부 클라우드로 회계 데이터가 유출되지 않도록 `uploads/작업완료_보관함/<기업명>/<연도>/<타임스탬프>/`에 원본 파일(`raw_files/`), `data.json`, `metadata.json`, `report.md` 동시 영속화
-   - 사내 Ubuntu 서버(PostgreSQL / Remote Mount) 환경설정 지원으로 손쉬운 엔터프라이즈 확장
-6. **기준연도 동적 타겟팅 (Fiscal Year Dynamic Targeting)**:
-   - 드롭다운 선택(2025년 당기 / 2024년 전기 등)에 따라 다중 연도 파일 중 해당 연도 자료를 최우선으로 선별 집계
+   - 사내 Ubuntu 서버(Docker MinIO / Remote Mount `/mnt/storage/minio_data`) 환경설정 지원으로 손쉬운 엔터프라이즈 확장
 7. **4대 재무비율 & 한국은행 벤치마크 진단**:
    - 안정성(부채비율, 유동비율, 당좌비율, 차입금의존도, 이자보상배율)
    - 수익성(영업이익률, 순이익률, ROE, ROA)
@@ -44,11 +45,6 @@
 10. **K-GAAP RAG 감사 조서 자동 작성 & 영속화**:
     - 일반기업회계기준(K-GAAP) 임베딩 벡터 RAG 검색 연동
     - 전문 마크다운(`.md`) 감사 보고서 실시간 렌더링, 클립보드 복사, 파일 다운로드
-11. **모바일/태블릿 반응형 최적화 & 1:1 전담 회계사 실시간 자문 상담실**:
-    - 스마트폰 화면에서도 사이드바가 상단 가로 스크롤 탭으로 자동 변환되는 Single-Column 반응형 레이아웃
-    - 카카오톡 스타일의 1:1 담당 회계사 실시간 메신저 UI 및 모바일 터치 최적화
-12. **PWA (Progressive Web App) 모바일 홈 화면 추가 지원**:
-    - 서비스 워커(`sw.js`) 및 웹앱 매니페스트(`manifest.json`), 고해상도 앱 아이콘 연동으로 스마트폰 앱처럼 설치 가능
 
 ---
 
@@ -57,22 +53,22 @@
 ```text
 landing_page/
 ├── core/
-│   ├── audit_engine.py          # 6대 회계자료 파서(계정별원장 7대 필드 포함), 무결성 번들 빌더, 재무비율 계산기, JET 스캐너, K-GAAP RAG
-│   ├── storage_manager.py       # [Phase 3/6] 사내 로컬 보관함 및 Ubuntu 서버 시점별 영구 누적 스토리지, 원본 ZIP 다운로드 어댑터
+│   ├── audit_engine.py          # [분리] ingest_accounting_files_to_bundle (1단계) & run_analysis_from_normalized_bundle (2단계)
+│   ├── storage_manager.py       # [스토리지] 시점별 영구 누적 저장(raw_files, data.json, metadata.json), 0.01초 로드, 원본 ZIP 다운로드
 │   └── extensions.py            # Supabase, ChromaDB, OpenAI 임베딩 및 글로벌 로거 설정
 ├── blueprints/
-│   └── master.py                # 마스터 관리자 엔드포인트 (/master/api/analyze-*, /upload-history*, /datasets/local-* 등)
+│   └── master.py                # [/master/api/ingest-files], [/master/api/analyze-stored-dataset], [/upload-history*] 엔드포인트
 ├── templates/
-│   └── master.html              # 6대 장부 2행 매트릭스, 실시간 업로드 이력 관리 센터, 데이터 인스펙터 모달, 조서 뷰어
+│   └── master.html              # [📂 회계자료 수집 & 보관소 (#tab-data-ingestion)] & [🧠 기업 정밀 분석 허브 (#tab-analytics-hub)]
 ├── static/
 │   ├── js/
-│   │   ├── main.js              # 탭 라우팅 및 전역 이벤트 핸들러
-│   │   └── master_analytics.js  # 6대 장부 렌더러, 실시간 업로드 이력 로드, 0.01초 복원 & ZIP 다운로드 엔진
+│   │   ├── main.js              # 탭 라우팅 및 사이드바 이벤트 핸들러
+│   │   └── master_analytics.js  # handleIngestFiles, handleStoredAnalysis, 6대 장부 매트릭스 렌더러, 0.01초 복원 엔진
 │   └── css/
-│       └── style.css            # 수집 현황 카드 호버 효과, 모달 테이블, @media print 최적화
+│       └── style.css            # 2대 탭 레이아웃, 드롭존, 수집 매트릭스, 인스펙터 모달 스타일
 └── uploads/
     ├── 고객제시자료/            # 고객 제출 엑셀 원본 보관함
-    └── 작업완료_보관함/          # [사내 로컬 폐쇄형 보관함] {회사명}/{연도}/{타임스탬프}/(raw_files, data.json, metadata.json, report.md)
+    └── 작업완료_보관함/          # [사내 로컬 폐쇄형 보관함] {회사명}/{연도}/{타임스탬프}/(raw_files, data.json, metadata.json)
 ```
 
 ---
@@ -81,14 +77,12 @@ landing_page/
 
 | Method | Endpoint | 설명 | 주요 Request Parameters | 주요 Response Data |
 | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/master/api/analyze-direct` | 6대 장부 엑셀 직접 업로드, 결정론적 정규화 파싱 및 시점별 원본 포함 영구 저장 | `company_name`, `fiscal_year`, `files[]` | `normalized_bundle`, `ingestion_health`, `summary`, `ratios`, `jet_anomalies`, `report_md` |
-| `POST` | `/master/api/analyze-company/<name>` | 고객사 스토리지 6대 장부 원클릭 분석 및 시점별 원본 포함 영구 저장 | JSON: `{ "fiscal_year": "2025" }` | `normalized_bundle`, `ingestion_health`, `summary`, `ratios`, `jet_anomalies`, `report_md` |
+| `POST` | `/master/api/ingest-files` | **[1단계] 6대 장부 수집, 스마트 파싱 및 우분투/로컬 시점별 영구 저장** | `company_name`, `fiscal_year`, `files[]` | `session_id`, `ingestion_health`, `normalized_bundle`, `archive_info` |
+| `POST` | `/master/api/analyze-stored-dataset` | **[2단계] 저장본 기반 0.01초 초고속 정밀 분석 & AI 감사 조서 산출** | JSON: `{ "company_name", "fiscal_year", "session_id" }` | `summary`, `ratios`, `variance_analysis`, `jet_anomalies`, `subledger_risks`, `report_md` |
 | `GET` | `/master/api/upload-history` | 실시간 회계 데이터 업로드 및 아카이브 타임라인 이력 목록 반환 | Query: `?company_name=...` (선택) | `{ "success": true, "count": N, "history": [{ "company_name", "session_id", "saved_at", "ledgers_collected", ... }] }` |
 | `GET` | `/master/api/upload-history/restore` | 특정 시점의 아카이브 데이터를 0.01초 만에 즉시 복원 | Query: `?company_name=...&session_id=...` | 전체 분석 페이로드 (`normalized_bundle`, `summary`, `report_md` 등) |
 | `GET` | `/master/api/upload-history/download-raw` | 특정 시점의 원본 업로드 엑셀 파일들을 ZIP으로 일괄 다운로드 | Query: `?company_name=...&session_id=...` | `application/zip` 바이너리 스트림 |
 | `GET` | `/master/api/datasets/local-list/<name>` | 사내 로컬/Ubuntu 보관함에 저장된 과거 분석 데이터셋 목록 조회 | URL Parameter: `company_name` | `{ "datasets": [{ "filename", "fiscal_year", "saved_at", "size_bytes", "source" }] }` |
-| `GET` | `/master/api/datasets/local-load` | 과거 보관본 JSON을 재파싱 없이 0.01초 만에 즉시 복원 로드 | Query: `?company_name=...&filename=...` | 전체 분석 페이로드 (`normalized_bundle`, `summary`, `report_md` 등) |
-| `GET` | `/master/api/storage/status` | 사내 로컬 보관함 및 사내 Ubuntu 서버 연결 상태 메타데이터 조회 | Header: Admin Session | `{ "mode": "hybrid", "local_storage": {...}, "ubuntu_server": {...} }` |
 | `POST` | `/master/api/save-analysis` | 분석 결과 및 조서 수동 영속화 저장 | JSON: `{ "company_name", "fiscal_year", "analysis_data", "report_md" }` | `{ "success": true, "archive_info": {...} }` |
 
 ---

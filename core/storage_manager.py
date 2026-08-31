@@ -365,30 +365,43 @@ class HybridStorageManager:
 
         return sorted(datasets, key=lambda x: x["saved_at"], reverse=True)
 
-    def load_dataset(self, company_name, filename):
+    def load_dataset(self, company_name, filename=None, session_id=None):
         """선택된 과거 데이터셋 JSON을 로컬 또는 Ubuntu 서버에서 0.01초 만에 로드합니다."""
         safe_company = re.sub(r'[\\/:*?"<>|]', "_", company_name).strip()
-        safe_fn = os.path.basename(filename)
+        target_id = session_id or filename or "latest"
 
-        # 1. session_id인 경우 (예: 2025_20260830_160400) 또는 파일명인 경우 처리
-        session_id = safe_fn.replace("_data.json", "")
-        parts = session_id.split("_")
-        fy = parts[0] if len(parts) > 0 else "2025"
+        candidate_paths = []
 
-        candidate_paths = [
-            # 세션 하위 data.json
-            os.path.join(self.local_base_dir, safe_company, str(fy), session_id, "data.json"),
-            # 회사 루트 하위 _data.json
-            os.path.join(self.local_base_dir, safe_company, f"{session_id}_data.json"),
-            os.path.join(self.local_base_dir, safe_company, safe_fn),
-        ]
-        if self.ubuntu_mount_path and os.path.exists(self.ubuntu_mount_path):
-            candidate_paths.insert(
-                0, os.path.join(self.ubuntu_mount_path, safe_company, str(fy), session_id, "data.json")
-            )
-            candidate_paths.insert(
-                1, os.path.join(self.ubuntu_mount_path, safe_company, f"{session_id}_data.json")
-            )
+        # 1. 특정 session_id 또는 filename이 지정된 경우
+        if target_id and target_id != "latest":
+            safe_fn = os.path.basename(target_id)
+            sess_str = safe_fn.replace("_data.json", "")
+            parts = sess_str.split("_")
+            fy = parts[0] if len(parts) > 0 else "2025"
+
+            candidate_paths.extend([
+                # 세션 폴더 하위 data.json
+                os.path.join(self.local_base_dir, safe_company, str(fy), sess_str, "data.json"),
+                # 회사 루트 하위 _data.json
+                os.path.join(self.local_base_dir, safe_company, f"{sess_str}_data.json"),
+                os.path.join(self.local_base_dir, safe_company, safe_fn),
+            ])
+            if self.ubuntu_mount_path and os.path.exists(self.ubuntu_mount_path):
+                candidate_paths.insert(
+                    0, os.path.join(self.ubuntu_mount_path, safe_company, str(fy), sess_str, "data.json")
+                )
+                candidate_paths.insert(
+                    1, os.path.join(self.ubuntu_mount_path, safe_company, f"{sess_str}_data.json")
+                )
+        else:
+            # 2. 최신 포인터 또는 가장 최근 연도 데이터 로드
+            for default_fy in ["2025", "2024", "2026", "2023"]:
+                candidate_paths.append(
+                    os.path.join(self.local_base_dir, safe_company, f"latest_{default_fy}_data.json")
+                )
+                candidate_paths.append(
+                    os.path.join(self.local_base_dir, safe_company, f"{default_fy}_data.json")
+                )
 
         for fp in candidate_paths:
             if os.path.exists(fp) and os.path.isfile(fp):
@@ -396,13 +409,13 @@ class HybridStorageManager:
                     data = json.load(jf)
                 logger.info(
                     "[STORAGE:LOAD_SUCCESS] 데이터셋 로드 성공: %s (경로: %s)",
-                    safe_fn,
+                    target_id,
                     fp,
                 )
                 return data
 
         raise FileNotFoundError(
-            f"'{safe_company}' 기업의 '{safe_fn}' 데이터를 찾을 수 없습니다."
+            f"'{safe_company}' 기업의 '{target_id}' 데이터를 찾을 수 없습니다."
         )
 
 

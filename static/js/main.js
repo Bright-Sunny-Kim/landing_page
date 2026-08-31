@@ -593,7 +593,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                // 5. [기업 정밀 분석 허브]
+                // 5-1. [회계자료 수집 & 보관소]
+                if (menu === 'data-ingestion') {
+                    const ingestionView = document.getElementById('data-ingestion-view');
+                    if (ingestionView) {
+                        ingestionView.style.display = 'block';
+                        window.initDataIngestion?.();
+                        console.log('[RENDER] 회계자료 수집 & 보관소 렌더링 완료');
+                    }
+                    return;
+                }
+
+                // 5-2. [기업 정밀 분석 허브]
                 if (menu === 'analytics-hub') {
                     const hubView = document.getElementById('analytics-hub-view');
                     if (hubView) {

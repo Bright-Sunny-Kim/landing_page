@@ -9,7 +9,11 @@
 
     // 전역 상태 객체
     let currentAnalyticsData = null;
-    let selectedDirectFiles = [];
+    window.selectedDirectFiles = window.selectedDirectFiles || [];
+
+    // 전역 브라우저 파일 드롭 기본동작(파일 열기) 원천 차단
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => e.preventDefault());
 
     // 안전한 JSON fetch 파서 (HTML 500 에러 페이지 반환 시 SyntaxError 방지)
     async function safeFetchJson(url, options = {}, fallbackErrorMsg = '요청 처리에 실패했습니다.') {
@@ -121,26 +125,41 @@
             if (panelDirect) panelDirect.style.display = 'block';
         }
     };
-    // 전역 스코프에도 직접 할당 (HTML onclick 대비)
     window.switchAnalyticsMode = window.switchAnalyticsMode;
 
 
     // 2. 드롭존 파일 선택 칩 렌더링
-    function renderSelectedFilesChips() {
+    window.renderSelectedFilesChips = function () {
         const container = document.getElementById('analytics-selected-files');
+        const mainText = document.getElementById('analytics-dropzone-main-text');
+        const subText = document.getElementById('analytics-dropzone-sub-text');
+        const dropzone = document.getElementById('analytics-dropzone');
         if (!container) return;
         container.innerHTML = '';
 
-        if (selectedDirectFiles.length === 0) {
+        if (!window.selectedDirectFiles || window.selectedDirectFiles.length === 0) {
+            if (dropzone) {
+                dropzone.style.borderColor = 'rgba(99,102,241,0.6)';
+                dropzone.style.background = 'rgba(99,102,241,0.05)';
+            }
+            if (mainText) mainText.textContent = '6대 회계자료 엑셀(.xlsx, .xls) 또는 CSV 파일을 여기에 끌어다 놓으세요';
+            if (subText) subText.innerHTML = '또는 <span style="color: #818cf8; text-decoration: underline; font-weight: 700;">내 PC에서 파일 선택</span> (재무상태표, 손익계산서, 합잔, 분개장, 거래처원장, 계정별원장 다중 선택 가능)';
             return;
         }
 
-        selectedDirectFiles.forEach((file, index) => {
+        if (dropzone) {
+            dropzone.style.borderColor = '#10b981';
+            dropzone.style.background = 'rgba(16,185,129,0.08)';
+        }
+        if (mainText) mainText.innerHTML = `<span style="color: #34d399;">✓ 총 ${window.selectedDirectFiles.length}개의 회계 파일이 준비되었습니다.</span>`;
+        if (subText) subText.innerHTML = '<span style="color: #cbd5e1;">추가 파일을 더 끌어다 놓거나 클릭하여 계속 추가할 수 있습니다.</span>';
+
+        window.selectedDirectFiles.forEach((file, index) => {
             const chip = document.createElement('div');
-            chip.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); border-radius: 6px; font-size: 0.8rem; color: #c7d2fe;';
+            chip.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.5); border-radius: 6px; font-size: 0.85rem; color: #c7d2fe; font-weight: 600;';
             chip.innerHTML = `
                 <span>📄 ${file.name} (${Math.round(file.size / 1024)} KB)</span>
-                <span class="btn-remove-file" data-index="${index}" style="cursor: pointer; font-weight: 700; color: #f87171; margin-left: 4px;">&times;</span>
+                <span class="btn-remove-file" data-index="${index}" style="cursor: pointer; font-weight: 700; color: #f87171; margin-left: 6px; padding: 0 4px; font-size: 1.1rem;" title="파일 제거">&times;</span>
             `;
             container.appendChild(chip);
         });
@@ -148,17 +167,77 @@
         // 삭제 이벤트
         container.querySelectorAll('.btn-remove-file').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const idx = parseInt(e.target.getAttribute('data-index'), 10);
-                selectedDirectFiles.splice(idx, 1);
-                renderSelectedFilesChips();
+                e.preventDefault();
+                e.stopPropagation();
+                const idx = parseInt(e.currentTarget.getAttribute('data-index'), 10);
+                window.selectedDirectFiles.splice(idx, 1);
+                window.renderSelectedFilesChips();
             });
         });
-    }
+    };
+
+    // 전역 파일 핸들러 (인라인 이벤트 지원)
+    window.handleAnalyticsFileInputChange = function (input) {
+        if (input && input.files && input.files.length > 0) {
+            Array.from(input.files).forEach(f => {
+                if (!window.selectedDirectFiles.some(existing => existing.name === f.name)) {
+                    window.selectedDirectFiles.push(f);
+                }
+            });
+            window.renderSelectedFilesChips();
+            input.value = '';
+        }
+    };
+
+    window.handleAnalyticsDragOver = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropzone = document.getElementById('analytics-dropzone');
+        if (dropzone) {
+            dropzone.style.borderColor = '#818cf8';
+            dropzone.style.background = 'rgba(99,102,241,0.15)';
+        }
+    };
+
+    window.handleAnalyticsDragLeave = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropzone = document.getElementById('analytics-dropzone');
+        if (dropzone) {
+            if (window.selectedDirectFiles && window.selectedDirectFiles.length > 0) {
+                dropzone.style.borderColor = '#10b981';
+                dropzone.style.background = 'rgba(16,185,129,0.08)';
+            } else {
+                dropzone.style.borderColor = 'rgba(99,102,241,0.6)';
+                dropzone.style.background = 'rgba(99,102,241,0.05)';
+            }
+        }
+    };
+
+    window.handleAnalyticsDrop = function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            Array.from(e.dataTransfer.files).forEach(f => {
+                if (!window.selectedDirectFiles.some(existing => existing.name === f.name)) {
+                    window.selectedDirectFiles.push(f);
+                }
+            });
+            window.renderSelectedFilesChips();
+        }
+    };
 
     // 3. 파싱 데이터 수집 현황 및 무결성 검증 렌더링 (Phase 2 - 가로형 2행 매트릭스)
     function renderIngestionHealthBlock(health, bundle) {
         const healthContainer = document.getElementById('analytics-health-container');
         if (!healthContainer || !health) return;
+
+        // 전달받은 객체가 result 전체 페이로드인 경우 ingestion_health 추출
+        if (health.ingestion_health) {
+            bundle = health.normalized_bundle || bundle;
+            health = health.ingestion_health;
+        }
+
         healthContainer.style.display = 'block';
 
         // 1. 무결성 점수 게이지
@@ -476,92 +555,160 @@
         wrapper.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // 4. 파트너사 원클릭 분석 실행
-    async function handleCompanyAnalysis() {
-        const select = document.getElementById('analytics-company-select');
-        const companyName = select ? select.value.trim() : '';
+    // 4. [저장본 기반 0.01초 정밀 분석 & AI 조서 산출] 실행
+    async function handleStoredAnalysis(customCompany = null, customFy = null, customSessionId = null) {
+        const compSelect = document.getElementById('analytics-company-select');
+        const fySelect = document.getElementById('analytics-fiscal-year');
+        const histSelect = document.getElementById('select-local-archive-history');
+        const emptyNotice = document.getElementById('analytics-empty-notice');
+
+        const companyName = customCompany || (compSelect ? compSelect.value.trim() : '');
+        const fy = customFy || (fySelect ? fySelect.value : '2025');
+        const sessionId = customSessionId || (histSelect ? histSelect.value : '');
 
         if (!companyName) {
-            alert('분석할 파트너사를 선택해 주세요.');
+            alert('분석을 진행할 기업을 선택해 주세요.');
             return;
         }
 
         const loading = document.getElementById('analytics-loading');
         const wrapper = document.getElementById('analytics-results-wrapper');
-        const statusEl = document.getElementById('company-files-status');
-
-        const fySelect = document.getElementById('analytics-fiscal-year');
-        const fy = fySelect ? fySelect.value : '2025';
 
         if (loading) loading.style.display = 'block';
         if (wrapper) wrapper.style.display = 'none';
-        if (statusEl) statusEl.textContent = `'${companyName}'의 ${fy}년도 회계 엑셀 자료를 취합하여 분석 중...`;
+        if (emptyNotice) emptyNotice.style.display = 'none';
 
         try {
+            console.log(`[MASTER_ANALYTICS:STORED] 분석 요청 시작: company=${companyName}, fy=${fy}, session=${sessionId || 'LATEST'}`);
             const result = await safeFetchJson(
-                `/master/api/analyze-company/${encodeURIComponent(companyName)}`,
+                '/master/api/analyze-stored-dataset',
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fiscal_year: fy })
+                    body: JSON.stringify({
+                        company_name: companyName,
+                        fiscal_year: fy,
+                        session_id: sessionId
+                    })
                 },
-                '기업 분석 요청에 실패했습니다.'
+                '저장본 정밀 분석에 실패했습니다.'
             );
 
-            if (statusEl) statusEl.textContent = `✓ '${companyName}' (${fy}년) 분석 완료 (${(result.analyzed_files || []).length}개 파일 처리됨)`;
             renderAnalyticsPayload(result);
 
         } catch (err) {
-            console.error('[MASTER_ANALYTICS:FRONT_ERROR]', err);
-            alert(`분석 오류: ${err.message}`);
-            if (statusEl) statusEl.textContent = `오류: ${err.message}`;
+            console.error('[MASTER_ANALYTICS:STORED_ERROR]', err);
+            if (emptyNotice && err.message.includes('찾을 수 없습니다')) {
+                emptyNotice.style.display = 'block';
+            } else {
+                alert(`정밀 분석 오류: ${err.message}`);
+            }
         } finally {
             if (loading) loading.style.display = 'none';
         }
     }
 
-    // 5. 직접 업로드 엑셀 분석 실행
-    async function handleDirectAnalysis() {
-        if (selectedDirectFiles.length === 0) {
-            alert('분석할 엑셀(.xlsx, .xls) 또는 CSV 파일을 최소 1개 이상 첨부해 주세요.');
+    // 5. [1단계 수집 & 스마트 파싱 & 우분투 서버 영구 저장] 실행
+    window.handleIngestFiles = async function () {
+        if (!window.selectedDirectFiles || window.selectedDirectFiles.length === 0) {
+            alert('수집할 엑셀(.xlsx, .xls) 또는 CSV 파일을 최소 1개 이상 첨부해 주세요.');
             return;
         }
 
+        const compSelect = document.getElementById('ingest-company-select');
         const nameInput = document.getElementById('analytics-direct-company-name');
-        const companyName = nameInput ? nameInput.value.trim() : '직접 분석 기업';
-        const fySelect = document.getElementById('analytics-fiscal-year');
+        const companyName = (nameInput ? nameInput.value.trim() : '') || (compSelect ? compSelect.value.trim() : '');
+        if (!companyName) {
+            alert('수집 대상 기업명을 선택하거나 직접 입력해 주세요.');
+            if (nameInput) nameInput.focus();
+            return;
+        }
+
+        const fySelect = document.getElementById('ingest-fiscal-year');
         const fy = fySelect ? fySelect.value : '2025';
 
-        const loading = document.getElementById('analytics-loading');
-        const wrapper = document.getElementById('analytics-results-wrapper');
-
-        if (loading) loading.style.display = 'block';
-        if (wrapper) wrapper.style.display = 'none';
+        const btn = document.getElementById('btn-run-ingest');
+        const originBtnHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 자료 수집 & 우분투 서버 영구 저장 중...</span>';
+        }
 
         const formData = new FormData();
         formData.append('company_name', companyName);
         formData.append('fiscal_year', fy);
-        selectedDirectFiles.forEach(f => {
+        window.selectedDirectFiles.forEach(f => {
             formData.append('files', f);
         });
 
         try {
+            console.log(`[MASTER_INGEST:SEND] 6대 회계자료 수집 요청: company=${companyName}, files=${window.selectedDirectFiles.length}`);
             const result = await safeFetchJson(
-                '/master/api/analyze-direct',
+                '/master/api/ingest-files',
                 {
                     method: 'POST',
                     body: formData
                 },
-                '직접 파일 분석에 실패했습니다.'
+                '회계자료 수집 처리에 실패했습니다.'
             );
 
-            renderAnalyticsPayload(result);
+            console.log('[MASTER_INGEST:RECV] 수집 완료 성공:', result);
+
+            // 1. 6대 장부 수집 매트릭스 렌더링
+            renderIngestionHealthBlock(result);
+
+            // 2. 수집 완료 성공 배너 표시
+            const successBanner = document.getElementById('ingest-success-banner');
+            const descEl = document.getElementById('ingest-success-desc');
+            if (descEl) {
+                descEl.textContent = `'${companyName}' 기업의 6대 장부가 성공적으로 파싱되어 세션(${result.session_id})으로 보관되었습니다.`;
+            }
+            if (successBanner) {
+                successBanner.style.display = 'flex';
+                // 배너 내 즉시 분석 버튼 바인딩
+                const gotoBtn = document.getElementById('btn-goto-analytics-from-ingest');
+                if (gotoBtn) {
+                    gotoBtn.onclick = () => {
+                        // 1. 기업 정밀 분석 탭으로 전환
+                        document.querySelector('.master-menu-item[data-menu="analytics-hub"]')?.click();
+                        // 2. 파트너사 셀렉트에 기업명 설정
+                        const compSel = document.getElementById('analytics-company-select');
+                        if (compSel) {
+                            let found = false;
+                            for (let i = 0; i < compSel.options.length; i++) {
+                                if (compSel.options[i].value === companyName) {
+                                    compSel.selectedIndex = i;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                const newOpt = document.createElement('option');
+                                newOpt.value = companyName;
+                                newOpt.textContent = companyName;
+                                newOpt.selected = true;
+                                compSel.appendChild(newOpt);
+                            }
+                        }
+                        // 3. 0.01초 즉시 분석 실행
+                        handleStoredAnalysis(companyName, fy, result.session_id);
+                    };
+                }
+            }
+
+            // 3. 실시간 업로드 이력 관리 센터 즉시 새로고침
+            loadRealtimeUploadHistory(companyName);
+
+            alert(`✓ [수집 완료] '${companyName}' 기업의 회계자료가 우분투 서버 영구 저장소에 안전하게 보관되었습니다!`);
 
         } catch (err) {
-            console.error('[MASTER_ANALYTICS:DIRECT_ERROR]', err);
-            alert(`직접 분석 오류: ${err.message}`);
+            console.error('[MASTER_INGEST:ERROR]', err);
+            alert(`회계자료 수집 오류: ${err.message}`);
         } finally {
-            if (loading) loading.style.display = 'none';
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originBtnHtml;
+            }
         }
     }
 
@@ -594,7 +741,6 @@
             );
 
             alert(`✓ ${result.message || '분석 결과가 안전하게 저장되었습니다.'}`);
-            // 저장 이력 목록 자동 갱신
             if (currentAnalyticsData.company_name) {
                 fetchLocalArchiveHistory(currentAnalyticsData.company_name);
             }
@@ -892,14 +1038,29 @@
                     const s = e.currentTarget.getAttribute('data-session');
                     if (!c || !s) return;
                     
+                    // 1. 기업 정밀 분석 탭으로 자동 이동
+                    document.querySelector('.master-menu-item[data-menu="analytics-hub"]')?.click();
+
                     const loading = document.getElementById('analytics-loading');
                     const wrapper = document.getElementById('analytics-results-wrapper');
                     if (loading) loading.style.display = 'block';
                     if (wrapper) wrapper.style.display = 'none';
 
                     try {
+                        // 2. 0.01초 즉시 복원 데이터 로드 및 렌더링
                         const payload = await safeFetchJson(`/master/api/upload-history/restore?company_name=${encodeURIComponent(c)}&session_id=${encodeURIComponent(s)}`);
                         renderAnalyticsPayload(payload);
+                        
+                        // 3. 셀렉트 박스 동기화
+                        const compSel = document.getElementById('analytics-company-select');
+                        if (compSel) {
+                            for (let i = 0; i < compSel.options.length; i++) {
+                                if (compSel.options[i].value === c) {
+                                    compSel.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
                         window.scrollTo({ top: document.getElementById('analytics-results-wrapper')?.offsetTop || 0, behavior: 'smooth' });
                     } catch (err) {
                         alert(`복원 실패: ${err.message}`);
@@ -924,102 +1085,132 @@
         }
     }
 
-    // 10. 초기화 바인딩 함수
-    window.initAnalyticsHub = function () {
-        console.log('[MASTER_ANALYTICS] Analytics Hub 초기화 완료');
+    // 10-1. [📂 회계자료 수집 & 보관소] 탭 전용 초기화 함수
+    window.initDataIngestion = function () {
+        console.log('[MASTER_INGEST] Data Ingestion & Repository 센터 초기화 시작');
 
-        // 드롭존 바인딩
-        const dropzone = document.getElementById('analytics-dropzone');
-        const fileInput = document.getElementById('analytics-file-input');
-
-        if (dropzone && fileInput) {
-            dropzone.addEventListener('click', () => fileInput.click());
-
-            dropzone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropzone.style.borderColor = '#818cf8';
-                dropzone.style.background = 'rgba(99,102,241,0.08)';
-            });
-
-            dropzone.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                dropzone.style.borderColor = 'rgba(99,102,241,0.4)';
-                dropzone.style.background = 'rgba(99,102,241,0.03)';
-            });
-
-            dropzone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropzone.style.borderColor = 'rgba(99,102,241,0.4)';
-                dropzone.style.background = 'rgba(99,102,241,0.03)';
-
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                    Array.from(e.dataTransfer.files).forEach(f => {
-                        if (!selectedDirectFiles.some(existing => existing.name === f.name)) {
-                            selectedDirectFiles.push(f);
-                        }
-                    });
-                    renderSelectedFilesChips();
-                }
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    Array.from(e.target.files).forEach(f => {
-                        if (!selectedDirectFiles.some(existing => existing.name === f.name)) {
-                            selectedDirectFiles.push(f);
-                        }
-                    });
-                    renderSelectedFilesChips();
-                    fileInput.value = '';
+        // 1. 등록 파트너사 선택 시 기업명 입력란 자동 채우기 연동
+        const compSelect = document.getElementById('ingest-company-select');
+        const nameInput = document.getElementById('analytics-direct-company-name');
+        if (compSelect && nameInput) {
+            compSelect.addEventListener('change', () => {
+                if (compSelect.value) {
+                    nameInput.value = compSelect.value;
                 }
             });
         }
 
-        // 탭 전환 버튼 바인딩
-        document.getElementById('tab-mode-company')?.addEventListener('click', () => window.switchAnalyticsMode('company'));
-        document.getElementById('tab-mode-direct')?.addEventListener('click', () => window.switchAnalyticsMode('direct'));
+        // 2. 파일 드롭존 바인딩
+        const dropzone = document.getElementById('analytics-dropzone');
+        const fileInput = document.getElementById('analytics-file-input');
 
-        // 실행 버튼 바인딩
-        document.getElementById('btn-run-company-analysis')?.addEventListener('click', async () => {
-            await handleCompanyAnalysis();
-            loadRealtimeUploadHistory();
-        });
-        document.getElementById('btn-run-direct-analysis')?.addEventListener('click', async () => {
-            await handleDirectAnalysis();
-            loadRealtimeUploadHistory();
-        });
-        document.getElementById('btn-save-current-analysis')?.addEventListener('click', async () => {
-            await handleSaveAnalysis();
-            loadRealtimeUploadHistory();
-        });
-        document.getElementById('btn-copy-report-md')?.addEventListener('click', handleCopyMarkdown);
-        document.getElementById('btn-download-report-md')?.addEventListener('click', handleDownloadMarkdown);
+        if (dropzone && fileInput) {
+            dropzone.onclick = function (e) {
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            };
 
-        // 실시간 이력 새로고침 버튼
-        document.getElementById('btn-refresh-upload-history')?.addEventListener('click', () => loadRealtimeUploadHistory());
+            dropzone.ondragover = function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.style.borderColor = '#818cf8';
+                dropzone.style.background = 'rgba(99,102,241,0.15)';
+            };
 
-        // [Phase 3] 로컬 보관함 불러오기 버튼 및 기업 선택 시 이력 조회 바인딩
-        document.getElementById('btn-load-local-archive')?.addEventListener('click', handleLoadLocalArchive);
+            dropzone.ondragleave = function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.selectedDirectFiles && window.selectedDirectFiles.length > 0) {
+                    dropzone.style.borderColor = '#10b981';
+                    dropzone.style.background = 'rgba(16,185,129,0.08)';
+                } else {
+                    dropzone.style.borderColor = 'rgba(99,102,241,0.6)';
+                    dropzone.style.background = 'rgba(99,102,241,0.05)';
+                }
+            };
+
+            dropzone.ondrop = function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    Array.from(e.dataTransfer.files).forEach(f => {
+                        if (!window.selectedDirectFiles.some(existing => existing.name === f.name)) {
+                            window.selectedDirectFiles.push(f);
+                        }
+                    });
+                    window.renderSelectedFilesChips();
+                }
+            };
+
+            fileInput.onchange = function (e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    Array.from(e.target.files).forEach(f => {
+                        if (!window.selectedDirectFiles.some(existing => existing.name === f.name)) {
+                            window.selectedDirectFiles.push(f);
+                        }
+                    });
+                    window.renderSelectedFilesChips();
+                    fileInput.value = '';
+                }
+            };
+        }
+
+        // 3. 수집 실행 버튼 바인딩
+        const runIngestBtn = document.getElementById('btn-run-ingest');
+        if (runIngestBtn) {
+            runIngestBtn.onclick = function () {
+                window.handleIngestFiles();
+            };
+        }
+
+        // 4. 실시간 이력 새로고침 버튼 바인딩
+        const refreshHistBtn = document.getElementById('btn-refresh-upload-history');
+        if (refreshHistBtn) {
+            refreshHistBtn.onclick = function () {
+                loadRealtimeUploadHistory();
+            };
+        }
+
+        // 초기 이력 목록 로드
+        loadRealtimeUploadHistory();
+        console.log('[MASTER_INGEST] Data Ingestion & Repository 센터 초기화 완료');
+    };
+
+    // 10-2. [🧠 기업 정밀 분석 허브] 탭 전용 초기화 함수
+    window.initAnalyticsHub = function () {
+        console.log('[MASTER_ANALYTICS] Analytics Hub 컨트롤러 초기화');
+
+        // 저장본 분석 실행 버튼 바인딩
+        const runStoredBtn = document.getElementById('btn-run-stored-analysis');
+        if (runStoredBtn) {
+            runStoredBtn.onclick = () => handleStoredAnalysis();
+        }
+
+        // 기업 선택 시 보관 이력 타임스탬프 목록 로드
         const compSelect = document.getElementById('analytics-company-select');
         if (compSelect) {
-            compSelect.addEventListener('change', () => {
+            compSelect.onchange = () => {
                 fetchLocalArchiveHistory(compSelect.value);
-                loadRealtimeUploadHistory(compSelect.value);
-            });
+            };
             if (compSelect.value) {
                 fetchLocalArchiveHistory(compSelect.value);
             }
         }
 
-        // 데이터 인스펙터 버튼 바인딩
+        // 보고서 복사 / 다운로드 / DB 저장 바인딩
+        document.getElementById('btn-save-current-analysis')?.addEventListener('click', handleSaveAnalysis);
+        document.getElementById('btn-copy-report-md')?.addEventListener('click', handleCopyMarkdown);
+        document.getElementById('btn-download-report-md')?.addEventListener('click', handleDownloadMarkdown);
+
+        // 데이터 인스펙터 모달 이벤트
         document.querySelectorAll('.btn-inspect-data').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.onclick = (e) => {
                 const dtype = e.currentTarget.getAttribute('data-type');
                 openDataInspector(dtype);
-            });
+            };
         });
 
-        // 모달 닫기/탭/복사 바인딩
         document.getElementById('btn-close-inspector')?.addEventListener('click', () => {
             const modal = document.getElementById('modal-data-inspector');
             if (modal) modal.style.display = 'none';
@@ -1034,14 +1225,13 @@
                 alert(`✓ ${currentInspectorTitle} 원본 JSON이 클립보드에 복사되었습니다.`);
             });
         });
-
-        // 실시간 업로드 이력 초기 로드
-        loadRealtimeUploadHistory();
     };
 
-    // DOM 로드 완료 시 바인딩
+    // DOM 로드 완료 시 기본 초기화
     document.addEventListener('DOMContentLoaded', () => {
+        window.initDataIngestion();
         window.initAnalyticsHub();
     });
 
 })();
+

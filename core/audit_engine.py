@@ -2478,25 +2478,20 @@ def build_normalized_financial_bundle(company_name, fiscal_year, bs_records=None
     return bundle
 
 
-def run_comprehensive_enterprise_analysis(company_name, files_data_list, fiscal_year=None, supabase_client=None):
+def ingest_accounting_files_to_bundle(company_name, files_data_list, fiscal_year=None):
     """
-    여러 엑셀/CSV 파일들을 일괄 수신하여 파싱부터 4대 비율, JET, 거래처원장, 조서 보고서까지 원스톱 실행합니다.
-    fiscal_year가 지정된 경우 해당 연도 파일(예: 2025_...)을 최우선으로 선별하여 분석합니다.
+    [1단계 수집/파싱]
+    여러 엑셀/CSV 파일들을 수신하여 결정론적으로 6대 장부(BS/IS/TB/분개장/거래처/계정원장)를 파싱하고
+    대차 무결성 검증을 거친 정규화 번들(Normalized Bundle)을 빌드합니다.
     """
-    logger.info("[MASTER_ANALYTICS:EXEC] 통합 기업분석 실행 시작: company=%s, fiscal_year=%s, files_count=%d", 
+    logger.info("[MASTER_INGEST:EXEC] 회계자료 수집/파싱 시작: company=%s, fiscal_year=%s, files_count=%d", 
                 company_name, fiscal_year, len(files_data_list))
 
-    # 기준연도(fiscal_year) 파일 필터링 및 우선순위 정렬
     target_fy_str = str(fiscal_year).strip() if fiscal_year else ""
-    
     if target_fy_str:
-        # 1. 파일명에 해당 연도가 포함된 파일 우선
         fy_files = [f for f in files_data_list if target_fy_str in f.get("filename", "")]
         non_fy_files = [f for f in files_data_list if not any(y in f.get("filename", "") for y in ["2023", "2024", "2025", "2026", "2027"])]
-        if fy_files:
-            sorted_files = fy_files + non_fy_files
-        else:
-            sorted_files = sorted(files_data_list, key=lambda x: x.get("filename", ""), reverse=True)
+        sorted_files = (fy_files + non_fy_files) if fy_files else sorted(files_data_list, key=lambda x: x.get("filename", ""), reverse=True)
     else:
         sorted_files = sorted(files_data_list, key=lambda x: x.get("filename", ""), reverse=True)
 
@@ -2509,9 +2504,7 @@ def run_comprehensive_enterprise_analysis(company_name, files_data_list, fiscal_
     account_ledger_all = []
     all_errors = []
 
-    # 파일 유형별 최우선 파일 1개씩 선별 (중복 덮어쓰기 방지)
     seen_types = set()
-
     for item in sorted_files:
         fname = item.get("filename", "")
         fcontent = item.get("content", b"")
@@ -2539,7 +2532,6 @@ def run_comprehensive_enterprise_analysis(company_name, files_data_list, fiscal_
         if parsed_res.get("errors"):
             all_errors.extend(parsed_res["errors"])
 
-    # 1. 정규화 번들 생성 및 수집 현황 검증 (Zero-Hallucination)
     all_source_filenames = [f.get("filename", "") for f in files_data_list]
     normalized_bundle = build_normalized_financial_bundle(
         company_name=company_name,
@@ -2553,24 +2545,47 @@ def run_comprehensive_enterprise_analysis(company_name, files_data_list, fiscal_
         analyzed_files=all_source_filenames
     )
 
-    # 2. 4대 재무비율 계산
-    ratios_res = calculate_financial_ratios(bs_records_all, is_records_all, tb_records_all)
+    logger.info("[MASTER_INGEST:SUCCESS] 회계자료 정규화 번들 생성 완료: company=%s, health_score=%s", 
+                company_name, normalized_bundle.get("ingestion_health", {}).get("integrity_score"))
+    return normalized_bundle, parsed_filenames, all_errors
 
-    # 3. 계정 변동분석(Variance)
-    variance_res = calculate_advanced_variance_analysis(bs_records_all, is_records_all, tb_records_all)
 
-    # 4. 분개장 JET 분석
-    jet_res = run_journal_entry_testing(journal_all)
+def run_analysis_from_normalized_bundle(normalized_bundle, company_name=None, fiscal_year=None, supabase_client=None, analyzed_files=None, all_errors=None):
+    """
+    [2단계 정밀 분석/진단]
+    우분투 서버 또는 로컬에 저장된 정규화 번들(JSON)을 입력받아 0.01초 만에 4대 재무비율, 변동분석,
+    ISA 240 JET 이상전표 전수 스캔 및 K-GAAP RAG 감사 조서를 연산합니다.
+    """
+    c_name = company_name or normalized_bundle.get("company_name", "미지정 기업")
+    fy = fiscal_year or normalized_bundle.get("fiscal_year", 2025)
 
-    # 5. 거래처원장 리스크 분석
-    subledger_res = run_subledger_risk_analysis(subledger_all)
+    logger.info("[MASTER_ANALYTICS:EXEC] 저장된 정규화 번들 기반 정밀 분석 실행: company=%s, fiscal_year=%s", c_name, fy)
 
-    # 6. K-GAAP RAG 매칭
+    raw_map = normalized_bundle.get("raw_datasets", {})
+    bs_records = raw_map.get("balance_sheet", [])
+    is_records = raw_map.get("income_statement", [])
+    tb_records = raw_map.get("trial_balance", [])
+    journal_records = raw_map.get("journal_entries_sample", [])
+    subledger_records = raw_map.get("subledger_sample", [])
+    
+    # 1. 4대 재무비율 계산
+    ratios_res = calculate_financial_ratios(bs_records, is_records, tb_records)
+
+    # 2. 계정 변동분석(Variance)
+    variance_res = calculate_advanced_variance_analysis(bs_records, is_records, tb_records)
+
+    # 3. 분개장 JET 분석
+    jet_res = run_journal_entry_testing(journal_records)
+
+    # 4. 거래처원장 리스크 분석
+    subledger_res = run_subledger_risk_analysis(subledger_records)
+
+    # 5. K-GAAP RAG 매칭
     matched_standards = retrieve_k_gaap("수취채권 손상 재고자산 저가법 수익인식 유형자산 감가상각", limit=2, supabase_client=supabase_client)
 
-    # 7. 마크다운 종합 보고서 생성
+    # 6. 마크다운 종합 보고서 생성
     report_md = generate_enterprise_analysis_report(
-        company_name=company_name,
+        company_name=c_name,
         ratios_res=ratios_res,
         variance_res=variance_res,
         jet_res=jet_res,
@@ -2608,10 +2623,10 @@ def run_comprehensive_enterprise_analysis(company_name, files_data_list, fiscal_
 
     payload = {
         "success": True,
-        "company_name": company_name,
-        "fiscal_year": fiscal_year or 2025,
-        "analyzed_files": parsed_filenames,
-        "ingestion_health": normalized_bundle["ingestion_health"],
+        "company_name": c_name,
+        "fiscal_year": fy,
+        "analyzed_files": analyzed_files or normalized_bundle.get("analyzed_files", []),
+        "ingestion_health": normalized_bundle.get("ingestion_health", {}),
         "normalized_bundle": normalized_bundle,
         "summary": ratios_res.get("summary", {}),
         "ratios": ratios_res,
@@ -2621,9 +2636,30 @@ def run_comprehensive_enterprise_analysis(company_name, files_data_list, fiscal_
         "matched_standards": matched_standards,
         "report_md": report_md,
         "limitations_checklist": checklist,
-        "errors": all_errors
+        "errors": all_errors or []
     }
 
-    logger.info("[MASTER_ANALYTICS:EXEC] 통합 기업분석 완료 성공: company=%s", company_name)
+    logger.info("[MASTER_ANALYTICS:EXEC] 정밀 분석 연산 완료 성공: company=%s", c_name)
     return payload
+
+
+def run_comprehensive_enterprise_analysis(company_name, files_data_list, fiscal_year=None, supabase_client=None):
+    """
+    [통합 원스톱 호환 엔트리포인트]
+    1단계(수집/파싱)와 2단계(정밀 분석)를 연속 실행하여 기존 호출 코드와의 하위 호환성을 보장합니다.
+    """
+    normalized_bundle, parsed_filenames, all_errors = ingest_accounting_files_to_bundle(
+        company_name=company_name,
+        files_data_list=files_data_list,
+        fiscal_year=fiscal_year
+    )
+
+    return run_analysis_from_normalized_bundle(
+        normalized_bundle=normalized_bundle,
+        company_name=company_name,
+        fiscal_year=fiscal_year,
+        supabase_client=supabase_client,
+        analyzed_files=parsed_filenames,
+        all_errors=all_errors
+    )
 

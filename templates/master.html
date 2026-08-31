@@ -80,6 +80,12 @@
                         <span>수수료 및 청구 관리</span>
                     </a>
                 </li>
+                <li class="master-menu-item" data-menu="data-ingestion" data-tab="tab-data-ingestion">
+                    <a href="#tab-data-ingestion">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                        <span>회계자료 수집 & 보관소</span>
+                    </a>
+                </li>
                 <li class="master-menu-item" data-menu="analytics-hub" data-tab="tab-analytics-hub">
                     <a href="#tab-analytics-hub">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
@@ -978,97 +984,81 @@
                 </div>
             </div>
 
-            <!-- [기업 정밀 분석 허브 뷰] -->
-            <div class="glass-card dashboard-card master-card analytics-hub-dashboard" id="analytics-hub-view" style="display: none;">
+            <!-- ======================================================== -->
+            <!-- 📂 [탭 1] 회계자료 수집 & 보관소 (Data Ingestion & Repository) -->
+            <!-- ======================================================== -->
+            <div class="glass-card dashboard-card master-card data-ingestion-dashboard" id="data-ingestion-view" style="display: none;">
                 <header class="dashboard-header">
                     <div class="status-badge master-badge" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); color: #a5b4fc;">
                         <span class="pulse-dot" style="background: #818cf8;"></span>
-                        <span>AI Enterprise Financial Analytics Hub</span>
+                        <span>Data Ingestion & Integrity Health Center</span>
                     </div>
-                    <h2>기업 정밀 재무분석 & 감사 리스크 허브</h2>
-                    <p class="welcome-message">고객사가 제출한 5대 회계자료(재무제표, 합잔, 분개장, 거래처원장) 및 직접 업로드한 엑셀 파일로 4대 재무비율, JET 이상치, 거래처 리스크를 정밀 진단합니다.</p>
+                    <h2>📂 회계자료 수집 & 아카이브 센터</h2>
+                    <p class="welcome-message">재무상태표, 손익계산서, 시산표, 분개장, 거래처원장, 계정별원장 6대 회계자료를 업로드하여 100% 결정론적 정규화 파싱 및 우분투/로컬 스토리지에 시점별로 영구 보관합니다.</p>
                 </header>
 
-                <div class="analytics-hub-container" id="analytics-hub-container">
-                    <!-- 1. 분석 모드 & 소스 선택 패널 -->
-                    <div class="analytics-control-panel glass-card-nested" style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-                            <!-- 분석 모드 탭 -->
-                            <div class="analytics-mode-tabs" style="display: flex; gap: 8px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 8px;">
-                                <button type="button" class="btn-mode-tab active" id="tab-mode-company" onclick="switchAnalyticsMode('company')" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                                    🏢 등록 파트너사 선택 분석
-                                </button>
-                                <button type="button" class="btn-mode-tab" id="tab-mode-direct" onclick="switchAnalyticsMode('direct')" style="padding: 8px 16px; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                                    📂 엑셀 파일 직접 업로드
-                                </button>
+                <div class="data-ingestion-container">
+                    <!-- 1. 파일 업로드 및 수집 컨트롤 패널 -->
+                    <div class="analytics-control-panel glass-card-nested" style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 22px; margin-bottom: 24px;">
+                        <div style="display: grid; grid-template-columns: 1.2fr 1.2fr 1fr auto; gap: 14px; align-items: end; margin-bottom: 18px;">
+                            <div>
+                                <label for="ingest-company-select" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">등록 파트너사 선택</label>
+                                <select id="ingest-company-select" class="status-select" style="width: 100%; padding: 10px 12px; font-size: 0.92rem; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;">
+                                    <option value="">-- 등록 기업 선택 (또는 우측 직접 입력) --</option>
+                                    {% for p in partners %}
+                                    <option value="{{ p.company }}">{{ p.company }} ({{ p.username or p.email }})</option>
+                                    {% endfor %}
+                                </select>
                             </div>
-
-                            <!-- 회계연도 및 기준일자 -->
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <label style="font-size: 0.85rem; color: #94a3b8;">기준연도:</label>
-                                <select id="analytics-fiscal-year" class="status-select" style="padding: 6px 12px; font-size: 0.9rem;">
+                            <div>
+                                <label for="analytics-direct-company-name" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">수집 대상 기업명 (직접 입력/수정)</label>
+                                <input type="text" id="analytics-direct-company-name" placeholder="예: (주)대한상사" style="width: 100%; padding: 9px 12px; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #fff; font-size: 0.92rem;">
+                            </div>
+                            <div>
+                                <label for="ingest-fiscal-year" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">결산 기준연도</label>
+                                <select id="ingest-fiscal-year" class="status-select" style="width: 100%; padding: 9px 12px; font-size: 0.92rem; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;">
                                     <option value="2025" selected>2025년 (당기)</option>
                                     <option value="2024">2024년 (전기)</option>
                                     <option value="2026">2026년</option>
+                                    <option value="2023">2023년</option>
                                 </select>
                             </div>
-                        </div>
-
-                        <!-- [모드 1 영역] 파트너사 드롭다운 & 기존 업로드 파일 선택 -->
-                        <div id="panel-company-mode" style="display: block;">
-                            <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end;">
-                                <div>
-                                    <label for="analytics-company-select" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">분석 대상 파트너사 선택</label>
-                                    <select id="analytics-company-select" class="status-select" style="width: 100%; padding: 10px 14px; font-size: 1rem; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;">
-                                        <option value="">-- 기업을 선택하세요 --</option>
-                                        {% for p in partners %}
-                                        <option value="{{ p.company }}">{{ p.company }} ({{ p.username or p.email }})</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <button type="button" id="btn-run-company-analysis" class="btn-primary" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer; transition: transform 0.2s;">
-                                    <span>⚡ 원클릭 종합 분석 실행</span>
-                                </button>
-                            </div>
-                            <div id="company-files-status" style="margin-top: 10px; font-size: 0.85rem; color: #64748b;"></div>
-
-                            <!-- [Phase 3 & 확장] 하이브리드 보관함(로컬 + 사내 Ubuntu 서버) 빠른 로드 바 -->
-                            <div id="local-archive-load-bar" style="margin-top: 14px; padding: 10px 14px; background: rgba(30,41,59,0.5); border: 1px dashed rgba(99,102,241,0.3); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">📂 보관함 빠른 불러오기:</span>
-                                    <select id="select-local-archive-history" style="padding: 6px 10px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #e2e8f0; font-size: 0.82rem; min-width: 240px;">
-                                        <option value="">과거 분석 보관 이력 없음</option>
-                                    </select>
-                                    <span id="storage-engine-badge" style="padding: 2px 8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; font-size: 0.72rem; color: #34d399;">💾 사내 안전 보관함</span>
-                                </div>
-                                <button type="button" id="btn-load-local-archive" style="padding: 6px 14px; font-size: 0.82rem; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); border-radius: 6px; color: #a5b4fc; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                                    <span>⚡ 0.01초 즉시 복원</span>
+                            <div>
+                                <button type="button" id="btn-run-ingest" class="btn-primary" style="padding: 10px 22px; font-size: 0.92rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer;">
+                                    <span>📤 6대 회계자료 수집 & 저장</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- [모드 2 영역] 엑셀 파일 직접 업로드 드롭존 -->
-                        <div id="panel-direct-mode" style="display: none;">
-                            <div style="margin-bottom: 12px;">
-                                <label for="analytics-direct-company-name" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">분석 대상 기업명 (직접 입력)</label>
-                                <input type="text" id="analytics-direct-company-name" placeholder="예: (주)대한상사" style="width: 100%; max-width: 400px; padding: 8px 12px; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff;">
-                            </div>
+                        <!-- 파일 드래그앤드롭 드롭존 -->
+                        <div id="analytics-dropzone" 
+                             onclick="document.getElementById('analytics-file-input').click();"
+                             style="display: block; border: 2px dashed rgba(99,102,241,0.6); border-radius: 12px; padding: 36px 20px; text-align: center; background: rgba(99,102,241,0.05); cursor: pointer; transition: all 0.25s ease; user-select: none;">
+                            <input type="file" id="analytics-file-input" multiple accept=".xlsx, .xls, .csv" 
+                                   style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;"
+                                   onchange="window.handleAnalyticsFileInputChange && window.handleAnalyticsFileInputChange(this)">
+                            <div style="font-size: 2.6rem; margin-bottom: 8px; pointer-events: none;">📊</div>
+                            <div id="analytics-dropzone-main-text" style="font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin-bottom: 6px; pointer-events: none;">6대 회계자료 엑셀(.xlsx, .xls) 또는 CSV 파일을 여기에 끌어다 놓으세요</div>
+                            <div id="analytics-dropzone-sub-text" style="font-size: 0.88rem; color: #94a3b8; pointer-events: none;">또는 <span style="color: #818cf8; text-decoration: underline; font-weight: 700;">내 PC에서 파일 선택</span> (재무상태표, 손익계산서, 합잔, 분개장, 거래처원장, 계정별원장 다중 선택 가능)</div>
+                        </div>
 
-                            <div id="analytics-dropzone" style="border: 2px dashed rgba(99,102,241,0.4); border-radius: 10px; padding: 28px; text-align: center; background: rgba(99,102,241,0.03); cursor: pointer; transition: all 0.2s;">
-                                <input type="file" id="analytics-file-input" multiple accept=".xlsx, .xls, .csv" style="display: none;">
-                                <div style="font-size: 2rem; margin-bottom: 8px;">📊</div>
-                                <div style="font-size: 1rem; font-weight: 600; color: #e2e8f0; margin-bottom: 4px;">엑셀(.xlsx, .xls) 또는 CSV 파일을 여기에 끌어다 놓으세요</div>
-                                <div style="font-size: 0.85rem; color: #94a3b8;">또는 <span style="color: #818cf8; text-decoration: underline;">내 PC에서 파일 선택</span> (재무제표, 합잔, 분개장, 거래처원장 다중 선택 가능)</div>
-                            </div>
+                        <div id="analytics-selected-files" style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                    </div>
 
-                            <div id="analytics-selected-files" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
-
-                            <div style="margin-top: 16px; text-align: right;">
-                                <button type="button" id="btn-run-direct-analysis" class="btn-primary" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer;">
-                                    <span>🚀 직접 업로드 파일 분석 시작</span>
-                                </button>
+                    <!-- 수집 완료 후 즉시 정밀 분석 이동 안내 배너 -->
+                    <div id="ingest-success-banner" class="glass-card-nested" style="display: none; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.4); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.4rem;">🎉</span>
+                            <div>
+                                <h4 style="margin: 0; font-size: 1rem; color: #34d399; font-weight: 700;">회계자료 수집 및 서버 영구 보관 완료!</h4>
+                                <span id="ingest-success-desc" style="font-size: 0.82rem; color: #cbd5e1;">우분투/로컬 스토리지에 정규화 번들이 안전하게 저장되었습니다.</span>
                             </div>
                         </div>
+                        <button type="button" id="btn-goto-analytics-from-ingest" class="btn-primary" style="padding: 8px 18px; font-size: 0.88rem; font-weight: 600; background: #10b981; border: none; border-radius: 6px; color: white; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <span>🚀 지금 바로 이 데이터로 정밀 분석하기 ›</span>
+                        </button>
+                    </div>
+
                     <!-- 1-1. 파싱 데이터 수집 현황 및 무결성 검증 블록 (Data Ingestion & Integrity Health) -->
                     <div id="analytics-health-container" class="analytics-health-panel glass-card-nested" style="display: none; width: 100%; box-sizing: border-box; background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
@@ -1186,6 +1176,67 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ======================================================== -->
+            <!-- 🧠 [탭 2] 기업 정밀 분석 허브 (Analytics & Intelligence) -->
+            <!-- ======================================================== -->
+            <div class="glass-card dashboard-card master-card analytics-hub-dashboard" id="analytics-hub-view" style="display: none;">
+                <header class="dashboard-header">
+                    <div class="status-badge master-badge" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); color: #a5b4fc;">
+                        <span class="pulse-dot" style="background: #818cf8;"></span>
+                        <span>AI Enterprise Financial Analytics Hub</span>
+                    </div>
+                    <h2>🧠 기업 정밀 재무분석 & AI 감사 조서 허브</h2>
+                    <p class="welcome-message">우분투/로컬 스토리지에 보관된 표준화 회계 데이터셋을 기반으로 4대 재무비율, 변동분석, ISA 240 이상전표 전수 스캔 및 K-GAAP RAG 감사 조서를 0.01초 만에 연산합니다.</p>
+                </header>
+
+                <div class="analytics-hub-container" id="analytics-hub-container">
+                    <!-- 슬림 분석 컨트롤 바 -->
+                    <div class="analytics-control-panel glass-card-nested" style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 18px 24px; margin-bottom: 24px;">
+                        <div style="display: grid; grid-template-columns: 1.5fr 1fr 1.5fr auto; gap: 16px; align-items: end;">
+                            <div>
+                                <label for="analytics-company-select" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">분석 대상 파트너사 선택</label>
+                                <select id="analytics-company-select" class="status-select" style="width: 100%; padding: 10px 14px; font-size: 0.95rem; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;">
+                                    <option value="">-- 기업을 선택하세요 --</option>
+                                    {% for p in partners %}
+                                    <option value="{{ p.company }}">{{ p.company }} ({{ p.username or p.email }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="analytics-fiscal-year" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">결산 기준연도</label>
+                                <select id="analytics-fiscal-year" class="status-select" style="width: 100%; padding: 10px 14px; font-size: 0.95rem; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;">
+                                    <option value="2025" selected>2025년 (당기)</option>
+                                    <option value="2024">2024년 (전기)</option>
+                                    <option value="2026">2026년</option>
+                                    <option value="2023">2023년</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="select-local-archive-history" style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">보관 시점 선택 (Timestamp)</label>
+                                <select id="select-local-archive-history" style="width: 100%; padding: 10px 12px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; color: #e2e8f0; font-size: 0.9rem;">
+                                    <option value="">최신 보관 데이터셋</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button type="button" id="btn-run-stored-analysis" class="btn-primary" style="padding: 11px 26px; font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer; transition: transform 0.2s;">
+                                    <span>⚡ 정밀 분석 & AI 조서 산출</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 회계자료 미등록 안내 배너 -->
+                    <div id="analytics-empty-notice" class="glass-card-nested" style="display: none; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+                        <div style="font-size: 2rem; margin-bottom: 8px;">📂</div>
+                        <h3 style="margin: 0 0 6px 0; color: #f87171; font-size: 1.1rem;">저장된 회계 데이터셋이 없습니다.</h3>
+                        <p style="margin: 0 0 16px 0; color: #94a3b8; font-size: 0.85rem;">해당 기업의 6대 회계자료(재무제표, 시산표, 분개장, 계정별원장 등)를 먼저 수집 및 보관해 주세요.</p>
+                        <button type="button" onclick="document.querySelector('.master-menu-item[data-menu=\'data-ingestion\']')?.click();" class="btn-primary" style="padding: 8px 18px; font-size: 0.85rem; background: #6366f1; border: none; border-radius: 6px; color: white; cursor: pointer;">
+                            <span>📂 회계자료 수집 & 보관소로 이동 ›</span>
+                        </button>
                     </div>
 
                     <!-- 2. 분석 결과 렌더링 컨테이너 -->
@@ -1446,7 +1497,7 @@
     {% include 'components/ai_cpa_widget.html' %}
 
     <!-- Script JS -->
-    <script src="{{ url_for('static', filename='js/main.js', v='20260806-progress-v2') }}"></script>
-    <script src="{{ url_for('static', filename='js/master_analytics.js', v='20260817-v12') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v='20260831-progress-v7') }}"></script>
+    <script src="{{ url_for('static', filename='js/master_analytics.js', v='20260831-decoupled-v6') }}"></script>
 </body>
 </html>
