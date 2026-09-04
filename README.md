@@ -1,14 +1,44 @@
-# 🏢 HEYAN 마스터 기업 정밀 분석 시스템 (Enterprise Financial Analytics & Audit Hub)
+# 🏢 HEYAN 마스터 기업 정밀 분석 시스템 & CPA 회계감사 포털
+> **Enterprise Financial Analytics & AI Audit Hub**
 
-> **고객이 제출한 6대 회계자료(재무상태표, 손익계산서, 합계잔액시산표, 분개장, 거래처원장, 계정별원장)를 [1단계: 자료 수집 & 우분투 서버 영구 보관]과 [2단계: 저장본 기반 0.01초 정밀 분석 & K-GAAP RAG 감사 조서 산출]로 탭 및 파이프라인을 원천 분리하여 초고속·무장애 안정성을 보장하는 차세대 종합 재무분석 솔루션**
+> **고객이 제출한 6대 회계자료(재무상태표, 손익계산서, 합계잔액시산표, 분개장, 거래처원장, 계정별원장)를 기반으로 한 [기업 정밀 분석 허브]와 K-GAAP 105개 엑셀 조서 RAG, 6대 장부 실시간 수치 대사, K-GAAS 700 표준 감사보고서 AI 생성을 지원하는 [CPA 회계감사 전용 포털]이 완벽히 통합된 차세대 종합 회계 감사 솔루션**
 
 ---
 
 ## 📌 1. 시스템 개요 및 주요 기능
 
-본 시스템은 공인회계사 및 세무 전문가가 기업의 결산 서류와 회계 원장을 원클릭으로 정밀 진단할 수 있도록 구축된 **풀스택 감사/분석 엔진**입니다. 대용량 파일 파싱과 복합 AI 분석의 단일 동기 처리로 인한 브라우저 타임아웃(500 에러)을 방지하기 위해 **2대 전담 탭 원천 분리 아키텍처(Decoupled Ingestion & Analytics Architecture)**를 적용하였습니다.
+본 시스템은 공인회계사 및 세무 전문가가 기업의 결산 서류와 회계 원장을 원클릭으로 정밀 진단하고 회계감사 조서 및 감사보고서를 완벽히 자동화할 수 있도록 구축된 **풀스택 감사/분석 엔진**입니다.
 
-### 🌟 핵심 역량 및 고도화 완료 기능
+---
+
+### 🏛️ [NEW] 회계법인 혜안 CPA AI 회계감사 전용 포털 (`/audit`)
+회계사(`role='cpa'` / `task_type='회계감사'`) 로그인 시 마스터 포털을 거치지 않고 독립된 **회계감사 전용 작업장(Audit Hub)**으로 직접 라우팅(Direct Routing)되며, 5대 전문 업무 탭을 제공합니다.
+
+1. **📑 1. 감사조서 작성 & AI 자동생성 (`#tab-audit-wp`)**:
+   - **K-GAAP 조서 색인 계층형 아코디언 트리**: Section 1000(감사계약)부터 Section 8000(기타)까지 105개 표준 조서 서식을 섹션별 아코디언 형태로 정돈, 실시간 검색창 지원
+   - **6대 장부 실시간 수치 대사 (Reconciliation Bar)**: TB 전기말 잔액, 당기말 잔액, 변동 금액/변동률, 장부 무결성 대사 상태를 실시간 연동
+   - **AI 조서 자동생성**: 계정별 입증절차, 실재성/완전성/평가 검증 코멘트 및 회계감사 기준서 준용 조서를 마크다운으로 1초 만에 자동 작성
+   - **K-GAAP 원본 서식 엑셀(`.xlsx`) 스트리밍 다운로드**: OpenPyXL 셀 좌표 바인딩을 통해 수식과 원본 셀 서식을 100% 보존한 엑셀 조서 파일 즉시 다운로드
+   - **K-GAAS 기준서 & RAG 가이드**: 계정과목 선택 시 관련 감사 기준서와 필수 실증절차 지침 자동 표출
+
+2. **📅 2. 감사일정 캘린더 (`#tab-audit-cal`)**:
+   - **마일스톤 D-Day 카드**: 기초재고 실사, 기말감사 현장투입, 금융기관 조회서 마감, 감사보고서 초안, 주총 공시 마감 등 주요 마일스톤 D-Day 실시간 계산
+   - **FullCalendar v6 다크 테마 인터랙티브 캘린더**: 월별/주별 일정 뷰, 일정 등록 모달 연동
+
+3. **👥 3. 프로젝트 & 배정 관리 (`#tab-audit-assign`)**:
+   - 수임 감사계약 현황, 담당 PM (In-charge), 투입 회계사, 감사 단계, 기준일 데이터 관리
+
+4. **🏦 4. 금융기관 조회·증빙 (`#tab-audit-finance`)**:
+   - 금융거래확인서, 은행/증권 잔액증명서 발송 및 회신 상태, 장부잔액 대사, 조회서 파일 조서 연계
+
+5. **📄 5. 감사보고서 작성 & AI 초안 (`#tab-audit-report`)**:
+   - **K-GAAS 700/701/705/706 표준 감사보고서 AI 자동생성**: 감사의견(적정/한정/부적정/의견거절), 재무제표 기준일, 발행일자, 핵심감사사항(KAM) 유무 선택
+   - **핵심감사사항(KAM) 칩 원클릭 삽입**: 수익인식의 적정성, 재고자산 순실현가치 평가, 영업권 손상, 파생상품 평가 등 주요 위험 항목 즉시 문단 추가
+   - **정식 A4 서식 인쇄/PDF 미리보기**: 실제 인쇄용 A4 규격 서식으로 렌더링되며 [인쇄 / PDF] 원클릭 지원
+
+---
+
+### 🌟 기업 정밀 분석 허브 (`/master`) 핵심 기능
 1. **🚀 2대 전담 탭 원천 분리 아키텍처 (Decoupled Pipeline)**:
    - **`[📂 회계자료 수집 & 보관소]` (#tab-data-ingestion)**: 6대 장부 드래그앤드롭 업로드, 100% Python 결정론적 파싱, 대차 무결성 검증, 우분투/로컬 스토리지 시점별 영구 저장, 실시간 업로드 이력 관리 및 원본 ZIP 일괄 다운로드
    - **`[🧠 기업 정밀 분석 (Hub)]` (#tab-analytics-hub)**: 슬림 분석 컨트롤 바(`기업 선택 ➔ 결산연도 ➔ 시점 선택 ➔ 0.01초 분석 실행`), 4대 재무비율, 변동분석, ISA 240 JET 이상전표 탐지, K-GAAP RAG 감사 조서 뷰어, 클립보드 복사 및 다운로드
@@ -84,6 +114,12 @@ landing_page/
 | `GET` | `/master/api/upload-history/download-raw` | 특정 시점의 원본 업로드 엑셀 파일들을 ZIP으로 일괄 다운로드 | Query: `?company_name=...&session_id=...` | `application/zip` 바이너리 스트림 |
 | `GET` | `/master/api/datasets/local-list/<name>` | 사내 로컬/Ubuntu 보관함에 저장된 과거 분석 데이터셋 목록 조회 | URL Parameter: `company_name` | `{ "datasets": [{ "filename", "fiscal_year", "saved_at", "size_bytes", "source" }] }` |
 | `POST` | `/master/api/save-analysis` | 분석 결과 및 조서 수동 영속화 저장 | JSON: `{ "company_name", "fiscal_year", "analysis_data", "report_md" }` | `{ "success": true, "archive_info": {...} }` |
+| `GET` | `/api/audit/companies` | **[감사] 감사 수임 고객사 목록 조회** | - | `{ "success": true, "companies": [{ "id", "company_name", ... }] }` |
+| `GET` | `/api/audit/templates/tree` | **[감사] K-GAAP 105개 조서 색인 트리 반환** | - | `{ "success": true, "tree": [{ "code", "title", "items": [...] }] }` |
+| `POST` | `/api/audit/working-papers/generate` | **[감사] 6대 장부 연계 계정과목별 AI 조서 자동생성** | JSON: `{ "company_name", "fiscal_year", "account_code" }` | `{ "success": true, "working_paper_md", "reconciliation" }` |
+| `GET` | `/api/audit/working-papers/export-excel` | **[감사] K-GAAP 원본 서식 엑셀(.xlsx) 스트리밍 다운로드** | Query: `?company_name=...&fiscal_year=...&account_code=...` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+| `GET` | `/api/audit/schedules` | **[감사] FullCalendar v6 감사일정 목록 조회** | Query: `?company_name=...&type=...` | `{ "success": true, "schedules": [...] }` |
+| `POST` | `/api/audit/schedules` | **[감사] 신규 감사일정 등록** | JSON: `{ "company_name", "title", "schedule_type", "start_date", "end_date" }` | `{ "success": true, "schedule": {...} }` |
 
 ---
 

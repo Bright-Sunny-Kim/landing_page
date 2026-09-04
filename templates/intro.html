@@ -100,6 +100,28 @@
       box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
     }
 
+    .cpa-btn-top {
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+      padding: 0.6rem 1.3rem;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 600;
+      font-family: var(--font-header);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .cpa-btn-top:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+    }
+
     /* Hero Section */
     .hero {
       position: relative;
@@ -316,20 +338,21 @@
       <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="혜안 로고" onerror="this.style.display='none'">
       회계법인 혜안
     </a>
-    <div style="display: flex; gap: 20px; align-items: center;">
-      <a href="#home" class="nav-link">홈</a>
-      <a href="{{ url_for('pages.profile') }}" class="nav-link">대표 소개</a>
-      <a href="#services" class="nav-link">주요업무</a>
-      <a href="#team" class="nav-link">팀</a>
+    <div style="display: flex; gap: 1.5rem; align-items: center;">
+      <a href="#services" class="nav-link">솔루션</a>
+      <a href="#team" class="nav-link">전문가</a>
       <a href="#track-record" class="nav-link">실적</a>
-      <a href="#contact" class="nav-link">Contact</a>
-      {% if session.get('email') %}
-      <a href="{{ url_for('auth.logout') }}" class="nav-link" style="color: #f87171;">로그아웃</a>
-      <a href="{{ url_for('auth.login_page') }}" class="login-btn-top">내 페이지로 이동</a>
-      {% else %}
-      <a href="{{ url_for('auth.login_page') }}" class="nav-link">로그인</a>
-      <a href="{{ url_for('auth.login_page') }}" class="login-btn-top">포털 접속하기</a>
-      {% endif %}
+      <a href="#contact" class="nav-link">문의하기</a>
+      <a href="{{ url_for('audit.audit_page') }}" class="cpa-btn-top">
+        <span>🏛️ CPA 회계감사</span>
+      </a>
+      <a href="{{ url_for('auth.login_page') }}" class="login-btn-top">
+        {% if 'email' in session %}
+        포털 바로가기
+        {% else %}
+        고객사 로그인
+        {% endif %}
+      </a>
     </div>
   </header>
 

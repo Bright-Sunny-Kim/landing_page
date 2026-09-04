@@ -11,8 +11,12 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/login_page')
 def login_page():
     if 'email' in session:
-        if session['email'] == MASTER_EMAIL:
+        user_role = session.get('role', 'client')
+        user_task = session.get('task_type', '')
+        if session['email'] == MASTER_EMAIL or user_role == 'master':
             return redirect(url_for('master.master_page'))
+        elif user_role in ['cpa', 'auditor'] or user_task == '회계감사':
+            return redirect(url_for('audit.audit_page'))
         return redirect(url_for('pages.company_page', company_name=session['company']))
     
     error = request.args.get('error', '')
@@ -100,6 +104,7 @@ def login():
                 session['company'] = user.get('company', '회계법인 혜안')
                 session['username'] = user.get('username', '마스터관리자')
                 session['task_type'] = user.get('task_type', '기타')
+                session['role'] = 'master'
             else:
                 if not password:
                     return redirect(url_for('auth.login_page', error='missing_password'))
@@ -109,6 +114,7 @@ def login():
                     'company': '회계법인 혜안', 
                     'username': '마스터관리자', 
                     'task_type': '기타',
+                    'role': 'master',
                     'password': hashed
                 }).execute()
                 
@@ -116,6 +122,7 @@ def login():
                 session['company'] = '회계법인 혜안'
                 session['username'] = '마스터관리자'
                 session['task_type'] = '기타'
+                session['role'] = 'master'
                 
             return redirect(url_for('master.master_page'))
             
@@ -151,6 +158,7 @@ def login():
             session['company'] = user['company']
             session['username'] = user['username']
             session['task_type'] = user['task_type']
+            session['role'] = user.get('role', 'cpa' if user.get('task_type') == '회계감사' else 'client')
         else:
             if not (corporate_number and company and username and task_type and password):
                 return redirect(url_for('auth.login_page', error='missing_fields'))
@@ -170,6 +178,7 @@ def login():
                 except Exception:
                     logger.exception('Failed to synchronize company during login')
 
+            user_role = 'cpa' if task_type == '회계감사' else 'client'
             hashed = _generate_password_hash(password)
             supabase.table('users').insert({
                 'email': email,
@@ -177,6 +186,7 @@ def login():
                 'company': company,
                 'username': username,
                 'task_type': task_type,
+                'role': user_role,
                 'password': hashed
             }).execute()
             
@@ -184,11 +194,15 @@ def login():
             session['company'] = company
             session['username'] = username
             session['task_type'] = task_type
+            session['role'] = user_role
             
     except Exception:
         logger.exception('Login processing failed for email=%s', email)
         return redirect(url_for('auth.login_page', error='db_error'))
         
+    if session.get('role') in ['cpa', 'auditor'] or session.get('task_type') == '회계감사':
+        logger.info("[AUTH_ROUTING] Direct routing to /audit for %s (role=%s)", email, session.get('role'))
+        return redirect(url_for('audit.audit_page'))
     return redirect(url_for('pages.company_page', company_name=session['company']))
 
 @auth_bp.route('/login/social', methods=['POST'])
@@ -222,9 +236,12 @@ def login_social():
             session['company'] = user['company']
             session['username'] = user['username']
             session['task_type'] = user['task_type']
+            session['role'] = user.get('role', 'cpa' if user.get('task_type') == '회계감사' else 'client')
             
-            if email == MASTER_EMAIL:
+            if email == MASTER_EMAIL or session.get('role') == 'master':
                 return jsonify({'success': True, 'redirect': url_for('master.master_page')})
+            elif session.get('role') in ['cpa', 'auditor'] or session.get('task_type') == '회계감사':
+                return jsonify({'success': True, 'redirect': url_for('audit.audit_page')})
                 
             return jsonify({'success': True, 'redirect': url_for('pages.company_page', company_name=session['company'])})
         else:
@@ -244,6 +261,7 @@ def login_social():
                     except Exception as company_sync_err:
                         logger.exception("companies sync error: %s", company_sync_err)
 
+                user_role = 'cpa' if task_type == '회계감사' else 'client'
                 oauth_pwd = f"OAUTH:{provider}"
                 supabase.table('users').insert({
                     'email': email,
@@ -251,6 +269,7 @@ def login_social():
                     'company': company,
                     'username': username,
                     'task_type': task_type,
+                    'role': user_role,
                     'password': oauth_pwd
                 }).execute()
                 
@@ -258,7 +277,10 @@ def login_social():
                 session['company'] = company
                 session['username'] = username
                 session['task_type'] = task_type
+                session['role'] = user_role
                 
+                if user_role in ['cpa', 'auditor'] or task_type == '회계감사':
+                    return jsonify({'success': True, 'redirect': url_for('audit.audit_page')})
                 return jsonify({'success': True, 'redirect': url_for('pages.company_page', company_name=session['company'])})
             else:
                 return jsonify({'need_registration': True, 'email': email})

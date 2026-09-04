@@ -4416,3 +4416,1251 @@ button:active,
     }
 }
 
+/* ============================================================================== */
+/* 7. Hyean CPA 회계감사 전용 포털 (audit.html) 완성형 스타일링                        */
+/* ============================================================================== */
+
+body.audit-portal-body {
+    background-color: var(--bg-dark) !important;
+    color: var(--text-primary) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    overflow-x: hidden !important;
+    position: relative;
+    font-family: var(--font-body);
+}
+
+/* 모바일 사이드바 배경 오버레이 (딤 처리) */
+.audit-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9998;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.audit-sidebar-overlay.active {
+    display: block !important;
+    opacity: 1 !important;
+}
+
+/* 모바일 전용 상단 헤더 */
+.audit-mobile-header {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: rgba(15, 23, 42, 0.98);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: 100%;
+}
+
+.logo-cpa-badge {
+    background: linear-gradient(135deg, #2563eb, #60a5fa);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-left: 6px;
+}
+
+.mobile-menu-toggle {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.mobile-menu-toggle:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* 포털 전체 컨테이너 */
+.audit-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100vh;
+    display: flex !important;
+    flex-direction: row !important;
+    flex: 1 1 auto;
+    background: transparent;
+    overflow-x: hidden;
+}
+
+/* 좌측 사이드바 */
+.audit-sidebar {
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    background: rgba(15, 23, 42, 0.95);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px;
+    z-index: 50;
+    flex-shrink: 0;
+}
+
+.audit-cpa-profile .master-profile-avatar {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+    font-weight: 800;
+    border-radius: 10px;
+}
+
+.audit-sidebar .menu-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 1.2rem 0.5rem 0.8rem;
+}
+
+.master-switch-item a {
+    color: #60a5fa !important;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 8px;
+}
+
+.master-switch-item .master-menu-icon {
+    fill: #60a5fa !important;
+}
+
+.logout-item a {
+    color: #f87171 !important;
+}
+
+.logout-item .master-menu-icon {
+    fill: #f87171 !important;
+}
+
+/* 메인 작업 영역 */
+.audit-main {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    padding: 24px 32px;
+    overflow-y: auto;
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 공통 버튼 시스템 (.audit-btn) */
+.audit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap !important;
+    flex-shrink: 0;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.audit-btn svg {
+    flex-shrink: 0;
+}
+
+.audit-btn-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff;
+}
+.audit-btn-primary:hover {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.audit-btn-accent {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: #fff;
+}
+.audit-btn-accent:hover {
+    background: linear-gradient(135deg, #a78bfa, #7c3aed);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+}
+
+.audit-btn-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+}
+.audit-btn-success:hover {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.audit-btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.audit-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.audit-btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 6px;
+}
+
+.audit-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 탭 패널 컨테이너 */
+.audit-tab-pane {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    animation: fadeInTab 0.25s ease-out forwards;
+}
+
+.audit-tab-pane.active {
+    display: flex;
+}
+
+@keyframes fadeInTab {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 상단 컨트롤 바 (회사/연도 선택) */
+.audit-top-bar {
+    width: 100% !important;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    backdrop-filter: blur(12px);
+}
+
+.audit-top-left, .audit-top-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.audit-select-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.audit-select-group label {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.audit-select {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #f1f5f9;
+    padding: 7px 12px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    outline: none;
+    cursor: pointer;
+    min-width: 180px;
+}
+
+.audit-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.audit-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.audit-badge-blue {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* 조서 작성 2분할 레이아웃 */
+.audit-wp-layout {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 20px;
+    align-items: stretch;
+    width: 100%;
+}
+
+/* 좌측 조서 서식 트리 패널 */
+.audit-wp-tree-pane {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: calc(100vh - 160px);
+    max-height: calc(100vh - 160px);
+    min-height: 520px;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+}
+
+.wp-tree-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.wp-tree-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+/* 모던 다크 검색창 스타일 */
+.tree-search-box {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.tree-search-box .search-icon {
+    position: absolute;
+    left: 12px;
+    color: #94a3b8;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.tree-search-input {
+    width: 100% !important;
+    background: rgba(15, 23, 42, 0.75) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 10px !important;
+    padding: 9px 12px 9px 36px !important;
+    color: #f8fafc !important;
+    font-size: 0.85rem !important;
+    outline: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.tree-search-input::placeholder {
+    color: #64748b !important;
+}
+
+.tree-search-input:focus {
+    border-color: #3b82f6 !important;
+    background: rgba(15, 23, 42, 0.95) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.wp-tree-container {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.wp-tree-container::-webkit-scrollbar {
+    width: 6px;
+}
+.wp-tree-container::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.3);
+    border-radius: 4px;
+}
+.wp-tree-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+}
+.wp-tree-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+/* K-GAAP 조서 아코디언 트리 스타일 */
+.wp-section-group {
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.wp-section-group:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.wp-section-header {
+    padding: 10px 14px;
+    background: rgba(30, 41, 59, 0.7);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: background 0.2s, color 0.2s;
+}
+
+.wp-section-header:hover {
+    background: rgba(51, 65, 85, 0.7);
+    color: #ffffff;
+}
+
+.wp-section-header.expanded {
+    background: rgba(37, 99, 235, 0.15);
+    color: #60a5fa;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wp-section-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.wp-section-chevron {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.wp-section-header.expanded .wp-section-chevron {
+    transform: rotate(90deg);
+}
+
+.wp-section-name {
+    font-size: 0.84rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.badge-count {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.wp-section-header.expanded .badge-count {
+    background: rgba(59, 130, 246, 0.25);
+    color: #93c5fd;
+}
+
+.wp-item-list {
+    display: none;
+    flex-direction: column;
+    padding: 4px 0;
+    background: rgba(10, 15, 30, 0.4);
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.wp-item-list::-webkit-scrollbar {
+    width: 4px;
+}
+.wp-item-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 3px;
+}
+
+.wp-item-list.open {
+    display: flex;
+}
+
+.wp-tree-item {
+    padding: 8px 14px 8px 28px;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-left: 3px solid transparent;
+}
+
+.wp-tree-item:hover {
+    background: rgba(59, 130, 246, 0.12);
+    color: #ffffff;
+}
+
+.wp-tree-item.active {
+    background: rgba(59, 130, 246, 0.22);
+    color: #60a5fa;
+    border-left-color: #3b82f6;
+    font-weight: 600;
+}
+
+.wp-item-proc-badge {
+    font-size: 0.72rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* 우측 조서 편집/생성 패널 */
+.audit-wp-editor-pane {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    width: 100%;
+    backdrop-filter: blur(12px);
+}
+
+/* 6대 장부 실시간 수치 대사 바 */
+.wp-reconciliation-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px 16px;
+    width: 100%;
+}
+
+.recon-stat-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.wp-recon-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.wp-recon-val {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.wp-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 20px;
+    width: 100%;
+}
+
+.wp-meta-title-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.wp-title-wrap {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wp-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    line-height: 1.35;
+}
+
+.wp-section-tag {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+.badge-code {
+    padding: 6px 12px;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.wp-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.wp-sub-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
+    width: 100%;
+}
+
+.wp-tab-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.wp-tab-btn.active {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.wp-markdown-editor {
+    width: 100%;
+    min-height: 480px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 16px;
+    color: #f8fafc;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+}
+
+.wp-markdown-editor:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.wp-rag-guide-view {
+    min-height: 480px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 20px;
+    color: #cbd5e1;
+    overflow-y: auto;
+    line-height: 1.7;
+    width: 100%;
+}
+
+/* 마일스톤 D-Day 카드 그리드 */
+.milestone-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    width: 100%;
+}
+
+.milestone-card {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.milestone-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: #3b82f6;
+}
+
+.milestone-card.urgent::before {
+    background: #ef4444;
+}
+
+.milestone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.milestone-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.milestone-dday {
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+}
+
+.milestone-dday.urgent {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
+
+.milestone-date {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+/* 데이터 테이블 시스템 */
+.audit-card {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 20px;
+    backdrop-filter: blur(12px);
+    width: 100%;
+}
+
+.audit-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.audit-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.audit-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+}
+
+.audit-data-table th {
+    background: rgba(30, 41, 59, 0.8);
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    white-space: nowrap !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.audit-data-table td {
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    color: #e2e8f0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+}
+
+.audit-data-table tr:hover td {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* ============================================================================== */
+/* 7.5. 감사보고서 작성 (Report Generator) 스타일링                                */
+/* ============================================================================== */
+
+.audit-report-control-bar {
+    padding: 16px 20px;
+    width: 100%;
+}
+
+.report-control-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.report-control-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.report-control-item .form-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.audit-report-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+    width: 100%;
+}
+
+.audit-report-sidebar {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.report-nav-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.report-section-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.report-nav-item {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-left: 2px solid transparent;
+}
+
+.report-nav-item:hover {
+    background: rgba(59, 130, 246, 0.1);
+    color: #fff;
+}
+
+.report-nav-item.active {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border-left-color: #3b82f6;
+    font-weight: 600;
+}
+
+.report-kam-preset-box {
+    background: rgba(15, 23, 42, 0.5);
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.kam-chip-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.kam-chip {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.kam-chip:hover {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.audit-report-editor-pane {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    width: 100%;
+}
+
+.report-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 16px;
+}
+
+.report-header-title-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.report-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.report-tab-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.report-tab-btn.active {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.report-sub-content {
+    width: 100%;
+}
+
+/* 정식 A4 감사보고서 인쇄/미리보기 서식 */
+.audit-report-preview-sheet {
+    background: #475569;
+    padding: 24px;
+    border-radius: 10px;
+    max-height: 600px;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+}
+
+.preview-report-paper {
+    background: #ffffff;
+    color: #1e293b;
+    width: 100%;
+    max-width: 720px;
+    min-height: 840px;
+    padding: 48px 56px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    font-family: 'Batang', 'Times New Roman', serif;
+    line-height: 1.8;
+}
+
+.report-paper-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.report-paper-header h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: 4px;
+    margin-bottom: 18px;
+    color: #0f172a;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 12px;
+}
+
+.report-target-company {
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: left;
+    margin-top: 14px;
+}
+
+.report-paper-content {
+    font-size: 0.95rem;
+    color: #1e293b;
+    white-space: pre-wrap;
+    line-height: 1.9;
+    min-height: 400px;
+}
+
+.report-paper-content h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 20px 0 8px;
+    color: #0f172a;
+    border-left: 3px solid #0f172a;
+    padding-left: 8px;
+}
+
+.report-paper-footer {
+    margin-top: 48px;
+    text-align: right;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 24px;
+}
+
+.report-auditor-firm {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+
+.report-auditor-date {
+    font-size: 0.95rem;
+    color: #64748b;
+}
+
+/* FullCalendar 다크 테마 커스텀 */
+.fc-custom-wrapper {
+    width: 100%;
+}
+
+.fc {
+    color: #e2e8f0;
+    font-family: var(--font-body);
+}
+
+.fc-theme-standard td, .fc-theme-standard th {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.fc-col-header-cell {
+    background: rgba(30, 41, 59, 0.7);
+    padding: 8px 0;
+    font-size: 0.85rem;
+    color: #cbd5e1;
+}
+
+.fc-daygrid-day-number {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.fc-day-today {
+    background: rgba(59, 130, 246, 0.12) !important;
+}
+
+.fc-button-primary {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #e2e8f0 !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+}
+
+.fc-button-primary:hover, .fc-button-primary.fc-button-active {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #fff !important;
+}
+
+.fc-event {
+    border-radius: 6px;
+    padding: 3px 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none !important;
+}
+
+/* ============================================================================== */
+/* 8. 태블릿 & 모바일/스마트폰 앱 화면 반응형 최적화                               */
+/* ============================================================================== */
+
+@media (max-width: 1200px) {
+    .milestone-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1024px) {
+    .audit-wp-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .audit-wp-tree-pane {
+        max-height: 420px;
+    }
+    
+    .milestone-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    body.audit-portal-body {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        min-height: 100vh !important;
+        overflow-x: hidden !important;
+    }
+
+    .audit-container {
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        min-height: auto !important;
+    }
+
+    .audit-mobile-header {
+        display: flex !important;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        width: 100% !important;
+    }
+    
+    .audit-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: 280px !important;
+        max-width: 82vw !important;
+        height: 100vh !important;
+        z-index: 9999 !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        background: rgba(15, 23, 42, 0.98) !important;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
+        box-shadow: none !important;
+    }
+    
+    .audit-sidebar.show-mobile {
+        transform: translateX(0) !important;
+        box-shadow: 10px 0 35px rgba(0, 0, 0, 0.8) !important;
+    }
+    
+    .audit-main {
+        padding: 16px 12px;
+        gap: 16px;
+    }
+    
+    .audit-top-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .audit-top-left, .audit-top-right {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .audit-select-group {
+        width: 100%;
+    }
+    
+    .audit-select {
+        width: 100%;
+        min-width: 0;
+    }
+    
+    .wp-reconciliation-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .milestone-cards-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .wp-editor-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .wp-editor-actions .audit-btn {
+        width: 100%;
+    }
+}
+
+
+

@@ -27,12 +27,14 @@ from blueprints.auth import auth_bp
 from blueprints.master import master_bp
 from blueprints.api import api_bp
 from blueprints.billing import billing_bp
+from blueprints.audit import audit_bp
 
 app.register_blueprint(pages_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(master_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(billing_bp)
+app.register_blueprint(audit_bp)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
