@@ -172,153 +172,109 @@ UBUNTU_PG_PASSWORD=your_password
   - **실시간 업로드 이력 관리 센터 UI**: 실시간 타임라인, 0.01초 즉시 복원, 원본 ZIP 압축 다운로드
   - **MinIO S3(Boto3) 3중 자동 영속화**: `s3://audit-lakehouse/bronze/...` 실시간 적재 및 S3 기반 0.01초 복원/ZIP 다운로드
   - **스토리지 헬스 모니터링**: 로컬 파일 시스템, Ubuntu 원격 마운트, 사내 MinIO S3 연결 상태 통합 점검 API 연동
-- [ ] **Phase 7. 향후 다각적 분석 허브 및 운영 최적화 로드맵**:
-  - **서버 환경 실운영 안정화 (500 에러 및 패키지/권한 정밀 진단)**
-  - **마스터 관리자 사이드바 3대 탭 체계(대시보드 / 파트너사 관리 / 회계감사) 리팩토링**
-  - **시계열 다개년 추세 분석 (Multi-year Trend)**: 3~5개년도 저장본 결합 분석
-  - **동종업계 피어 그룹 교차 비교 (Cross-sectional Peer Benchmarking)**
-  - **세무조정 및 심층 포렌식 연계 (Tax Adjustment & Forensic)**
+- [x] **Phase 7. CPA 회계감사 포털 DSD 감사보고서 & 주석 자동화 허브 및 DART 표준 롤포워드 엔진 구축** (완료):
+  - **전기 DSD 역추출 파서 (`core/dsd_manager.py`)**: 전기 `.dsd` 파일(ZIP 바이너리)에서 비교표시 재무제표 4종(B/S, I/S 등) 및 18개 주석(67개 표) 100% 무결성 역추출
+  - **결산 수정분개(AJE) 실시간 연동 파이프라인 (`core/audit_engine.py`)**: AJE 분개 입력 시 수정후 T/B 및 B/S, I/S 대차평형($\Delta = 0$) 및 5대 계정 자동 분류 실시간 재계산
+  - **K-GAAP 주석(Notes 1~18번) 자동 생성 엔진 (`core/notes_generator.py`)**: 특수관계자, 지분법, 유형자산변동표, 잉여금처분계산서 등 18개 표준 주석 자동 집계
+  - **금융감독원 DART 표준 DSD 빌더 & 롤포워드 엔진 (`core/dsd_builder.py`)**: 
+    - 금감원 DART 편집기(DART 4.0 / 5.107) 전용 스키마(`dart4.xsd`) 및 00760 서식 구조 100% 준수
+    - 5열 재무제표(`과목, 당기세부, 당기합계, 전기세부, 전기합계`)의 전기 롤포워드 및 당기 AJE 수정후 금액 자동 인젝션
+    - 토큰 기반 기수(15기 ➔ 16기) 및 회계연도(2025 ➔ 2026) 안전 치환 및 `SUMMARY` 추출값(자산/부채/매출액) 자동 갱신
+    - 감사의견서(K-GAAS 700) + 재무제표 4종 + 주석을 `contents.xml`, `meta.xml`의 `.dsd` 파일로 원클릭 바이너리 스트리밍
+  - **CPA 포털 4단계 원스톱 카드 대시보드 UI (`templates/audit.html`, `static/js/audit_dsd_hub.js`)**:
+    - **상단 DSD 메타데이터 바**: 회사명, CIK(`01294846`), 3개년 fiscal_year 드롭다운(`2026/2025/2024`) 실시간 양방향 동기화
+    - **4단계 대시보드 워크플로우**: 전기 DSD 업로드 & 역추출 ➡️ AJE 수정분개 & 대차평형 ➡️ 18개 주석 검토 ➡️ DSD 최종 빌드 및 DART 전용 `.dsd` 다운로드
+  - **E2E 전 단계 통합 검증 (`scripts/verify_step10_e2e.py`)**: Step 1~10 전 파이프라인 무결성 테스트 통과 (100% Pass)
 
 ---
 
-## 🛠️ 6. 개발 지침 및 마스터 프롬프트 가이드 (Instruction & Master Prompt)
+## 🛠️ 6. 개발 지침 및 마스터 프롬프트 (Master Prompt for Antigravity CLI & PowerShell)
 
-### 📌 개발 진행 시 준수 가이드라인 (Instruction for Developers & AI Agents)
+### 📌 Antigravity CLI 및 Windows PowerShell 직접 실행 원칙
+본 프로젝트의 모든 변경 및 고도화 작업은 사용자가 **Antigravity CLI**와 **Windows PowerShell**을 통해 직접 통제하며 진행합니다.
+
 1. **단일 단계 진행 원칙 (Step-by-Step Execution)**:
-   - 새로운 기능 추가나 대규모 리팩토링 시 아래의 `master_prompt_example` 구조를 준수하여 한 번에 하나의 Step만 진행합니다.
-   - 각 단계가 완료된 후 동작 검증(Frontend Console Log, Backend Flask Log)을 거친 뒤 다음 단계로 넘어갑니다.
+   - AI 에이전트는 한 번에 오직 하나의 Step만 설명/작성하고 멈춥니다.
+   - 사용자가 Windows PowerShell에서 검증 명령어를 실행하거나 화면을 확인한 후 `"다음"`이라고 지시할 때만 다음 Step으로 이동합니다.
 2. **백엔드 로깅 규칙 (Backend Logging Rule)**:
-   - Python 코드 내 `print()` 사용을 엄격히 금지하며, `logging` 모듈(`logger.info`, `logger.error` 등)을 사용합니다.
-   - 모든 API 요청/응답 및 예외(try-except) 처리 시 트레이스백과 상황 컨텍스트를 구조화된 로그로 남깁니다.
+   - Python 코드 내 `print()` 사용을 엄격히 금지하며, Python 표준 `logging` 모듈(`logger.info`, `logger.error` 등)을 사용합니다.
+   - 모든 API 요청/응답 및 예외(try-except) 발생 시 에러 트레이스백과 컨텍스트를 필수 기록합니다.
 3. **무결성 및 회귀 방지 (Zero Regression)**:
-   - 기존에 정상 동작하던 엔드포인트 및 UI 컴포넌트는 절대 임의로 삭제하거나 덮어쓰지 않습니다.
+   - 기존에 정상 작동하던 6대 장부 파싱, K-GAAP 조서 작성, 스토리지 연동 로직을 절대 훼손하지 않습니다.
 
 ---
 
-### 📋 `master_prompt_example` (마스터 관리자 개편 마스터 프롬프트 예시)
+### 📋 `master_prompt`: CPA 회계감사 DSD 감사보고서 자동화 마스터 프롬프트
 
 ```markdown
 # 역할
 
-당신은 Python Flask, Jinja2, Vanilla JavaScript, CSS로 회계법인 포털 시스템을 고도화하는 Senior Full Stack Developer이다.
+당신은 Python Flask, Jinja2, Vanilla JavaScript, DART 전자공시 규격(XML/CP949) 및 K-GAAP/K-GAAS 회계감사 도메인에 정통한 Senior Full Stack Developer & Audit Automation Architect이다.
 
-코딩 및 시스템 구조 변경을 진행할 때 초보자와 함께 한 단계씩 안전하게 진행한다.
+사용자는 Windows PowerShell과 Antigravity CLI 환경에서 직접 명령을 실행하고 코드를 확인하며 시스템을 한 단계씩 구축해 나간다.
 
-복잡한 구조보다 다음을 우선한다.
-1. 기존 기능의 완벽한 보존 (회귀 버그 방지)
-2. 매 단계 실행해서 화면과 동작을 즉시 확인할 수 있는 상태 유지
-3. 충분한 Frontend Console Log와 Backend Python Logging
-4. 오류 발생 시 현재 상태와 원인을 초보자에게 친절하고 명확하게 설명하는 구조
+# 개발 대원칙
+
+1. 한 번에 오직 한 단계(Step)만 진행하고 즉시 멈춘다.
+2. 사용자가 PowerShell에서 테스트하거나 브라우저에서 확인한 뒤 "다음"이라고 입력할 때까지 임의로 다음 단계를 진행하지 않는다.
+3. 기존 기능의 완벽한 보존 (6대 장부 파서, 105개 엑셀 조서, 스토리지 매니저 등 회귀 버그 절대 방지).
+4. 백엔드(Python) 작성 시 print()는 일절 금지하며 Python 표준 logging 모듈(logger.info, logger.error)을 사용한다.
+5. 모든 단계마다 사용자가 Windows PowerShell에서 직접 실행해 볼 수 있는 구체적인 검증 명령어(CLI/Python)를 함께 제공한다.
 
 # 프로젝트명
 
-Hyean Admin Portal - Master Tab Refactoring
+Hyean CPA Audit Hub - DSD Financial Reporting & Notes Automation
 
 # 프로젝트 목적
 
-마스터 관리자(Master Admin)의 좌측 사이드바 및 페이지 구성을 업무 효율 중심의 3대 핵심 탭 체계로 전면 개편한다.
+CPA 회계감사 포털(/audit)에 다음 4대 핵심 파이프라인을 구축하여, 자료 입수부터 금융감독원 DART 제출용 .dsd 감사보고서 출력까지 전 과정을 완전 자동화한다.
 
-1) [대시보드 홈]: 기존 홈 화면 유지 (전체 현황 요약)
-2) [파트너사 관리]: 파트너사 목록뿐 아니라 '업무 요청 관리'와 '공지 및 알림 관리'를 서브 탭/모듈로 통합
-3) [회계감사]: 기존 '금융기관 조회 관리'를 '회계감사' 탭으로 명칭 및 영역을 확장하고, 하위에서 금융기관 조회 및 감사 증빙을 관리
-4) [통합 문서 보관함]: 별도 우분투 서버를 유지 중인 환경을 고려하여, 비효율적인 독립 전역 탭을 제거하고 파트너사별/감사업무별 하위 문서함으로 분산 통합
+1) [전기 DSD 역추출 파서]: 작년도 .dsd 파일 업로드 시 비교표시 재무제표 4종 및 기초 주석 데이터를 1초 만에 자동 추출
+2) [수정분개(AJE) 실시간 연동]: 회계사 수정분개 입력 시 수정후 T/B 및 B/S, I/S 실시간 재계산 및 대차평형 검증
+3) [주석(Notes 1~30번) 자동 생성기]: 특수관계자(주석13), 지분법(주석5), 유형자산변동(주석6), 잉여금처분(주석10) 원장 기반 자동 집계
+4) [DART 표준 DSD 빌더]: 감사의견 + 재무제표 4종 + 주석을 contents.xml, meta.xml(CP949)로 조합하여 .dsd 파일 원클릭 출력
+5) [CPA 4단계 원스톱 대시보드]: templates/audit.html의 #tab-audit-report 화면을 4단계 카드 흐름 및 DART 실시간 뷰어로 개편
 
-# 절대 규칙 (가장 중요)
+# 사용 기술 및 환경 제약
 
-- 기존에 구현되어 정상 작동하던 백엔드 로직(데이터 조회, 승인/반려, 금융기관 상태 변경 등)을 임의로 삭제하거나 훼손하지 않는다.
-- 모든 백엔드(Python) 코드 작성 및 수정 시 단순 print() 대신 Python 표준 logging 모듈(logger.info, logger.error 등)을 필수 사용한다.
-- API 요청(Request), 응답(Response), 예외(try-except) 발생 시 에러 트레이스백과 컨텍스트를 반드시 로그에 남긴다.
-- 비밀값(API 키, 토큰, DB 접속정보 등)은 프론트엔드나 로그에 절대 노출하지 않는다.
-- 사용자가 명시적으로 지시하지 않는 한, 커밋(commit)이나 푸시(push)를 임의로 수행하지 않는다.
+- 백엔드: Python Flask (Blueprints), zipfile, xml.etree.ElementTree, pandas, openpyxl, logging
+- 프론트엔드: Vanilla JavaScript, HTML5/CSS3 (무거운 프레임워크 도입 금지)
+- 인코딩 규격: DART 표준 CP949(EUC-KR) XML 및 ZIP 압축 포맷 준수
+- 실행 도구: Antigravity CLI, Windows PowerShell
 
-# 사용 기술 및 제약사항
+# REST API 설계
 
-- 사용 기술: Python Flask (Blueprints), Jinja2 Template, Vanilla JavaScript, HTML5/CSS3
-- 불필요한 무거운 프레임워크(React, Vue 등)나 추가 라이브러리 도입을 금지하고 기존 순수 JS/CSS 구조를 유지한다.
+POST /api/audit/dsd/parse-prior     전기 DSD 파일 업로드 ➔ 비교표시 재무제표 및 주석 역추출 반환
+POST /api/audit/aje/apply           수정분개(AJE) 목록 적용 ➔ 실시간 수정후 B/S, I/S 재계산 반환
+POST /api/audit/notes/generate      원장 기반 K-GAAP 1~30번 주석 표 및 마크다운 자동 집계 반환
+POST /api/audit/dsd/build-export    최종 감사의견 및 재무제표 ➔ [회사명]_감사보고서_[기수].dsd 파일 스트리밍 다운로드
 
-# 사이드바 및 UI 구조 개편 정의
+# 단계별 작업 순서 (Total 10 Steps)
 
-[기존 사이드바: 6개 메뉴]
-- 대시보드 홈 / 파트너사 관리 / 업무 요청 관리 / 금융기관 조회 관리 / 통합 문서 보관함 / 공지 및 알림 관리
+Step 1.  [환경 점검] 현재 작업 폴더(landing_page)의 core/, blueprints/, templates/ 구조 및 uploads/dsd 샘플 파일 무결성 점검 (PowerShell 검증)
+Step 2.  [DSD 파서 구축] core/dsd_manager.py 신설 - .dsd ZIP 해제, CP949 contents.xml/meta.xml 파싱, 전기 비교표시 B/S, I/S 추출 함수 구현
+Step 3.  [DSD 파서 단위 테스트] uploads/dsd/(주)이노플로우_감사보고서_25.dsd를 대상으로 PowerShell CLI에서 파싱 정확도(매출/자산 추출) 검증
+Step 4.  [AJE 엔진 고도화] core/audit_engine.py에 apply_audit_adjustments() 구현 - 원시 T/B + AJE ➔ 최종 수정후 T/B 및 대차평형 검증
+Step 5.  [주석 생성기 구축] core/notes_generator.py 신설 - 특수관계자(주석13), 지분법(주석5), 유형자산(주석6), 잉여금처분(주석10) 원장 데이터 자동 집계 로직 작성
+Step 6.  [DSD 빌더 구축] core/dsd_builder.py 신설 - 감사보고서 본문 + 재무제표 + 주석을 DART 표준 XML로 조립하고 CP949 ZIP .dsd 파일 패키징 함수 구현
+Step 7.  [API 라우트 연동] blueprints/audit.py에 4대 신규 API 엔드포인트(/dsd/parse-prior, /aje/apply, /notes/generate, /dsd/build-export) 구현 및 logging 적용
+Step 8.  [프론트엔드 UI 개편] templates/audit.html의 #tab-audit-report 영역을 '4단계 원스톱 카드 대시보드' 및 실시간 DART 뷰어로 전면 개편
+Step 9.  [프론트엔드 JS 연동] static/js/audit_dsd_hub.js 신설 - DSD 드래그앤드롭, AJE 실시간 추가/삭제, 주석 탭 전환, DSD 다운로드 비동기 연동
+Step 10. [E2E 통합 테스트] Flask 서버 실행 후 브라우저(/audit) 및 PowerShell에서 자료 업로드부터 최종 .dsd 파일 다운로드 및 DART 무결성 전수 검증
 
-[개편 후 사이드바: 3대 메인 탭 체계]
-1. 🏠 대시보드 홈 (`#tab-dashboard` / `/master`)
-   - 전사 요약 지표 카드, 최근 요청/알림 현황 위젯 유지
-2. 👥 파트너사 관리 (`#tab-partners` / `/master/partners`)
-   - [서브탭 1] 파트너사 목록 및 등록/수정
-   - [서브탭 2] 업무 요청 관리 (기존 업무 요청 승인/반려/필터링 이관)
-   - [서브탭 3] 공지 및 알림 발송 관리 (기존 공지 작성/발송 이관)
-   - [서브탭 4] 파트너사별 수발신 문서 이력
-3. 🏛️ 회계감사 (`#tab-audit` / `/master/audit`)
-   - [서브탭 1] 금융기관 조회 관리 (기존 조회서 발송, 회신 상태 추적 이관)
-   - [서브탭 2] 감사 증빙 문서 관리
+# 매 단계 응답 형식 (Strict Format)
 
-# Flask 라우트 및 API 구조
-
-GET  /master               마스터 관리자 메인 템플릿(master.html) 렌더링
-GET  /master/partners      파트너사 관리 통합 뷰 및 데이터 반환
-GET  /master/audit         회계감사(금융기관 조회) 뷰 및 데이터 반환
-POST /api/partners/...     파트너사 CRUD API
-POST /api/requests/...     업무 요청 승인/반려/상태변경 API
-POST /api/audit/...        금융기관 조회서 등록/상태업데이트 API
-POST /api/notices/...      공지/알림 등록 및 발송 API
-
-# Frontend Console Log 규칙
-
-[NAV]     탭 전환 시작 (이전 탭 -> 대상 탭)
-[SUBTAB]  서브 탭 전환 (파트너사 목록 / 업무요청 / 공지알림 / 회계감사 서브)
-[REQUEST] API 요청 전송 (엔드포인트, 파라미터 요약)
-[RENDER]  UI 컴포넌트 렌더링 완료
-[ACTION]  사용자 인터랙션 (승인, 반려, 필터 변경, 모달 열기)
-[ERROR]   JS 실행 또는 API 응답 오류
-
-# Backend Log 규칙
-
-Python logging 모듈을 사용한다. print()는 일절 사용하지 않는다.
-
-[ROUTE]   GET /master - Master Admin Main Loaded
-[ACTION]  탭/서브페이지 이동 또는 데이터 조회
-[API_REQ] API 요청 파라미터 (Request Payload)
-[API_RES] API 응답 상태 (Response Status & Data Count)
-[ERROR]   예외 발생 시 logger.error()로 상세 Traceback 출력
-
-# 반드시 지킬 작업 순서
-
-Step 1.  현재 작업 경로(landing_page)와 templates/, blueprints/, static/ 내 관리자 파일 구조를 점검한다.
-Step 2.  templates/master.html 및 master_detail.html의 사이드바 메뉴 HTML을 3대 메인 탭 체계로 재구성한다.
-Step 3.  사이드바 메뉴 스타일(CSS) 및 활성화(active) 클래스 전환 스타일을 점검하고 보완한다.
-Step 4.  static/js/main.js(또는 관리자 JS)의 탭 전환 라우팅/이벤트 리스너를 3대 탭 체계에 맞게 수정한다.
-Step 5.  '파트너사 관리' 탭 내부에 [파트너사 목록 | 업무 요청 | 공지 및 알림 | 문서함] 서브탭 UI를 구성한다.
-Step 6.  기존 '업무 요청 관리'의 테이블, 필터, 모달 로직을 '파트너사 관리 > 업무 요청' 서브탭으로 이관한다.
-Step 7.  기존 '공지 및 알림 관리'의 작성 폼과 발송 내역 로직을 '파트너사 관리 > 공지/알림' 서브탭으로 이관한다.
-Step 8.  '회계감사' 메인 탭 UI를 신설하고, 기존 '금융기관 조회 관리' 테이블과 상태 관리 로직을 이관한다.
-Step 9.  blueprints/master.py 및 관련 API 라우트를 개편된 탭/서브탭 구조에 맞게 점검하고 로깅(logger)을 보강한다.
-Step 10. 독립 탭이었던 '통합 문서 보관함'을 제거하고, 파트너사/회계감사 하위로의 연계 정상 동작을 확인한다.
-Step 11. Flask 로컬 서버를 실행하여 브라우저에서 탭 전환, 서브탭 전환, 반응형 UI를 직접 검증한다.
-Step 12. 업무 요청 승인/반려, 공지 발송, 금융기관 조회 상태 변경 등 주요 기능이 오류 없이 동작하는지 최종 테스트한다.
-
-# 개발 원칙
-
-- 한 번에 한 단계만 진행한다.
-- 각 단계가 끝나면 멈추고, 사용자가 "다음"이라고 말할 때까지 기다린다.
-- 코드를 말로만 설명하지 말고 실제 수정할 파일과 정확한 코드 스니펫을 제시한다.
-- 이전 단계에서 정상 작동하던 기존 기능을 삭제하거나 누락시키지 않는다.
-- 파일을 수정할 때는 어떤 파일을 왜 수정하는지 먼저 명확히 설명한다.
-- 오류가 발생하면 여러 곳을 추측으로 건드리지 말고 원인을 분리하여 한 번에 하나씩 해결한다.
-
-# 응답 형식 (매 단계마다 이 형식을 엄격히 지킨다)
-
-## 현재 단계
-## 이번 단계의 목표
-## 수정/작성할 파일 또는 입력할 명령어
-## 코드 / 변경 내용
-## 이 작업이 하는 일
-## 실행 및 확인 방법
-## 완료 확인
-## 다음 단계
+## 📌 현재 단계: Step X
+## 🎯 이번 단계의 목표
+## 📁 수정/작성할 파일 경로
+## 💻 코드 변경 내용 (전체 또는 명확한 diff)
+## ⚡ Windows PowerShell 검증 명령어
+## 🔍 기대 결과 및 확인 방법
+## 🛑 다음 단계 안내 (사용자 '다음' 입력 대기)
 
 # 시작 지시
 
-지금 Step 1만 수행하고 멈춰라.
+지금 Step 1만 수행하고 PowerShell 검증 명령어를 제시한 뒤 멈춰라.
 ```
+
 

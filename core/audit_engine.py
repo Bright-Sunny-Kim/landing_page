@@ -8,6 +8,7 @@ import numpy as np
 import openpyxl
 from datetime import datetime
 import logging
+from typing import Union, Dict, List, Any, Optional
 logger = logging.getLogger(__name__)
 
 # scikit-learn을 이용한 로컬 Fallback RAG 구현용 임포트
@@ -2944,6 +2945,256 @@ def export_working_paper_excel(company_name, fiscal_year, account_code, working_
     
     logger.info("[WP_EXCEL:SUCCESS] Generated Excel working paper (%d bytes)", len(output_stream.getvalue()))
     return output_stream
+
+
+# ==============================================================================
+# 16. 결산 수정분개(AJE: Audit Journal Entries) 실시간 연동 및 수정후 T/B 산출 엔진
+# ==============================================================================
+
+def classify_account_type(account_name: str, account_code: str = "") -> str:
+    """
+    계정과목명 및 계정코드를 분석하여 5대 기본 계정 유형(ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE)으로 분류합니다.
+    """
+    name = (account_name or "").strip()
+    code = str(account_code or "").strip()
+    
+    # 1. 코드 기반 판별 (표준 5자리 더존/세무사랑 코드 체계)
+    if code.isdigit() and len(code) >= 3:
+        code_int = int(code[:3])
+        if 101 <= code_int <= 250:
+            return "ASSET"
+        elif 251 <= code_int <= 330:
+            return "LIABILITY"
+        elif 331 <= code_int <= 399:
+            return "EQUITY"
+        elif 401 <= code_int <= 499:
+            return "REVENUE"
+        elif 501 <= code_int <= 999:
+            return "EXPENSE"
+
+    # 2. 계정명 키워드 기반 판별
+    # 수익 (REVENUE)
+    if any(k in name for k in ['매출액', '상품매출', '제품매출', '용역매출', '이자수익', '배당금수익', '잡이익', '유형자산처분이익', '외환차익', '외화환산이익']):
+        return "REVENUE"
+    
+    # 비용 (EXPENSE)
+    if any(k in name for k in ['원가', '급여', '상여', '퇴직급여', '복리후생비', '여비교통비', '통신비', '수도광열비', '세금과공과', 
+                               '감가상각비', '임차료', '수선비', '보험료', '차량유지비', '지급수수료', '광고선전비', '대손상각비', 
+                               '이자비용', '잡손실', '기부금', '외환차손', '외화환산손실', '법인세비용', '판관비', '판매비와관리비']):
+        return "EXPENSE"
+    
+    # 부채 (LIABILITY)
+    if any(k in name for k in ['부채', '차입금', '외상매입금', '매입채무', '지급어음', '미지급금', '미지급비용', '예수금', 
+                               '선수금', '선수수익', '예수보증금', '사채', '충당부채']):
+        return "LIABILITY"
+        
+    # 자본 (EQUITY)
+    if any(k in name for k in ['자본금', '자본잉여금', '주식발행초과금', '이익잉여금', '미처분이익잉여금', '임의적립금', 
+                               '기타포괄손익누계액', '자본조정', '자기주식']):
+        return "EQUITY"
+        
+    # 자산 (ASSET) - 기본값
+    return "ASSET"
+
+
+def apply_audit_adjustments(raw_tb_data: Union[pd.DataFrame, List[Dict[str, Any]]], 
+                             adjustments: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    원시 합계잔액시산표(Raw T/B)에 회계사의 결산 수정분개(AJE)를 실시간 반영하여
+    수정후 시산표(Adjusted T/B) 및 대차평형, 재무상태표/손익계산서 영향도를 재계산합니다.
+
+    :param raw_tb_data: 원시 시산표 (DataFrame 또는 [{Account, Current, ...}])
+    :param adjustments: AJE 수정분개 목록 [{id, description, entries: [{account_name, debit, credit}, ...]}]
+    :return: 수정후 T/B, 분개 집계, 대차평형 검증 결과 딕셔너리
+    """
+    logger.info("[AJE Engine] Starting apply_audit_adjustments with %d AJE entries...", len(adjustments))
+    
+    try:
+        # 1. 원시 T/B 데이터를 표준 DataFrame으로 변환
+        if isinstance(raw_tb_data, pd.DataFrame):
+            df_tb = raw_tb_data.copy()
+        elif isinstance(raw_tb_data, list):
+            df_tb = pd.DataFrame(raw_tb_data)
+        else:
+            raise ValueError(f"Unsupported raw_tb_data type: {type(raw_tb_data)}")
+            
+        # 컬럼명 정규화 (가장 적합한 1개 컬럼만 각각 Account, UnadjustedBalance, AccountCode로 지정)
+        account_col = None
+        balance_col = None
+        code_col = None
+        
+        for c in df_tb.columns:
+            clow = str(c).lower().strip()
+            if not account_col and any(k in clow for k in ['account', '계정', '과목', '항목']):
+                account_col = c
+            elif not code_col and any(k in clow for k in ['code', '코드']):
+                code_col = c
+            elif not balance_col and any(k in clow for k in ['current', '당기', '잔액', 'amount', '금액']):
+                balance_col = c
+                
+        if not account_col:
+            account_col = df_tb.columns[0]
+            
+        clean_df = pd.DataFrame()
+        clean_df['Account'] = df_tb[account_col].astype(str).str.strip()
+        
+        if code_col:
+            clean_df['AccountCode'] = df_tb[code_col].astype(str).str.strip()
+        else:
+            clean_df['AccountCode'] = ""
+            
+        if balance_col:
+            clean_df['UnadjustedBalance'] = pd.to_numeric(df_tb[balance_col], errors='coerce').fillna(0.0)
+        else:
+            num_cols = df_tb.select_dtypes(include=[np.number]).columns
+            clean_df['UnadjustedBalance'] = pd.to_numeric(df_tb[num_cols[0]], errors='coerce').fillna(0.0) if len(num_cols) > 0 else 0.0
+            
+        df_tb = clean_df
+        
+        # 2. AJE 수정분개 집계 (계정별 차변 합계 / 대변 합계 계산)
+        total_aje_debit = 0.0
+        total_aje_credit = 0.0
+        aje_by_account = {}  # {account_name: {'debit': sum, 'credit': sum}}
+        
+        for aje_idx, aje in enumerate(adjustments):
+            desc = aje.get('description', f'AJE #{aje_idx+1}')
+            entries = aje.get('entries', [])
+            aje_debit_sum = 0.0
+            aje_credit_sum = 0.0
+            
+            for entry in entries:
+                acct = str(entry.get('account_name') or entry.get('account') or '').strip()
+                deb = float(entry.get('debit') or 0.0)
+                crd = float(entry.get('credit') or 0.0)
+                
+                if not acct:
+                    continue
+                    
+                total_aje_debit += deb
+                total_aje_credit += crd
+                aje_debit_sum += deb
+                aje_credit_sum += crd
+                
+                if acct not in aje_by_account:
+                    aje_by_account[acct] = {'debit': 0.0, 'credit': 0.0}
+                aje_by_account[acct]['debit'] += deb
+                aje_by_account[acct]['credit'] += crd
+                
+            if round(aje_debit_sum, 2) != round(aje_credit_sum, 2):
+                logger.warning("[AJE Engine] Unbalanced AJE '%s': Debit=%.2f vs Credit=%.2f", desc, aje_debit_sum, aje_credit_sum)
+
+        is_aje_balanced = abs(total_aje_debit - total_aje_credit) < 1.0
+        logger.info("[AJE Engine] Total AJE Debit=%.2f, Credit=%.2f (Balanced=%s)", total_aje_debit, total_aje_credit, is_aje_balanced)
+
+        # 3. T/B에 AJE 반영 및 수정후 잔액(AdjustedBalance) 산출
+        all_accounts = set(df_tb['Account'].dropna().unique()) | set(aje_by_account.keys())
+        tb_dict = {row['Account']: row['UnadjustedBalance'] for _, row in df_tb.iterrows()}
+        code_dict = {row['Account']: str(row.get('AccountCode', '')) for _, row in df_tb.iterrows()} if 'AccountCode' in df_tb.columns else {}
+
+        adjusted_items = []
+        unadj_assets, unadj_liab, unadj_eq, unadj_rev, unadj_exp = 0.0, 0.0, 0.0, 0.0, 0.0
+        adj_assets, adj_liab, adj_eq, adj_rev, adj_exp = 0.0, 0.0, 0.0, 0.0, 0.0
+
+        for acct in sorted(all_accounts):
+            if not acct or acct in ['과 목', '합계', '총계', '차변', '대변']:
+                continue
+                
+            acct_code = code_dict.get(acct, "")
+            acct_type = classify_account_type(acct, acct_code)
+            
+            unadj_bal = float(tb_dict.get(acct, 0.0))
+            deb_adj = aje_by_account.get(acct, {}).get('debit', 0.0)
+            crd_adj = aje_by_account.get(acct, {}).get('credit', 0.0)
+            
+            # 계정 성격에 따른 수정후 잔액 계산
+            if acct_type in ['ASSET', 'EXPENSE']:
+                # 차변 정상잔액: 수정후 = 수정전 + 차변조정 - 대변조정
+                adj_bal = unadj_bal + deb_adj - crd_adj
+            else:
+                # 대변 정상잔액 (LIABILITY, EQUITY, REVENUE): 수정후 = 수정전 + 대변조정 - 차변조정
+                adj_bal = unadj_bal + crd_adj - deb_adj
+                
+            adjusted_items.append({
+                "account_name": acct,
+                "account_code": acct_code,
+                "account_type": acct_type,
+                "unadjusted_balance": int(round(unadj_bal)),
+                "adjustment_debit": int(round(deb_adj)),
+                "adjustment_credit": int(round(crd_adj)),
+                "adjusted_balance": int(round(adj_bal))
+            })
+
+            # 집계 (수정전 / 수정후)
+            if acct_type == 'ASSET':
+                unadj_assets += unadj_bal
+                adj_assets += adj_bal
+            elif acct_type == 'LIABILITY':
+                unadj_liab += unadj_bal
+                adj_liab += adj_bal
+            elif acct_type == 'EQUITY':
+                unadj_eq += unadj_bal
+                adj_eq += adj_bal
+            elif acct_type == 'REVENUE':
+                unadj_rev += unadj_bal
+                adj_rev += adj_bal
+            elif acct_type == 'EXPENSE':
+                unadj_exp += unadj_bal
+                adj_exp += adj_bal
+
+        # 당기순이익 산출 (수익 - 비용)
+        unadj_net_income = unadj_rev - unadj_exp
+        adj_net_income = adj_rev - adj_exp
+
+        # 기말 이익잉여금(자본)에 당기순이익 반영한 실질 자본총계 및 대차평형
+        unadj_total_equity_with_ni = unadj_eq + unadj_net_income
+        adj_total_equity_with_ni = adj_eq + adj_net_income
+
+        unadj_balance_diff = unadj_assets - (unadj_liab + unadj_total_equity_with_ni)
+        adj_balance_diff = adj_assets - (adj_liab + adj_total_equity_with_ni)
+
+        result_payload = {
+            "success": True,
+            "unadjusted_summary": {
+                "total_assets": int(round(unadj_assets)),
+                "total_liabilities": int(round(unadj_liab)),
+                "total_equity": int(round(unadj_total_equity_with_ni)),
+                "revenue": int(round(unadj_rev)),
+                "expense": int(round(unadj_exp)),
+                "net_income": int(round(unadj_net_income)),
+                "is_balanced": abs(unadj_balance_diff) < 1.0,
+                "balance_diff": int(round(unadj_balance_diff))
+            },
+            "adjusted_summary": {
+                "total_assets": int(round(adj_assets)),
+                "total_liabilities": int(round(adj_liab)),
+                "total_equity": int(round(adj_total_equity_with_ni)),
+                "revenue": int(round(adj_rev)),
+                "expense": int(round(adj_exp)),
+                "net_income": int(round(adj_net_income)),
+                "is_balanced": abs(adj_balance_diff) < 1.0,
+                "balance_diff": int(round(adj_balance_diff))
+            },
+            "adjustments_summary": {
+                "total_aje_count": len(adjustments),
+                "total_debit": int(round(total_aje_debit)),
+                "total_credit": int(round(total_aje_credit)),
+                "is_balanced": is_aje_balanced,
+                "variance": int(round(total_aje_debit - total_aje_credit))
+            },
+            "adjusted_tb": adjusted_items
+        }
+        
+        logger.info("[AJE Engine] Completed AJE calculation. Adj Net Income: %d, Diff: %d", 
+                    result_payload["adjusted_summary"]["net_income"], result_payload["adjusted_summary"]["balance_diff"])
+        return result_payload
+
+    except Exception as e:
+        logger.error("[AJE Engine] Critical error applying audit adjustments: %s", str(e), exc_info=True)
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 
 
 

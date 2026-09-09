@@ -15,3 +15,6 @@ uploads/
 
 temporary_data/
 scratch/
+.claude/
+.codex/
+docs_cache/

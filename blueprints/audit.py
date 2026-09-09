@@ -316,3 +316,160 @@ def get_audit_projects():
     except Exception as e:
         logger.error("[ASSIGN_ERROR] Failed to fetch projects: %s", e)
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ==============================================================================
+# 6. DSD 감사보고서 자동화 4대 핵심 REST API 엔드포인트
+# ==============================================================================
+
+from core.dsd_manager import parse_dsd_file
+from core.audit_engine import apply_audit_adjustments
+from core.notes_generator import generate_all_k_gaap_notes
+from core.dsd_builder import build_dsd_archive
+
+
+@audit_bp.route('/api/audit/dsd/parse-prior', methods=['POST'])
+def parse_prior_dsd_api():
+    """
+    [API 1] 전기 DSD 파일 업로드 또는 샘플 DSD ➔ 비교표시 재무제표 4종 및 주석 역추출 반환
+    """
+    logger.info("[API_REQ] POST /api/audit/dsd/parse-prior")
+    try:
+        if 'file' in request.files and request.files['file'].filename:
+            uploaded_file = request.files['file']
+            logger.info("[DSD_PARSE:REQ] Uploaded file: %s (%d bytes)", uploaded_file.filename, len(uploaded_file.read()))
+            uploaded_file.seek(0)
+            file_bytes = uploaded_file.read()
+            parse_result = parse_dsd_file(file_bytes)
+        else:
+            data = request.get_json(silent=True) or {}
+            sample_name = data.get('filename') or '(주)이노플로우_감사보고서_25.dsd'
+            sample_path = os.path.join("uploads", "dsd", sample_name)
+            logger.info("[DSD_PARSE:REQ] Using local sample file: %s", sample_path)
+            
+            if not os.path.exists(sample_path):
+                logger.error("[DSD_PARSE:ERR] Sample file not found: %s", sample_path)
+                return jsonify({"success": False, "error": f"파일을 찾을 수 없습니다: {sample_path}"}), 404
+                
+            parse_result = parse_dsd_file(sample_path)
+            
+        if not parse_result.get("success"):
+            logger.error("[DSD_PARSE:ERR] DSD parse error: %s", parse_result.get("error"))
+            return jsonify({"success": False, "error": parse_result.get("error")}), 400
+            
+        logger.info("[DSD_PARSE:RES] Parsed successfully: Company=%s, Notes=%d", 
+                    parse_result.get("company_name"), parse_result.get("notes_count", 0))
+        return jsonify({"success": True, "data": parse_result})
+
+    except Exception as e:
+        logger.error("[API_ERROR] parse_prior_dsd_api failed: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@audit_bp.route('/api/audit/aje/apply', methods=['POST'])
+def apply_aje_api():
+    """
+    [API 2] 결산 수정분개(AJE) 목록 적용 ➔ 실시간 수정후 B/S, I/S 및 대차평형 재계산 반환
+    """
+    logger.info("[API_REQ] POST /api/audit/aje/apply")
+    try:
+        data = request.get_json() or {}
+        raw_tb = data.get('raw_tb', [])
+        adjustments = data.get('adjustments', [])
+        
+        logger.info("[AJE_API:REQ] Applying %d AJEs on %d raw TB rows", len(adjustments), len(raw_tb))
+        
+        result = apply_audit_adjustments(raw_tb_data=raw_tb, adjustments=adjustments)
+        
+        if not result.get("success"):
+            logger.error("[AJE_API:ERR] Failed to apply AJEs: %s", result.get("error"))
+            return jsonify({"success": False, "error": result.get("error")}), 400
+            
+        logger.info("[AJE_API:RES] Completed. Adj Net Income: %d, Diff: %d", 
+                    result.get("adjusted_summary", {}).get("net_income", 0),
+                    result.get("adjusted_summary", {}).get("balance_diff", 0))
+        return jsonify({"success": True, "data": result})
+
+    except Exception as e:
+        logger.error("[API_ERROR] apply_aje_api failed: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@audit_bp.route('/api/audit/notes/generate', methods=['POST'])
+def generate_notes_api():
+    """
+    [API 3] 원장 및 수정후 T/B 기반 K-GAAP 1~18번 주석 데이터 및 표 자동 집계 반환
+    """
+    logger.info("[API_REQ] POST /api/audit/notes/generate")
+    try:
+        data = request.get_json() or {}
+        company_name = data.get('company_name', '주식회사 이노플로우')
+        fiscal_year = int(data.get('fiscal_year', 2025))
+        company_meta = data.get('company_meta') or {"company_name": company_name, "fiscal_year": fiscal_year}
+        adjusted_tb_items = data.get('adjusted_tb', [])
+        prior_dsd_notes = data.get('prior_notes', [])
+        
+        logger.info("[NOTES_API:REQ] Generating notes for company=%s, FY=%d", company_name, fiscal_year)
+        
+        notes_bundle = generate_all_k_gaap_notes(
+            company_meta=company_meta,
+            adjusted_tb_items=adjusted_tb_items,
+            prior_dsd_notes=prior_dsd_notes
+        )
+        
+        logger.info("[NOTES_API:RES] Generated %d K-GAAP notes", len(notes_bundle))
+        return jsonify({"success": True, "notes_count": len(notes_bundle), "notes": notes_bundle})
+
+    except Exception as e:
+        logger.error("[API_ERROR] generate_notes_api failed: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@audit_bp.route('/api/audit/dsd/build-export', methods=['POST'])
+def build_and_export_dsd_api():
+    """
+    [API 4] 최종 감사의견 + 재무제표 4종 + 주석 ➔ 금융감독원 DART 표준 .dsd 파일 스트리밍 다운로드
+    """
+    logger.info("[API_REQ] POST /api/audit/dsd/build-export")
+    try:
+        data = request.get_json() or {}
+        company_name = data.get('company_name', '주식회사 이노플로우').strip()
+        cik = data.get('cik', '01294846').strip()
+        fiscal_year = int(data.get('fiscal_year', 2025))
+        period = int(data.get('period', 15))
+        opinion_text = data.get('opinion_text', '우리의 의견으로는 별첨된 재무제표는 일반기업회계기준에 따라 중요성의 관점에서 공정하게 표시하고 있습니다.')
+        audit_firm = data.get('audit_firm', '회계법인 혜안')
+        
+        balance_sheet_data = data.get('balance_sheet_data', {})
+        income_statement_data = data.get('income_statement_data', {})
+        notes_data = data.get('notes_data', [])
+        
+        logger.info("[DSD_EXPORT:REQ] Packaging .dsd for %s (FY %d, Period %d)", company_name, fiscal_year, period)
+        
+        dsd_stream = build_dsd_archive(
+            company_name=company_name,
+            cik=cik,
+            fiscal_year=fiscal_year,
+            period=period,
+            opinion_text=opinion_text,
+            audit_firm=audit_firm,
+            balance_sheet_data=balance_sheet_data,
+            income_statement_data=income_statement_data,
+            notes_data=notes_data
+        )
+        
+        safe_company = company_name.replace(' ', '_')
+        download_filename = f"{safe_company}_감사보고서_{period}.dsd"
+        
+        logger.info("[DSD_EXPORT:RES] Streaming .dsd download: %s (%d bytes)", download_filename, len(dsd_stream.getvalue()))
+        return send_file(
+            dsd_stream,
+            mimetype="application/x-zip-compressed",
+            as_attachment=True,
+            download_name=download_filename
+        )
+
+    except Exception as e:
+        logger.error("[API_ERROR] build_and_export_dsd_api failed: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+

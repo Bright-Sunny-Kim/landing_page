@@ -355,117 +355,292 @@
             </section>
 
             <!-- ======================================================== -->
-            <!-- 탭 5: 감사보고서 작성 & AI 초안 (#tab-audit-report)         -->
+            <!-- 탭 5: CPA 4단계 DSD 감사보고서 & 주석 자동화 허브 (#tab-audit-report) -->
             <!-- ======================================================== -->
             <section id="tab-audit-report" class="audit-tab-pane">
-                <div class="audit-card audit-report-control-bar">
-                    <div class="report-control-grid">
-                        <div class="report-control-item">
-                            <label class="form-label">감사의견 유형</label>
-                            <select id="report-opinion-type" class="form-select audit-select" style="width:100%;">
-                                <option value="unqualified" selected>적정의견 (Unqualified Opinion)</option>
-                                <option value="qualified">한정의견 (Qualified Opinion)</option>
-                                <option value="adverse">부적정의견 (Adverse Opinion)</option>
-                                <option value="disclaimer">의견거절 (Disclaimer of Opinion)</option>
-                            </select>
+                <!-- DSD 실시간 메타데이터 헤더 바 -->
+                <div class="audit-card dsd-meta-top-bar" style="margin-bottom: 16px; padding: 14px 20px; background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                        <!-- 회사명 -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.1rem;">🏢</span>
+                            <div>
+                                <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 500;">감사 대상 회사명</div>
+                                <strong id="dsd-meta-company" style="font-size: 0.95rem; color: #f8fafc;">(주)이노플로우</strong>
+                            </div>
                         </div>
-                        <div class="report-control-item">
-                            <label class="form-label">재무제표 기준일</label>
-                            <input type="date" id="report-period-end" class="form-input" value="2025-12-31">
+                        <div style="width: 1px; height: 26px; background: rgba(148, 163, 184, 0.2);"></div>
+                        <!-- CIK 코드 -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.1rem;">🔢</span>
+                            <div>
+                                <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 500;">DART CIK 고유번호</div>
+                                <strong id="dsd-meta-cik" style="font-size: 0.95rem; color: #38bdf8; font-family: 'JetBrains Mono', monospace;">01294846</strong>
+                            </div>
                         </div>
-                        <div class="report-control-item">
-                            <label class="form-label">감사보고서 발행일</label>
-                            <input type="date" id="report-issue-date" class="form-input" value="2026-03-20">
+                        <div style="width: 1px; height: 26px; background: rgba(148, 163, 184, 0.2);"></div>
+                        <!-- 당기 귀속연도 (3개년 드롭다운) -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.1rem;">📅</span>
+                            <div>
+                                <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 500;">사업연도 (Fiscal Year)</div>
+                                <select id="dsd-meta-fiscal-year" class="form-select audit-select" style="padding: 3px 10px; font-size: 0.85rem; font-weight: 600; background: rgba(15, 23, 42, 0.8); border: 1px solid #3b82f6; color: #fff; border-radius: 6px;">
+                                    <option value="2026" selected>2026 귀속 (제 16기 - 당기)</option>
+                                    <option value="2025">2025 귀속 (제 15기 - 전기)</option>
+                                    <option value="2024">2024 귀속 (제 14기 - 전전기)</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="report-control-item">
-                            <label class="form-label">핵심감사사항 (KAM)</label>
-                            <select id="report-kam-status" class="form-select audit-select" style="width:100%;">
-                                <option value="included" selected>KAM 포함 (상장/대형 비상장)</option>
-                                <option value="exempted">KAM 미적용 (일반 비상장)</option>
-                            </select>
+                        <div style="width: 1px; height: 26px; background: rgba(148, 163, 184, 0.2);"></div>
+                        <!-- DSD 서식 버전 -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.1rem;">📄</span>
+                            <div>
+                                <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 500;">DART 서식 표준</div>
+                                <span class="audit-badge audit-badge-blue" id="dsd-meta-schema" style="font-size: 0.75rem;">dart4.xsd (v6.0)</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge-status badge-incharge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+                            ● 메타데이터 연동됨
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 4단계 워크플로우 진행 바 -->
+                <div class="audit-card dsd-workflow-bar" style="margin-bottom: 20px; padding: 16px 20px;">
+                    <div class="dsd-step-nav" style="display: flex; justify-content: space-between; gap: 10px; position: relative;">
+                        <div class="dsd-step-item active" data-dsd-step="1" style="flex: 1; text-align: center; cursor: pointer;">
+                            <div class="step-badge" style="width: 32px; height: 32px; border-radius: 50%; background: #2563eb; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 6px;">1</div>
+                            <div class="step-label" style="font-size: 0.85rem; font-weight: 600; color: #f8fafc;">📂 전기 DSD 역추출</div>
+                        </div>
+                        <div class="dsd-step-item" data-dsd-step="2" style="flex: 1; text-align: center; cursor: pointer;">
+                            <div class="step-badge" style="width: 32px; height: 32px; border-radius: 50%; background: #334155; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 6px;">2</div>
+                            <div class="step-label" style="font-size: 0.85rem; font-weight: 600; color: #94a3b8;">✍️ 결산 수정분개 (AJE)</div>
+                        </div>
+                        <div class="dsd-step-item" data-dsd-step="3" style="flex: 1; text-align: center; cursor: pointer;">
+                            <div class="step-badge" style="width: 32px; height: 32px; border-radius: 50%; background: #334155; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 6px;">3</div>
+                            <div class="step-label" style="font-size: 0.85rem; font-weight: 600; color: #94a3b8;">📑 K-GAAP 주석 (1~18번)</div>
+                        </div>
+                        <div class="dsd-step-item" data-dsd-step="4" style="flex: 1; text-align: center; cursor: pointer;">
+                            <div class="step-badge" style="width: 32px; height: 32px; border-radius: 50%; background: #334155; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; margin-bottom: 6px;">4</div>
+                            <div class="step-label" style="font-size: 0.85rem; font-weight: 600; color: #94a3b8;">📦 DSD 빌드 & 다운로드</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="audit-report-layout">
-                    <!-- 좌측: 보고서 목차 및 KAM/강조사항 제어 패널 -->
-                    <div class="audit-report-sidebar audit-card">
-                        <div class="report-nav-header">
-                            <h4 style="font-size:0.95rem; font-weight:700; color:#f1f5f9; margin:0;">📋 K-GAAS 보고서 목차</h4>
-                            <span class="audit-badge audit-badge-blue">K-GAAS 700</span>
+                <!-- Step 1 카드: 전기 DSD 업로드 & 역추출 -->
+                <div class="dsd-step-pane active" id="dsd-pane-step-1">
+                    <div class="audit-card" style="padding: 24px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <div>
+                                <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0;">Step 1. 전기 DSD 파일 업로드 및 비교표시 데이터 역추출</h3>
+                                <p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0 0 0;">작년도 감사보고서(.dsd)를 업로드하면 비교표시 재무제표 4종과 기초 주석 18개를 0.01초 만에 자동 추출합니다.</p>
+                            </div>
+                            <button type="button" id="btn-load-sample-dsd" class="audit-btn audit-btn-secondary btn-sm">
+                                <span>⚡ 샘플 DSD 즉시 로드</span>
+                            </button>
                         </div>
-                        <ul class="report-section-nav" id="report-section-nav">
-                            <li class="report-nav-item active" data-sec="opinion">1. 감사의견 및 의견의 근거</li>
-                            <li class="report-nav-item" data-sec="kam">2. 핵심감사사항 (KAM)</li>
-                            <li class="report-nav-item" data-sec="emphasis">3. 강조사항 및 기타사항</li>
-                            <li class="report-nav-item" data-sec="going-concern">4. 계속기업 유의적 불확실성</li>
-                            <li class="report-nav-item" data-sec="responsibilities-mgmt">5. 재무제표에 대한 경영진 책임</li>
-                            <li class="report-nav-item" data-sec="responsibilities-auditor">6. 재무제표감사에 대한 감사인 책임</li>
-                        </ul>
+                        
+                        <div id="dsd-dropzone" class="audit-dropzone" style="border: 2px dashed rgba(59, 130, 246, 0.4); border-radius: 12px; padding: 30px; text-align: center; background: rgba(15, 23, 42, 0.6); cursor: pointer; transition: all 0.2s;">
+                            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#3b82f6" stroke-width="2" style="margin-bottom: 10px;"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                            <h4 style="font-size: 1rem; color: #f1f5f9; margin-bottom: 6px;">전기 감사보고서(.dsd) 파일을 여기로 드래그하세요</h4>
+                            <p style="font-size: 0.8rem; color: #64748b; margin: 0;">또는 클릭하여 파일 탐색기에서 선택 (.dsd 포맷 지원)</p>
+                            <input type="file" id="input-prior-dsd-file" accept=".dsd" style="display: none;">
+                        </div>
 
-                        <div class="report-kam-preset-box">
-                            <h5 style="font-size:0.85rem; font-weight:600; color:#cbd5e1; margin-bottom:8px;">💡 추천 KAM 키워드</h5>
-                            <div class="kam-chip-group">
-                                <button type="button" class="kam-chip" data-kam="revenue">수익인식의 적정성</button>
-                                <button type="button" class="kam-chip" data-kam="inventory">재고자산 순실현가치 평가</button>
-                                <button type="button" class="kam-chip" data-kam="impairment">영업권 및 무형자산 손상</button>
-                                <button type="button" class="kam-chip" data-kam="derivative">파생상품 공정가치 평가</button>
+                        <!-- 추출 결과 요약 바 -->
+                        <div id="dsd-extract-summary-box" style="display: none; margin-top: 20px; padding: 16px; background: rgba(30, 41, 59, 0.8); border-radius: 10px; border-left: 4px solid #10b981;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span class="audit-badge audit-badge-green" id="dsd-extract-badge">🟢 역추출 완료</span>
+                                    <strong id="dsd-extract-company" style="color: #fff; margin-left: 8px; font-size: 0.95rem;">주식회사 이노플로우</strong>
+                                    <span id="dsd-extract-cik" style="color: #94a3b8; font-size: 0.85rem; margin-left: 6px;">(CIK: 01294846)</span>
+                                </div>
+                                <button type="button" class="audit-btn audit-btn-primary btn-sm" onclick="window.switchDsdStep(2)">
+                                    <span>다음: 수정분개(AJE) 입력 ➔</span>
+                                </button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px;">
+                                <div style="background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 6px;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8;">전기 자산총계 (제15기)</div>
+                                    <div id="dsd-pri-assets" style="font-size: 0.95rem; font-weight: 700; color: #38bdf8;">-</div>
+                                </div>
+                                <div style="background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 6px;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8;">전기 부채총계 (제15기)</div>
+                                    <div id="dsd-pri-liab" style="font-size: 0.95rem; font-weight: 700; color: #f43f5e;">-</div>
+                                </div>
+                                <div style="background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 6px;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8;">전기 매출액 (제15기)</div>
+                                    <div id="dsd-pri-revenue" style="font-size: 0.95rem; font-weight: 700; color: #4ade80;">-</div>
+                                </div>
+                                <div style="background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 6px;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8;">전전기 자산 (제14기)</div>
+                                    <div id="dsd-2pri-assets" style="font-size: 0.95rem; font-weight: 700; color: #a78bfa;">-</div>
+                                </div>
+                                <div style="background: rgba(15, 23, 42, 0.5); padding: 10px; border-radius: 6px;">
+                                    <div style="font-size: 0.75rem; color: #94a3b8;">추출된 K-GAAP 주석</div>
+                                    <div id="dsd-pri-notes-count" style="font-size: 0.95rem; font-weight: 700; color: #fbbf24;">18개</div>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- 우측: 감사보고서 마크다운 & 실시간 서식 에디터 -->
-                    <div class="audit-report-editor-pane audit-card">
-                        <div class="report-editor-header">
-                            <div class="report-header-title-box">
-                                <span class="badge-code" style="background:#059669;">REPORT</span>
-                                <div>
-                                    <h3 style="font-size:1.15rem; font-weight:700; color:#fff; margin:0;" id="report-active-title">독립된 감사인의 감사보고서</h3>
-                                    <span style="font-size:0.8rem; color:#94a3b8;">주식회사 대상 감사보고서 (K-GAAS 700/701/705/706 준용)</span>
-                                </div>
+                <!-- Step 2 카드: 결산 수정분개 (AJE) & 대차평형 -->
+                <div class="dsd-step-pane" id="dsd-pane-step-2" style="display: none;">
+                    <div class="audit-card" style="padding: 24px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <div>
+                                <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0;">Step 2. 결산 수정분개(AJE) 입력 및 실시간 대차평형</h3>
+                                <p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0 0 0;">감사 중 발견된 수정사항을 입력하면 수정후 T/B와 B/S, I/S가 실시간으로 재계산됩니다.</p>
                             </div>
-                            <div class="report-editor-actions">
-                                <button type="button" id="btn-generate-report-ai" class="audit-btn audit-btn-primary">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7.5 5.6L10 0l2.5 5.6L18 8l-5.5 2.4L10 16l-2.5-5.6L2 8l5.5-2.4zm12 9.4l1.5-3.4 1.5 3.4 3.4 1.5-3.4 1.5-1.5 3.4-1.5-3.4-3.4-1.5 3.4-1.5z"/></svg>
-                                    <span>AI 보고서 초안 생성</span>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" id="btn-add-aje-row" class="audit-btn audit-btn-secondary btn-sm">
+                                    <span>➕ 수정분개 행 추가</span>
                                 </button>
-                                <button type="button" id="btn-save-report" class="audit-btn audit-btn-secondary">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-                                    <span>저장</span>
-                                </button>
-                                <button type="button" id="btn-print-report" class="audit-btn audit-btn-accent">
-                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
-                                    <span>인쇄 / PDF</span>
+                                <button type="button" id="btn-apply-aje" class="audit-btn audit-btn-primary btn-sm">
+                                    <span>⚡ AJE 실시간 반영</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- 보고서 서식 탭: [에디터] / [공식 인쇄 미리보기] -->
-                        <div class="wp-sub-tabs">
-                            <button type="button" class="report-tab-btn active" data-sub="editor">보고서 본문 에디터 (Markdown)</button>
-                            <button type="button" class="report-tab-btn" data-sub="preview">정식 감사보고서 서식 미리보기</button>
+                        <!-- AJE 입력 테이블 -->
+                        <div class="table-responsive" style="max-height: 280px; overflow-y: auto; margin-bottom: 16px;">
+                            <table class="audit-table" style="width: 100%; text-align: left;" id="table-aje-entries">
+                                <thead>
+                                    <tr style="background: rgba(30, 41, 59, 0.9);">
+                                        <th style="width: 25%;">계정과목</th>
+                                        <th style="width: 20%;">차변 (Dr)</th>
+                                        <th style="width: 20%;">대변 (Cr)</th>
+                                        <th style="width: 25%;">수정 사유 (적요)</th>
+                                        <th style="width: 10%; text-align: center;">삭제</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-aje-list">
+                                    <tr>
+                                        <td><input type="text" class="form-input aje-acct" placeholder="예: 대손상각비" value="대손상각비"></td>
+                                        <td><input type="number" class="form-input aje-debit" placeholder="0" value="50000000"></td>
+                                        <td><input type="number" class="form-input aje-credit" placeholder="0" value="0"></td>
+                                        <td><input type="text" class="form-input aje-memo" placeholder="적요" value="매출채권 대손충당금 추가설정"></td>
+                                        <td style="text-align: center;"><button type="button" class="btn-del-aje" style="background:none; border:none; color:#ef4444; cursor:pointer;">❌</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="text" class="form-input aje-acct" placeholder="예: 대손충당금" value="대손충당금"></td>
+                                        <td><input type="number" class="form-input aje-debit" placeholder="0" value="0"></td>
+                                        <td><input type="number" class="form-input aje-credit" placeholder="0" value="50000000"></td>
+                                        <td><input type="text" class="form-input aje-memo" placeholder="적요" value="매출채권 대손충당금 추가설정"></td>
+                                        <td style="text-align: center;"><button type="button" class="btn-del-aje" style="background:none; border:none; color:#ef4444; cursor:pointer;">❌</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
 
-                        <div id="report-view-editor" class="report-sub-content active">
-                            <textarea id="audit-report-editor" class="wp-markdown-editor custom-scrollbar" placeholder="AI 감사보고서 초안 생성을 클릭하거나 감사보고서 본문을 직접 입력하세요..."></textarea>
-                        </div>
-
-                        <div id="report-view-preview" class="report-sub-content" style="display:none;">
-                            <div id="audit-report-preview-container" class="audit-report-preview-sheet custom-scrollbar">
-                                <div class="preview-report-paper">
-                                    <div class="report-paper-header">
-                                        <h2>독 립 된  감 사 인 의  감 사 보 고 서</h2>
-                                        <p class="report-target-company" id="prev-company-title">주식회사 혜안 귀중</p>
-                                    </div>
-                                    <div id="report-preview-body" class="report-paper-content">
-                                        <!-- 마크다운 렌더링 또는 표준 보고서 HTML -->
-                                    </div>
-                                    <div class="report-paper-footer">
-                                        <p class="report-auditor-firm">회 계 법 인  혜 안</p>
-                                        <p class="report-auditor-date" id="prev-issue-date">2026년 03월 20일</p>
-                                    </div>
-                                </div>
+                        <!-- AJE 반영 후 대차평형 모니터링 카드 -->
+                        <div id="aje-balance-card" style="padding: 14px 18px; background: rgba(15, 23, 42, 0.8); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span style="font-size: 0.85rem; color: #94a3b8;">수정후 대차평형 상태:</span>
+                                <strong id="aje-balance-status" style="color: #4ade80; margin-left: 6px; font-size: 0.95rem;">🟢 평형 (오차: 0원)</strong>
                             </div>
+                            <div style="display: flex; gap: 16px; font-size: 0.85rem;">
+                                <span>수정후 자산: <strong id="aje-res-assets" style="color:#38bdf8;">-</strong></span>
+                                <span>수정후 순익: <strong id="aje-res-netincome" style="color:#fbbf24;">-</strong></span>
+                            </div>
+                            <button type="button" class="audit-btn audit-btn-primary btn-sm" onclick="window.switchDsdStep(3)">
+                                <span>다음: 주석 검토 ➔</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 카드: K-GAAP 주석 검토 & 자동생성 -->
+                <div class="dsd-step-pane" id="dsd-pane-step-3" style="display: none;">
+                    <div class="audit-card" style="padding: 24px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <div>
+                                <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0;">Step 3. K-GAAP 1~18번 주석 검토 및 자동생성</h3>
+                                <p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0 0 0;">원장 및 수정후 T/B와 연동하여 특수관계자(13번), 지분법(5번), 유형자산(6번), 잉여금(10번) 표를 자동 집계합니다.</p>
+                            </div>
+                            <button type="button" id="btn-refresh-notes" class="audit-btn audit-btn-primary btn-sm">
+                                <span>🤖 전체 주석 일괄 자동생성</span>
+                            </button>
+                        </div>
+
+                        <div style="display: flex; gap: 16px; min-height: 380px;">
+                            <!-- 좌측: 주석 목차 리스트 -->
+                            <div style="width: 260px; background: rgba(15, 23, 42, 0.7); border-radius: 8px; padding: 10px; overflow-y: auto; max-height: 420px;" id="notes-sidebar-list">
+                                <!-- JS로 1~18번 주석 탭 렌더링 -->
+                            </div>
+                            <!-- 우측: 주석 상세 본문 & 표 뷰어 -->
+                            <div style="flex: 1; background: rgba(15, 23, 42, 0.9); border-radius: 8px; padding: 18px; overflow-y: auto; max-height: 420px;" id="notes-content-viewer">
+                                <h4 id="active-note-title" style="color: #f1f5f9; font-size: 1.05rem; margin-top: 0;">주석을 선택하세요</h4>
+                                <div id="active-note-body" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.6;"></div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+                            <button type="button" class="audit-btn audit-btn-primary btn-sm" onclick="window.switchDsdStep(4)">
+                                <span>다음: 최종 DSD 빌드 ➔</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4 카드: DSD 빌드 & 전자공시 다운로드 -->
+                <div class="dsd-step-pane" id="dsd-pane-step-4" style="display: none;">
+                    <div class="audit-card" style="padding: 24px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <div>
+                                <h3 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0;">Step 4. 금융감독원 DART 표준 .dsd 감사보고서 생성 & 다운로드</h3>
+                                <p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0 0 0;">K-GAAS 700 감사의견서, 4대 재무제표, 18개 주석을 contents.xml 및 CP949 .dsd 파일로 출력합니다.</p>
+                            </div>
+                            <button type="button" id="btn-export-final-dsd" class="audit-btn audit-btn-success" style="font-size: 0.95rem; padding: 10px 18px;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg>
+                                <span>📥 DART 제출용 .dsd 다운로드</span>
+                            </button>
+                        </div>
+
+                        <!-- 감사보고서 옵션 폼 -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; padding: 14px; background: rgba(30, 41, 59, 0.6); border-radius: 8px;">
+                            <div>
+                                <label class="form-label">감사의견 유형</label>
+                                <select id="final-opinion-type" class="form-select audit-select" style="width: 100%;">
+                                    <option value="적정의견" selected>적정의견 (Unqualified)</option>
+                                    <option value="한정의견">한정의견 (Qualified)</option>
+                                    <option value="부적정의견">부적정의견 (Adverse)</option>
+                                    <option value="의견거절">의견거절 (Disclaimer)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label">감사보고서 발행일</label>
+                                <input type="date" id="final-report-date" class="form-input" value="2026-03-20">
+                            </div>
+                            <div>
+                                <label class="form-label">감사인 명칭</label>
+                                <input type="text" id="final-audit-firm" class="form-input" value="회계법인 혜안">
+                            </div>
+                        </div>
+
+                        <!-- 실시간 DART 전자공시 규격 미리보기 뷰어 -->
+                        <div class="wp-sub-tabs" style="margin-bottom: 12px;">
+                            <button type="button" class="report-tab-btn active" data-dsd-view="preview">정식 DART 감사보고서 서식 뷰어</button>
+                            <button type="button" class="report-tab-btn" data-dsd-view="xml">DART XML 구조 (contents.xml)</button>
+                        </div>
+
+                        <div id="dsd-view-preview" class="audit-report-preview-sheet custom-scrollbar" style="max-height: 480px; overflow-y: auto; background: #fff; color: #1e293b; padding: 30px; border-radius: 8px;">
+                            <div style="text-align: center; margin-bottom: 24px;">
+                                <h2 style="font-size: 1.5rem; font-weight: 800; letter-spacing: 2px;">독 립 된  감 사 인 의  감 사 보 고 서</h2>
+                                <p style="font-size: 1.05rem; font-weight: 600; margin-top: 8px;" id="preview-final-company">주식회사 이노플로우 주주 및 이사회 귀중</p>
+                            </div>
+                            <div id="preview-final-body" style="font-size: 0.95rem; line-height: 1.8;">
+                                <!-- 실시간 렌더링 영역 -->
+                            </div>
+                        </div>
+
+                        <div id="dsd-view-xml" style="display: none; max-height: 480px; overflow-y: auto; background: #0f172a; padding: 18px; border-radius: 8px;">
+                            <pre><code id="xml-source-code" style="color: #38bdf8; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;"></code></pre>
                         </div>
                     </div>
                 </div>
@@ -522,5 +697,6 @@
 
     <!-- 스크립트 연동 -->
     <script src="{{ url_for('static', filename='js/audit_portal.js', v='20260904-report-v9') }}"></script>
+    <script src="{{ url_for('static', filename='js/audit_dsd_hub.js', v='20260909-dsd-v1') }}"></script>
 </body>
 </html>
