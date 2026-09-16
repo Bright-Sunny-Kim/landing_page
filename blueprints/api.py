@@ -592,3 +592,63 @@ def admin_export_inquiries():
         mimetype="text/csv",
         headers={"Content-disposition": "attachment; filename=inquiry_export.csv"}
     )
+
+
+@api_bp.route('/api/calendar/notion.ics', methods=['GET'])
+@api_bp.route('/calendar/notion.ics', methods=['GET'])
+def get_notion_calendar_ics():
+    """
+    구글 캘린더 등 외부 캘린더 앱에서 노션 일정을 실시간 구독할 수 있는 RFC 5545 iCal (.ics) 피드를 제공합니다.
+    """
+    logger.info("[CALENDAR_FEED] iCal feed requested from IP: %s, User-Agent: %s", 
+                request.remote_addr, request.headers.get('User-Agent', 'Unknown'))
+    
+    force_refresh = request.args.get('refresh', '').lower() in ('true', '1', 'yes') or request.args.get('force', '').lower() in ('true', '1')
+    category_filter = request.args.get('category', '').strip()
+    audit_type_filter = request.args.get('audit_type', '').strip() or request.args.get('audit', '').strip()
+    status_filter = request.args.get('status', '').strip()
+    exclude_completed = request.args.get('exclude_completed', '').lower() in ('true', '1', 'yes')
+
+    try:
+        from core.notion_calendar import fetch_notion_schedule_events, generate_ical_feed
+        events = fetch_notion_schedule_events(force_refresh=force_refresh)
+
+        # 필터링 적용 (감사구분, 세부내역 카테고리, 상태, 완료 여부)
+        if audit_type_filter:
+            events = [e for e in events if audit_type_filter in (e.get('audit_types') or [])]
+        if category_filter:
+            events = [e for e in events if e.get('category') == category_filter]
+        if status_filter:
+            events = [e for e in events if e.get('status') == status_filter]
+        if exclude_completed:
+            events = [e for e in events if not e.get('completed') and e.get('status') != '완료']
+
+        cal_name = f"노션 일정 - {audit_type_filter}" if audit_type_filter else "노션 일정 (Todo DB)"
+        ics_content = generate_ical_feed(events, calendar_name=cal_name)
+        logger.info("[CALENDAR_FEED] Returning iCal feed with %d events (audit_type=%s, force_refresh=%s)", 
+                    len(events), audit_type_filter, force_refresh)
+
+        return Response(
+            ics_content,
+            mimetype='text/calendar; charset=utf-8',
+            headers={
+                'Content-Disposition': 'inline; filename="notion_calendar.ics"',
+                'Cache-Control': 'public, max-age=300'
+            }
+        )
+    except requests.exceptions.HTTPError as exc:
+        status_code = exc.response.status_code if exc.response is not None else 502
+        logger.error("[CALENDAR_FEED] Notion API error (status: %s): %s", status_code, exc, exc_info=True)
+        return Response(
+            f"Notion API 연동 오류: 상태코드 {status_code}",
+            status=502,
+            mimetype="text/plain; charset=utf-8"
+        )
+    except Exception as e:
+        logger.error("[CALENDAR_FEED] Unexpected error during iCal feed generation: %s", e, exc_info=True)
+        return Response(
+            f"일정 피드 생성 중 오류 발생: {str(e)}",
+            status=500,
+            mimetype="text/plain; charset=utf-8"
+        )
+
