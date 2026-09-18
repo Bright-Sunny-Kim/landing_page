@@ -33,11 +33,10 @@ def audit_page():
     user_role = session.get('role', 'client')
     user_task = session.get('task_type', '')
     
-    # 최고 관리자 또는 회계사/감사인 또는 회계감사 업무담당자 허용
+    # 최고 관리자 또는 회계사/감사인 전용 허용
     is_authorized = (
         user_email == MASTER_EMAIL or 
-        user_role in ['master', 'cpa', 'auditor'] or 
-        user_task == '회계감사'
+        user_role in ['master', 'cpa', 'auditor']
     )
     
     if not is_authorized:

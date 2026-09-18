@@ -1174,8 +1174,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const partnerMenuItems = document.querySelectorAll('.master-menu-item[data-menu^="partner-"]');
     const partnerViews = [
         'partner-home-view',
-        'partner-history-view',
-        'partner-inquiry-view',
+        'partner-external-view',
+        'partner-analysis-view',
         'partner-consulting-view',
         'partner-billing-view',
         'partner-settings-view'
@@ -1203,6 +1203,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     targetView.style.display = 'block';
                     if (menu === 'partner-consulting' && typeof window.loadClientCompanyChat === 'function') {
                         window.loadClientCompanyChat();
+                    } else if (menu === 'partner-analysis' && typeof window.loadCompanyAnalysisReport === 'function') {
+                        window.loadCompanyAnalysisReport();
+                    } else if (menu === 'partner-external' && typeof window.loadInquiryStatus === 'function') {
+                        window.loadInquiryStatus();
                     }
                 }
             });

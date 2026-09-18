@@ -185,6 +185,17 @@ UBUNTU_PG_PASSWORD=your_password
     - **상단 DSD 메타데이터 바**: 회사명, CIK(`01294846`), 3개년 fiscal_year 드롭다운(`2026/2025/2024`) 실시간 양방향 동기화
     - **4단계 대시보드 워크플로우**: 전기 DSD 업로드 & 역추출 ➡️ AJE 수정분개 & 대차평형 ➡️ 18개 주석 검토 ➡️ DSD 최종 빌드 및 DART 전용 `.dsd` 다운로드
   - **E2E 전 단계 통합 검증 (`scripts/verify_step10_e2e.py`)**: Step 1~10 전 파이프라인 무결성 테스트 통과 (100% Pass)
+- [x] **Phase 8. 고객사 전용 포털(`company.html`) UI/UX 전면 개편 & 선택 기반 Drag & Drop 허브 고도화** (완료):
+  - **독립 뷰 분리 및 사이드바 메뉴 재편**:
+    - `자료제출` (`partner-home-view`): 대형 스마트 드롭존, 미제출 서류 팝오버, 진척도 트래커, 최근 제출 목록 5개 및 문의사항 제출 폼으로 구성된 단일 집중 제출 허브로 정돈
+    - `🏛️ 외부조회` (`partner-external-view`): 금융기관(신청 현황 요약, 전자/서면조회 신청 마법사, PDF 서식 발급) 및 거래처(수신처 엑셀 업로드) 전용 독립 뷰 신설
+    - `📊 분석보고서` (`partner-analysis-view`): 제출된 장부 기반 AI 변동성 분석, 식별된 감사 위험, K-GAAP 기준서 매칭, 시산표 ↔ 재무상태표 대차평형 대사, 감사 조서 초안(.md) 다운로드 독립 뷰 신설
+    - 구형 `제출 내역 조회` 및 `AI 회계사 문의` 메뉴/뷰 정리 및 [static/js/main.js](file:///c:/Users/CLAUD/landing_page/static/js/main.js) 사이드바 라우팅 연동
+  - **선택 기반 스마트 Drag & Drop 자료제출 파이프라인**:
+    - 팝업창(팝오버)에서 서류 항목(예: `[PBC-P-01] 최신 정관`)을 클릭하여 선택한 후에만 해당 서류 전용 업로드 모드 활성화 (미선택 시 드롭존 클릭 시 서류 선택 팝업 유도)
+    - 파일 Drag & Drop 또는 파일 선택 완료 시 팝업창(미제출 서류 목록)에서 해당 항목 즉시 제거 (`completed` 자동 숨김) 및 `localStorage` 동기화
+    - 진도율 프로그레스 바(%) 및 미제출 건수 뱃지 실시간 차감 갱신, 최근 제출 목록 상단 실시간 행 추가, 드롭존 상태 자동 리셋
+
 
 ---
 
@@ -193,33 +204,42 @@ UBUNTU_PG_PASSWORD=your_password
 ### 📌 Antigravity CLI 및 Windows PowerShell 직접 실행 원칙
 본 프로젝트의 모든 변경 및 고도화 작업은 사용자가 **Antigravity CLI**와 **Windows PowerShell**을 통해 직접 통제하며 진행합니다.
 
-1. **단일 단계 진행 원칙 (Step-by-Step Execution)**:
+1. **승인 기반 실행 원칙 (Approval-Required Execution)**:
+   - 모든 작업 및 코드 적용/실행은 반드시 사용자의 사전 검토 및 명시적 승인 하에 단계별로 진행합니다.
+2. **README 및 생성 규칙 우선 숙지 (Prior Rule Acquisition)**:
+   - 작업을 시작하기 전 반드시 `README.md` 파일을 읽고 master_prompt 생성 규칙 및 기존 프로젝트 아키텍처를 완벽히 숙지합니다.
+3. **단일 단계 진행 원칙 (Step-by-Step Execution)**:
    - AI 에이전트는 한 번에 오직 하나의 Step만 설명/작성하고 멈춥니다.
    - 사용자가 Windows PowerShell에서 검증 명령어를 실행하거나 화면을 확인한 후 `"다음"`이라고 지시할 때만 다음 Step으로 이동합니다.
-2. **백엔드 로깅 규칙 (Backend Logging Rule)**:
+4. **목표 기능 한정 및 회귀 방지 (Strict Scope & Zero Regression)**:
+   - 고도화 및 변경하고자 하는 대상 기능 외의 기존 기능 및 코드는 절대 임의로 변경하거나 훼손하지 않습니다.
+5. **최소한의 도구 사용 및 경량화 원칙 (Minimal Tooling & Lightweight)**:
+   - 고도화 과정에서 꼭 필요한 최소한의 Tool들만 사용하며, 불필요하거나 무거운 프레임워크(Heavy Frameworks)는 절대 도입하지 않습니다 (Vanilla JS, 경량 표준 라이브러리 준수).
+6. **백엔드 로깅 규칙 (Backend Logging Rule)**:
    - Python 코드 내 `print()` 사용을 엄격히 금지하며, Python 표준 `logging` 모듈(`logger.info`, `logger.error` 등)을 사용합니다.
    - 모든 API 요청/응답 및 예외(try-except) 발생 시 에러 트레이스백과 컨텍스트를 필수 기록합니다.
-3. **무결성 및 회귀 방지 (Zero Regression)**:
-   - 기존에 정상 작동하던 6대 장부 파싱, K-GAAP 조서 작성, 스토리지 연동 로직을 절대 훼손하지 않습니다.
 
 ---
 
-### 📋 `master_prompt`: CPA 회계감사 DSD 감사보고서 자동화 마스터 프롬프트
+### 📋 `master_prompt`: 마스터 프롬프트 생성 기본 원칙
 
 ```markdown
 # 역할
 
-당신은 Python Flask, Jinja2, Vanilla JavaScript, DART 전자공시 규격(XML/CP949) 및 K-GAAP/K-GAAS 회계감사 도메인에 정통한 Senior Full Stack Developer & Audit Automation Architect이다.
+당신은 Python Flask, Jinja2, Vanilla JavaScript 및 회계/감사/기업 분석 도메인에 정통한 Senior Full Stack Developer & System Architect이다.
 
 사용자는 Windows PowerShell과 Antigravity CLI 환경에서 직접 명령을 실행하고 코드를 확인하며 시스템을 한 단계씩 구축해 나간다.
 
-# 개발 대원칙
+# 개발 대원칙 (Master Prompt Creation Rules)
 
-1. 한 번에 오직 한 단계(Step)만 진행하고 즉시 멈춘다.
-2. 사용자가 PowerShell에서 테스트하거나 브라우저에서 확인한 뒤 "다음"이라고 입력할 때까지 임의로 다음 단계를 진행하지 않는다.
-3. 기존 기능의 완벽한 보존 (6대 장부 파서, 105개 엑셀 조서, 스토리지 매니저 등 회귀 버그 절대 방지).
-4. 백엔드(Python) 작성 시 print()는 일절 금지하며 Python 표준 logging 모듈(logger.info, logger.error)을 사용한다.
-5. 모든 단계마다 사용자가 Windows PowerShell에서 직접 실행해 볼 수 있는 구체적인 검증 명령어(CLI/Python)를 함께 제공한다.
+1. 반드시 모든 실행은 사용자의 승인하에 단계별로 진행한다.
+2. 작업 전 항상 README.md 파일을 읽고 master_prompt 생성 규칙 및 시스템 구조를 숙지한다.
+3. 한 번에 오직 한 단계(Step)만 진행하고 즉시 멈춘다.
+4. 사용자가 PowerShell에서 테스트하거나 브라우저에서 확인한 뒤 "다음"이라고 입력할 때까지 임의로 다음 단계를 진행하지 않는다.
+5. 변경하고자 하는 대상 기능 외의 기존 기능(파서, 조서, 스토리지 등)은 절대 변경하지 않는다 (Zero Regression).
+6. 고도화 과정에서 꼭 필요한 최소한의 tool들만 사용하며, 불필요한 무거운 프레임워크는 절대 사용하지 않는다.
+7. 백엔드(Python) 작성 시 print()는 일절 금지하며 Python 표준 logging 모듈(logger.info, logger.error)을 사용한다.
+8. 모든 단계마다 사용자가 Windows PowerShell에서 직접 실행해 볼 수 있는 구체적인 검증 명령어(CLI/Python)를 함께 제공한다.
 
 # 프로젝트명
 
