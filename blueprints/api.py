@@ -2,12 +2,15 @@
 import os
 import csv
 import json
+import time
+import re
 import datetime
 import requests
 from io import StringIO
 from flask import Blueprint, request, jsonify, session, Response, stream_with_context, send_from_directory, current_app
+from werkzeug.utils import secure_filename
 from core.extensions import (
-    supabase, openai_client, MASTER_EMAIL, logger
+    supabase, openai_client, s3_client, minio_endpoint, get_safe_path_name, MASTER_EMAIL, logger
 )
 
 api_bp = Blueprint('api', __name__)
@@ -651,4 +654,128 @@ def get_notion_calendar_ics():
             status=500,
             mimetype="text/plain; charset=utf-8"
         )
+
+
+@api_bp.route('/api/upload-single-file', methods=['POST'])
+def upload_single_file():
+    """
+    개별 서류 항목 선택 시 파일을 MinIO와 Supabase DB에 즉시 비동기 업로드하는 엔드포인트
+    """
+    try:
+        if 'email' not in session:
+            logger.warning("[UPLOAD_SINGLE:AUTH_FAIL] Unauthorized upload attempt")
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+
+        email = session.get('email')
+        user_company = session.get('company', '')
+        is_master = (email == MASTER_EMAIL or session.get('role') == 'master')
+
+        req_company = request.form.get('company_name', '').strip()
+        if is_master and req_company:
+            target_company = req_company
+        else:
+            target_company = user_company or req_company
+
+        if not target_company:
+            return jsonify({'success': False, 'error': '회사 정보가 확인되지 않았습니다.'}), 400
+
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': '업로드할 파일이 전달되지 않았습니다.'}), 400
+
+        file = request.files['file']
+        if not file or not file.filename:
+            return jsonify({'success': False, 'error': '선택된 파일이 없습니다.'}), 400
+
+        field_name = request.form.get('field_name', 'other_current').strip()
+        label = request.form.get('label', '').strip()
+        original_filename = os.path.basename(file.filename)
+        safe_filename = get_safe_path_name(original_filename)
+        safe_company = get_safe_path_name(target_company)
+
+        # 폴더 구분자 산출
+        if field_name.startswith('pfile_'):
+            year_folder = 'P-File'
+        elif 'finance' in field_name:
+            year_folder = 'Ext_F'
+        elif 'partner' in field_name:
+            year_folder = 'Ext_C'
+        elif 'current' in field_name:
+            year_folder = 'Temp/Temp_P'
+        else:
+            year_folder = 'Temp/Temp_L'
+
+        timestamp = int(time.time() * 1000)
+        file_key = f"{safe_company}/{year_folder}/{timestamp}_{field_name}_{safe_filename}"
+        file_bytes = file.read()
+        file_url = None
+        bucket_name = 'company-uploads'
+
+        logger.info("[UPLOAD_SINGLE:START] User=%s, Company=%s, Field=%s (%s), Filename=%s, Size=%d bytes",
+                    email, target_company, field_name, label, original_filename, len(file_bytes))
+
+        # 1. MinIO 업로드
+        if s3_client:
+            try:
+                s3_client.put_object(
+                    Bucket=bucket_name,
+                    Key=file_key,
+                    Body=file_bytes,
+                    ContentType=file.content_type or 'application/octet-stream'
+                )
+                file_url = f"{minio_endpoint}/{bucket_name}/{file_key}"
+                logger.info("[UPLOAD_SINGLE:MINIO_OK] Uploaded to MinIO: %s", file_url)
+            except Exception as minio_err:
+                logger.warning("[UPLOAD_SINGLE:MINIO_WARN] Primary put_object failed (%s). Retrying with bucket creation...", minio_err)
+                try:
+                    s3_client.create_bucket(Bucket=bucket_name)
+                    s3_client.put_object(
+                        Bucket=bucket_name,
+                        Key=file_key,
+                        Body=file_bytes,
+                        ContentType=file.content_type or 'application/octet-stream'
+                    )
+                    file_url = f"{minio_endpoint}/{bucket_name}/{file_key}"
+                    logger.info("[UPLOAD_SINGLE:MINIO_RETRY_OK] Uploaded to MinIO after bucket creation: %s", file_url)
+                except Exception as retry_err:
+                    logger.error("[UPLOAD_SINGLE:MINIO_ERROR] MinIO upload completely failed: %s", retry_err, exc_info=True)
+        else:
+            logger.warning("[UPLOAD_SINGLE:MINIO_SKIP] s3_client not available")
+
+        # 2. Supabase DB 기록
+        db_filename = f"[{label}] {original_filename}" if label else original_filename
+        formatted_help = f"[{label}] 상태: 제출 (즉시 업로드)"
+        inserted_id = None
+
+        if supabase:
+            try:
+                insert_data = {
+                    'company_name': target_company,
+                    'uploaded_by': email,
+                    'file_name': db_filename,
+                    'file_url': file_url,
+                    'help_text': formatted_help
+                }
+                res = supabase.table('company_files').insert(insert_data).execute()
+                if res.data and len(res.data) > 0:
+                    inserted_id = res.data[0].get('id')
+                logger.info("[UPLOAD_SINGLE:DB_OK] Supabase company_files inserted successfully. ID: %s", inserted_id)
+            except Exception as db_err:
+                logger.error("[UPLOAD_SINGLE:DB_ERROR] Supabase company_files insert failed: %s", db_err, exc_info=True)
+
+        now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+        return jsonify({
+            'success': True,
+            'id': inserted_id,
+            'company_name': target_company,
+            'field_name': field_name,
+            'label': label,
+            'file_name': original_filename,
+            'db_filename': db_filename,
+            'file_url': file_url,
+            'uploaded_at': now_str
+        })
+    except Exception as e:
+        logger.error("[UPLOAD_SINGLE:UNHANDLED_ERROR] %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': f'서버 처리 오류: {str(e)}'}), 500
+
 

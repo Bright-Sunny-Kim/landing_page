@@ -58,7 +58,9 @@ else:
     openai_client = None
 
 # Boto3 MinIO 초기화
-minio_endpoint = os.getenv("MINIO_ENDPOINT", "https://s3.hyean-dskim.com")
+from botocore.config import Config
+
+minio_endpoint = os.getenv("MINIO_ENDPOINT", "http://100.74.25.71:9000")
 minio_access_key = os.getenv("MINIO_ACCESS_KEY", "")
 minio_secret_key = os.getenv("MINIO_SECRET_KEY", "")
 
@@ -68,11 +70,13 @@ if minio_access_key and minio_secret_key:
         endpoint_url=minio_endpoint,
         aws_access_key_id=minio_access_key,
         aws_secret_access_key=minio_secret_key,
-        region_name='us-east-1'
+        region_name='us-east-1',
+        config=Config(connect_timeout=5, read_timeout=15, retries={'max_attempts': 2})
     )
 else:
     logger.warning("MINIO credentials missing in .env")
     s3_client = None
+
 
 
 def get_safe_path_name(name):

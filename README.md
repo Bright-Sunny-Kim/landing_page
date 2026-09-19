@@ -241,6 +241,52 @@ UBUNTU_PG_PASSWORD=your_password
 7. 백엔드(Python) 작성 시 print()는 일절 금지하며 Python 표준 logging 모듈(logger.info, logger.error)을 사용한다.
 8. 모든 단계마다 사용자가 Windows PowerShell에서 직접 실행해 볼 수 있는 구체적인 검증 명령어(CLI/Python)를 함께 제공한다.
 
+---
+
+## 📦 3. 데이터저장 및 DB화 (Data Storage & Database Pipeline)
+
+본 시스템은 고객이 제출하는 다양한 형태의 회계 증빙 및 결산 서류를 **1) 원본 보존**, **2) 체계적 DB 분류**, **3) 디지털 파싱 및 JSON 표준화**, **4) AI 감사조서 자동 연동**으로 이어지는 완전 자동화 데이터 레이크하우스 파이프라인으로 구축하고 있습니다.
+
+### 🌟 현재 구축 완료 현황
+1. **MinIO S3 객체 스토리지 연동 및 하이브리드 보관**:
+   - 사내 Ubuntu 서버의 대용량 스토리지(`/mnt/storage/minio_data`)와 MinIO S3 API(`company-uploads`, `audit-lakehouse` 버킷) 연동 완료
+   - 고객별(`company_name`), 회계연도/항목별(`year_folder`), 타임스탬프 기반 자동 경로 격리 저장
+2. **파트너 포털 실시간 즉시 업로드 (Instant Upload)**:
+   - 페이지 하단의 submit 버튼을 누를 필요 없이, 서류 항목을 클릭하고 파일을 선택(열기)하는 즉시 비동기(AJAX `/api/upload-single-file`)로 MinIO 및 Supabase DB에 실시간 저장
+   - 실시간 업로드 스피너 피드백, 서류 칩 자동 완료 처리, 진도율(%) 실시간 계산
+   - 최근 제출 서류 목록 테이블에 실시간 행 추가 및 MinIO 원본 다운로드 링크 연동
+
+---
+
+### 🗺️ 향후 추가 개발 로드맵
+
+```text
+[ 1단계: 만능 파일 파서 엔진 구축 ]
+  • xlsx, xls, csv: 시트별 표, 계정과목, 차변/대변/잔액 수치 정밀 추출
+  • pdf: 세무조정계산서/감사보고서의 텍스트 및 표 좌표 디지털화
+  • png, jpg: 영수증, 통장 사본, 등기부등본의 AI OCR 글자 인식
+  • zip: 자동 압축 해제 후 내부 파일들에 대한 재귀 파싱 처리
+        │
+        ▼
+[ 2단계: 표준 JSON 규격화 및 DB 버전 관리 ]
+  • 파싱된 데이터를 일관된 형식의 [표준 JSON 파일]로 생성하여 MinIO에 저장
+  • Supabase `company_files` 테이블에 [고객별 / 연도별 / 항목별 / 업로드회차(1차, 2차)] 메타데이터 저장
+  • 수정본 재업로드 시 버전(Version) 이력 관리 및 변경점 추적
+        │
+        ▼
+[ 3단계: AI 감사 엔진 & 감사조서 자동 연동 ]
+  • 파싱된 JSON 데이터를 감사 엔진(`core/audit_engine.py`)에 주입
+  • 재무제표 대차 무결성 검증, 전기 대비 증감 분석, ISA 240 이상전표 탐지 자동 수행
+  • OpenAI API를 통한 계정별 위험 평가 및 K-GAAP 감사 주석 초안 10초 만에 자동 완성
+        │
+        ▼
+[ 4단계: 우분투 운영 서버 동기화 및 무중단 배포 ]
+  • GitHub 배포 파이프라인을 통해 우분투 서버(`hyean-portal`)에 변경사항 동기화
+  • `hyean-dskim.com` 실도메인 서비스 무중단 운영
+
+---
+
+
 # 프로젝트명
 
 Hyean CPA Audit Hub - DSD Financial Reporting & Notes Automation
