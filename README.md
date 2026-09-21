@@ -196,6 +196,16 @@ UBUNTU_PG_PASSWORD=your_password
     - 파일 Drag & Drop 또는 파일 선택 완료 시 팝업창(미제출 서류 목록)에서 해당 항목 즉시 제거 (`completed` 자동 숨김) 및 `localStorage` 동기화
     - 진도율 프로그레스 바(%) 및 미제출 건수 뱃지 실시간 차감 갱신, 최근 제출 목록 상단 실시간 행 추가, 드롭존 상태 자동 리셋
 
+- [x] **Phase 9. 고객사 포털 감사 기준연도(당해연도) 다중 연도 아키텍처 & 사내 우분투 MinIO 서버 연도별 스토리지 동기화** (완료):
+  - **감사 기준연도 드롭다운 셀렉터 (`templates/company.html`)**: 포털 우측 상단에 `2026`, `2025`, `2024`, `2023` 기준연도 선택기 배치 및 URL 파라미터(`fiscal_year`) 기반 실시간 전환.
+  - **사내 우분투 서버(MinIO S3) 연도별 물리적 스토리지 저장 구조 확립 (`blueprints/api.py`)**:
+    - 업로드 시 `{회사명}/{기준연도}/Temp/{Temp_L or Temp_P}/{timestamp}_{field}_{filename}` 경로로 연도별 물리적 격리 저장.
+    - 영구 감사문서(`P-File`)는 `{회사명}/P-File/` 경로에 공통 저장.
+  - **연도별 제출 목록 & 진도율(%) & 미제출 칩 독립 동기화**:
+    - `GET /api/company/recent-submissions/<company>`에 `fiscal_year` 필터링 적용.
+    - 우분투 서버 물리 파일 실존 검증(`check_storage_file_exists`)을 통해 유령 파일 원천 차단.
+  - **회사기본사항(P-File) 연도 전환 시 영구 완료 상태 보존**:
+    - P-File(정관, 등기부등본, 주주명부 등)은 연도를 전환하더라도 초기화되지 않고 모든 연도에서 공통 완료 상태 유지.
 
 ---
 

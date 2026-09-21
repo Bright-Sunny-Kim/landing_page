@@ -26,12 +26,16 @@
     <!-- [NEW] 자료제출 팝오버: 선택 기반 즉시 업로드 및 제출 완료 실시간 동기화 스크립트 -->
     <script>
         const currentCompanyName = {{ company_name|tojson }};
+        const currentFiscalYear = {{ (fiscal_year or '2025')|tojson }};
+        const serverInitialFiles = {{ (history_files or [])|tojson }};
         let currentSelectedDoc = null; // { key, name, category, title }
         const queuedDocFiles = {}; // key -> File
 
         function getNotApplicableDocs() {
             try {
-                return JSON.parse(localStorage.getItem('heyan_na_docs_' + currentCompanyName) || localStorage.getItem('heyan_na_docs') || '[]');
+                const pfileNA = JSON.parse(localStorage.getItem('heyan_na_pfile_' + currentCompanyName) || '[]');
+                const writtenNA = JSON.parse(localStorage.getItem('heyan_na_written_' + currentCompanyName + '_' + currentFiscalYear) || '[]');
+                return Array.from(new Set([...pfileNA, ...writtenNA]));
             } catch (e) {
                 return [];
             }
@@ -39,13 +43,22 @@
 
         function saveNotApplicableDocs(list) {
             try {
-                localStorage.setItem('heyan_na_docs_' + currentCompanyName, JSON.stringify(list));
+                const pfileNA = list.filter(k => k && k.startsWith('pfile'));
+                const writtenNA = list.filter(k => k && !k.startsWith('pfile'));
+
+                const existingPfileNA = JSON.parse(localStorage.getItem('heyan_na_pfile_' + currentCompanyName) || '[]');
+                const mergedPfileNA = Array.from(new Set([...existingPfileNA, ...pfileNA]));
+
+                localStorage.setItem('heyan_na_pfile_' + currentCompanyName, JSON.stringify(mergedPfileNA));
+                localStorage.setItem('heyan_na_written_' + currentCompanyName + '_' + currentFiscalYear, JSON.stringify(writtenNA));
             } catch (e) {}
         }
 
         function getCompletedDocs() {
             try {
-                return JSON.parse(localStorage.getItem('heyan_completed_docs_' + currentCompanyName) || localStorage.getItem('heyan_completed_docs') || '[]');
+                const pfileList = JSON.parse(localStorage.getItem('heyan_completed_pfile_' + currentCompanyName) || '[]');
+                const writtenList = JSON.parse(localStorage.getItem('heyan_completed_written_' + currentCompanyName + '_' + currentFiscalYear) || '[]');
+                return Array.from(new Set([...pfileList, ...writtenList]));
             } catch (e) {
                 return [];
             }
@@ -53,7 +66,14 @@
 
         function saveCompletedDocs(list) {
             try {
-                localStorage.setItem('heyan_completed_docs_' + currentCompanyName, JSON.stringify(list));
+                const pfileList = list.filter(k => k && k.startsWith('pfile'));
+                const writtenList = list.filter(k => k && !k.startsWith('pfile'));
+
+                const existingPfile = JSON.parse(localStorage.getItem('heyan_completed_pfile_' + currentCompanyName) || '[]');
+                const mergedPfile = Array.from(new Set([...existingPfile, ...pfileList]));
+
+                localStorage.setItem('heyan_completed_pfile_' + currentCompanyName, JSON.stringify(mergedPfile));
+                localStorage.setItem('heyan_completed_written_' + currentCompanyName + '_' + currentFiscalYear, JSON.stringify(writtenList));
             } catch (e) {}
         }
 
@@ -273,8 +293,9 @@
                 formData.append('field_name', doc.key);
                 formData.append('label', doc.name);
                 formData.append('company_name', currentCompanyName);
+                formData.append('fiscal_year', currentFiscalYear);
 
-                const response = await fetch('/api/upload-single-file', {
+                const response = await fetch('/api/company/upload-single-file', {
                     method: 'POST',
                     body: formData
                 });
@@ -302,11 +323,11 @@
                 // 3. 진도율 및 미제출 카운트 실시간 갱신
                 updatePopoverPendingCounts();
 
-                // 4. 최근 제출 서류 목록 테이블에 즉시 추가 (실제 MinIO 다운로드 링크 연동)
-                appendRecentSubmissionRow(doc.category, doc.name, file.name, result.file_url, result.uploaded_at);
+                // 4. 우분투 서버에서 최신 5개 제출 목록 실시간 동기화
+                await loadRecentSubmissions();
 
                 // 5. 성공 알림 및 드롭존 초기화
-                alert(`🎉 [${doc.category}] "${doc.name}" 파일이 MinIO 서버에 성공적으로 업로드되었습니다!`);
+                alert(`🎉 [${doc.category}] "${doc.name}" 파일이 MinIO 서버에 성공적으로 업로드되었습니다! (${currentFiscalYear}년도)`);
                 cancelSelectedDoc();
 
             } catch (error) {
@@ -314,6 +335,124 @@
                 alert(`❌ 업로드 실패: ${error.message}`);
                 if (dropzoneTitle) dropzoneTitle.innerHTML = originalTitle;
                 if (dropzoneDesc) dropzoneDesc.innerHTML = originalDesc;
+            }
+        };
+
+        function mapFileToDocKey(fileName, helpText) {
+            const text = ((fileName || '') + ' ' + (helpText || '')).toLowerCase();
+            
+            // P-File 키 직접 매핑 (pfile_01 ~ pfile_17, pbc-p-01 ~ pbc-p-17)
+            for (let i = 1; i <= 17; i++) {
+                const pad = String(i).padStart(2, '0');
+                if (text.includes('pfile_' + pad) || text.includes('pbc-p-' + pad)) {
+                    return 'pfile_' + pad;
+                }
+            }
+
+            // P-File 키워드 매핑
+            if (text.includes('정관')) return 'pfile_01';
+            if (text.includes('등기부')) return 'pfile_02';
+            if (text.includes('주주명부') || text.includes('지분도')) return 'pfile_03';
+            if (text.includes('의사록') || text.includes('주총') || text.includes('이사회')) return 'pfile_04';
+            if (text.includes('직제') || text.includes('위임전결') || text.includes('업무분장') || text.includes('조직도')) return 'pfile_05';
+            if (text.includes('내부회계')) return 'pfile_06';
+            if (text.includes('사규') || text.includes('규정집')) return 'pfile_07';
+            if (text.includes('erp') || text.includes('회계시스템') || text.includes('사양서')) return 'pfile_08';
+            if (text.includes('사업자등록증') || text.includes('인허가')) return 'pfile_08';
+            if (text.includes('차입금') || text.includes('사채')) return 'pfile_09';
+            if (text.includes('임대차') || text.includes('리스') || text.includes('주요 계약서')) return 'pfile_10';
+            if (text.includes('부동산') || text.includes('토지') || text.includes('건물')) return 'pfile_11';
+            if (text.includes('국책과제') || text.includes('기술이전')) return 'pfile_12';
+            if (text.includes('담보') || text.includes('보증')) return 'pfile_13';
+            if (text.includes('법인세') || text.includes('세무조정')) return 'pfile_14';
+            if (text.includes('이월결손금') || text.includes('세액공제')) return 'pfile_15';
+            if (text.includes('세무조사')) return 'pfile_16';
+            if (text.includes('감사보고서')) return 'pfile_17';
+            
+            // 서면자료 매핑
+            if (text.includes('시산표') || text.includes('합계잔액') || text.includes('_tb_')) return 'tb';
+            if (text.includes('재무상태표') || text.includes('대차대조표') || text.includes('_bs_')) return 'bs';
+            if (text.includes('손익계산서') || text.includes('손익') || text.includes('_is_')) return 'is';
+            if (text.includes('분개장') || text.includes('_je_')) return 'je';
+            if (text.includes('계정별원장') || text.includes('계정별') || text.includes('_gl_')) return 'gl';
+            if (text.includes('거래처원장') || text.includes('거래처') || text.includes('_sl_')) return 'sl';
+            if (text.includes('유형자산') || text.includes('감가상각') || text.includes('_fa_')) return 'fa';
+            if (text.includes('부가가치세') || text.includes('부가세') || text.includes('_vat_')) return 'vat';
+            if (text.includes('급여') || text.includes('원천징수') || text.includes('_payroll_')) return 'payroll';
+            if (text.includes('퇴직금') || text.includes('퇴직급여') || text.includes('_severance_')) return 'severance';
+            if (text.includes('재고자산') || text.includes('수불부') || text.includes('_inv_')) return 'inv';
+            
+            return null;
+        }
+
+        // 우분투 서버로부터 최근 제출 서류 목록(최신 5건) 실시간 조회 및 렌더링
+        window.loadRecentSubmissions = async function() {
+            try {
+                const res = await fetch(`/api/company/recent-submissions/${encodeURIComponent(currentCompanyName)}?fiscal_year=${encodeURIComponent(currentFiscalYear)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.success || !data.files) return;
+
+                // 서버의 실존 파일 목록과 진도율/팝업 칩 실시간 동기화 (기존 목록에 추가 병합)
+                const currentCompleted = getCompletedDocs();
+                (data.files || []).forEach(f => {
+                    const key = mapFileToDocKey(f.file_name, f.help_text);
+                    if (key && !currentCompleted.includes(key)) {
+                        currentCompleted.push(key);
+                    }
+                });
+                saveCompletedDocs(currentCompleted);
+                updatePopoverPendingCounts();
+
+                const tbody = document.getElementById('recent-submissions-tbody');
+                if (!tbody) return;
+
+                if (data.files.length === 0) {
+                    tbody.innerHTML = `
+                        <tr id="empty-submissions-row">
+                            <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 25px;">제출된 서류 내역이 없습니다. 상단 드롭존에서 서류를 선택하여 업로드하면 즉시 서버에 저장됩니다.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                data.files.slice(0, 5).forEach(f => {
+                    const fileName = f.file_name || '파일명 없음';
+                    const isPFile = fileName.includes('P-File') || fileName.includes('PBC-P') || (f.help_text && f.help_text.includes('회사기본사항'));
+                    const catClass = isPFile ? 'pfile' : 'written';
+                    const category = isPFile ? '회사기본사항' : '서면제출자료';
+
+                    let docTitle = fileName;
+                    let pureFileName = fileName;
+                    if (fileName.includes(']')) {
+                        const parts = fileName.split(']');
+                        docTitle = parts[0].replace('[', '') + ']';
+                        pureFileName = parts.slice(1).join(']').trim() || fileName;
+                    }
+
+                    const downloadUrl = f.id ? `/api/company/download/${f.id}` : (f.public_url && f.public_url !== '#' ? f.public_url : '#');
+                    const downloadAction = (downloadUrl !== '#')
+                        ? `<a href="${downloadUrl}" class="btn-table-action download">다운로드</a>`
+                        : `<a href="javascript:void(0);" class="btn-table-action download" onclick="alert('제출 파일: ${fileName}')">다운로드</a>`;
+
+                    html += `
+                        <tr>
+                            <td class="cell-date">${f.created_at || '-'}</td>
+                            <td class="cell-category">
+                                <span class="table-chip ${catClass}">${category}</span>
+                                ${docTitle}
+                            </td>
+                            <td class="cell-filename" title="${pureFileName}">${pureFileName}</td>
+                            <td class="cell-status"><span class="status-tag success">${f.status || '접수완료'}</span></td>
+                            <td class="cell-action">${downloadAction}</td>
+                        </tr>
+                    `;
+                });
+
+                tbody.innerHTML = html;
+            } catch (err) {
+                console.warn("[RECENT_SUBMISSIONS:LOAD_WARN]", err);
             }
         };
 
@@ -358,10 +497,10 @@
                 tbody.appendChild(tr);
             }
 
-            // 상위 10건 유지
+            // 상위 5건 유지
             const rows = tbody.querySelectorAll('tr');
-            if (rows.length > 10) {
-                for (let i = 10; i < rows.length; i++) {
+            if (rows.length > 5) {
+                for (let i = 5; i < rows.length; i++) {
                     rows[i].remove();
                 }
             }
@@ -449,6 +588,12 @@
             });
         };
 
+        window.handleFiscalYearChange = function(selectedYear) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('fiscal_year', selectedYear);
+            window.location.href = url.toString();
+        };
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeAllSubmissionsModal();
@@ -457,7 +602,20 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
+            // 서버에서 렌더링된 실존 파일 목록(P-File 및 당해연도)과 즉시 동기화
+            if (Array.isArray(serverInitialFiles) && serverInitialFiles.length > 0) {
+                const initialCompleted = getCompletedDocs();
+                serverInitialFiles.forEach(f => {
+                    const key = mapFileToDocKey(f.file_name, f.help_text);
+                    if (key && !initialCompleted.includes(key)) {
+                        initialCompleted.push(key);
+                    }
+                });
+                saveCompletedDocs(initialCompleted);
+            }
+
             updatePopoverPendingCounts();
+            loadRecentSubmissions();
 
             // 드롭존 Drag & Drop 이벤트 바인딩
             const dropzone = document.getElementById('company-smart-dropzone');
@@ -588,16 +746,46 @@
         <main class="master-main-content" id="partner-main-content">
             <!-- 1. 자료 제출 홈 뷰 -->
             <div class="glass-card dashboard-card master-card" id="partner-home-view">
-            <header class="dashboard-header">
-                <div class="logo-container-company">
-                    <img src="/static/images/logo_light.png" alt="회계법인 혜안" class="logo-img">
-                    <span class="logo-text-portal">Partner</span>
+            <header class="dashboard-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 24px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                        <div class="logo-container-company">
+                            <img src="/static/images/logo_light.png" alt="회계법인 혜안" class="logo-img">
+                            <span class="logo-text-portal">Partner</span>
+                        </div>
+                        <div class="status-badge">
+                            <span class="pulse-dot"></span>
+                            <span>인증된 기업 파트너</span>
+                        </div>
+                    </div>
+                    <h1 id="dashboard-heading" style="margin: 0;"><span class="company-highlight">{{ company_name }}</span> 전용 공간</h1>
                 </div>
-                <div class="status-badge">
-                    <span class="pulse-dot"></span>
-                    <span>인증된 기업 파트너</span>
+
+                <!-- [NEW] 맨 오른쪽 위: 기준 사업연도 (당해연도 감사 기준) 드롭다운 셀렉트 -->
+                <div class="target-fiscal-year-badge" style="display: inline-flex; align-items: center; gap: 12px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); padding: 6px 14px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);">
+                    <div style="background: rgba(99, 102, 241, 0.25); border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                        <label for="company-fiscal-year-select" style="font-size: 0.7rem; font-weight: 600; color: #a5b4fc; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; margin-bottom: 2px;">기준 사업연도</label>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <select id="company-fiscal-year-select" onchange="handleFiscalYearChange(this.value)" style="appearance: none; -webkit-appearance: none; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 6px; color: #60a5fa; font-size: 0.92rem; font-weight: 800; padding: 4px 26px 4px 10px; cursor: pointer; outline: none; transition: border-color 0.2s;">
+                                <option value="2026" {{ 'selected' if fiscal_year == '2026' else '' }} style="background: #1e1e2f; color: #fff;">2026년도 결산·감사</option>
+                                <option value="2025" {{ 'selected' if (not fiscal_year or fiscal_year == '2025') else '' }} style="background: #1e1e2f; color: #fff;">2025년도 결산·감사</option>
+                                <option value="2024" {{ 'selected' if fiscal_year == '2024' else '' }} style="background: #1e1e2f; color: #fff;">2024년도 결산·감사</option>
+                                <option value="2023" {{ 'selected' if fiscal_year == '2023' else '' }} style="background: #1e1e2f; color: #fff;">2023년도 결산·감사</option>
+                            </select>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; right: 8px; pointer-events: none;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
-                <h1 id="dashboard-heading"><span class="company-highlight">TestCompany</span> 전용 공간</h1>
             </header>
             
             
@@ -662,16 +850,16 @@
                                 <span class="popover-section-count" id="pfile-pending-count">미제출 목록</span>
                             </div>
                             <div class="popover-list-grid" id="pending-pfile-list">
-                                <div class="popover-doc-chip" data-doc-key="pfile_01" onclick="selectDocForUpload(event, 'pfile_01', '[PBC-P-01] 최신 정관 (신·구 대비표)', '회사기본사항')" title="[PBC-P-01] 최신 정관 (신·구 조문 대비표 및 부칙 포함 전문)"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-01] 최신 정관 (신·구 대비표)</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_01')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_02" onclick="selectDocForUpload(event, 'pfile_02', '[PBC-P-02] 법인 등기부등본 (말소포함)', '회사기본사항')" title="[PBC-P-02] 법인 등기부등본 (말소사항 포함 발급일 1개월 이내 전량)"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-02] 법인 등기부등본 (말소포함)</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_02')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_03" onclick="selectDocForUpload(event, 'pfile_03', '[PBC-P-03] 주주명부 및 지분도', '회사기본사항')" title="[PBC-P-03] 주주명부 및 특수관계자 지분 구조도 (지분율 및 주식수 상세)"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-03] 주주명부 및 지분도</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_03')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_04" onclick="selectDocForUpload(event, 'pfile_04', '[PBC-P-04] 3개년 주총/이사회 의사록', '회사기본사항')" title="[PBC-P-04] 과거 3개년 정기/임시 주주총회 및 이사회 의사록 일체"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-04] 3개년 주총/이사회 의사록</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_04')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_05" onclick="selectDocForUpload(event, 'pfile_05', '[PBC-P-05] 직제/위임전결규정', '회사기본사항')" title="[PBC-P-05] 직제규정, 위임전결규정 및 업무분장표"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-05] 직제/위임전결규정</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_05')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_06" onclick="selectDocForUpload(event, 'pfile_06', '[PBC-P-06] 내부회계관리제도 규정', '회사기본사항')" title="[PBC-P-06] 내부회계관리제도 설계/운영 평가 보고서 및 관련 사규"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-06] 내부회계관리제도 규정</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_06')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_07" onclick="selectDocForUpload(event, 'pfile_07', '[PBC-P-07] ERP/회계시스템 개요', '회사기본사항')" title="[PBC-P-07] ERP 및 회계정보시스템 개요 (접근통제 및 백업 정책)"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-07] ERP/회계시스템 개요</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_07')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_08" onclick="selectDocForUpload(event, 'pfile_08', '[PBC-P-08] 사업자등록증/인허가증', '회사기본사항')" title="[PBC-P-08] 사업자등록증 및 인허가증, 특허/상표권 증명 일체"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-08] 사업자등록증/인허가증</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_08')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_09" onclick="selectDocForUpload(event, 'pfile_09', '[PBC-P-09] 주요 계약서 (임대차 등)', '회사기본사항')" title="[PBC-P-09] 주요 사업/임대차/라이선스/금융 차입 계약서 원본 사본"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-09] 주요 계약서 (임대차 등)</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_09')">해당없음</button></div>
-                                <div class="popover-doc-chip" data-doc-key="pfile_10" onclick="selectDocForUpload(event, 'pfile_10', '[PBC-P-10] 계열/관계회사 현황', '회사기본사항')" title="[PBC-P-10] 계열회사 및 관계회사 현황표, 출자명세서"><span class="chip-status">선택</span><span class="chip-name">[PBC-P-10] 계열/관계회사 현황</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_10')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_01" onclick="selectDocForUpload(event, 'pfile_01', '최신 정관 (신·구 대비표)', '회사기본사항')" title="최신 정관 (신·구 조문 대비표 및 부칙 포함 전문)"><span class="chip-status">선택</span><span class="chip-name">최신 정관 (신·구 대비표)</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_01')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_02" onclick="selectDocForUpload(event, 'pfile_02', '법인 등기부등본 (말소포함)', '회사기본사항')" title="법인 등기부등본 (말소사항 포함 발급일 1개월 이내 전량)"><span class="chip-status">선택</span><span class="chip-name">법인 등기부등본 (말소포함)</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_02')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_03" onclick="selectDocForUpload(event, 'pfile_03', '주주명부 및 지분도', '회사기본사항')" title="주주명부 및 특수관계자 지분 구조도 (지분율 및 주식수 상세)"><span class="chip-status">선택</span><span class="chip-name">주주명부 및 지분도</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_03')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_04" onclick="selectDocForUpload(event, 'pfile_04', '3개년 주총/이사회 의사록', '회사기본사항')" title="과거 3개년 정기/임시 주주총회 및 이사회 의사록 일체"><span class="chip-status">선택</span><span class="chip-name">3개년 주총/이사회 의사록</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_04')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_05" onclick="selectDocForUpload(event, 'pfile_05', '직제/위임전결규정', '회사기본사항')" title="직제규정, 위임전결규정 및 업무분장표"><span class="chip-status">선택</span><span class="chip-name">직제/위임전결규정</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_05')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_06" onclick="selectDocForUpload(event, 'pfile_06', '내부회계관리제도 규정', '회사기본사항')" title="내부회계관리제도 설계/운영 평가 보고서 및 관련 사규"><span class="chip-status">선택</span><span class="chip-name">내부회계관리제도 규정</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_06')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_07" onclick="selectDocForUpload(event, 'pfile_07', 'ERP/회계시스템 개요', '회사기본사항')" title="ERP 및 회계정보시스템 개요 (접근통제 및 백업 정책)"><span class="chip-status">선택</span><span class="chip-name">ERP/회계시스템 개요</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_07')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_08" onclick="selectDocForUpload(event, 'pfile_08', '사업자등록증/인허가증', '회사기본사항')" title="사업자등록증 및 인허가증, 특허/상표권 증명 일체"><span class="chip-status">선택</span><span class="chip-name">사업자등록증/인허가증</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_08')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_09" onclick="selectDocForUpload(event, 'pfile_09', '주요 계약서 (임대차 등)', '회사기본사항')" title="주요 사업/임대차/라이선스/금융 차입 계약서 원본 사본"><span class="chip-status">선택</span><span class="chip-name">주요 계약서 (임대차 등)</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_09')">해당없음</button></div>
+                                <div class="popover-doc-chip" data-doc-key="pfile_10" onclick="selectDocForUpload(event, 'pfile_10', '계열/관계회사 현황', '회사기본사항')" title="계열회사 및 관계회사 현황표, 출자명세서"><span class="chip-status">선택</span><span class="chip-name">계열/관계회사 현황</span><button type="button" class="btn-chip-na" onclick="markDocAsNotApplicable(event, 'pfile_10')">해당없음</button></div>
                             </div>
                         </div>
 
@@ -788,7 +976,7 @@
                             </thead>
                             <tbody id="recent-submissions-tbody">
                                 {% if history_files and history_files|length > 0 %}
-                                    {% for f in history_files[:10] %}
+                                    {% for f in history_files[:5] %}
                                     <tr>
                                         <td class="cell-date">{{ f.created_at[:16]|replace('T', ' ') if f.created_at else '-' }}</td>
                                         <td class="cell-category">
@@ -800,7 +988,9 @@
                                         <td class="cell-filename" title="{{ f.file_name }}">{{ f.file_name.split('] ')[1] if '] ' in (f.file_name or '') else (f.file_name or '-') }}</td>
                                         <td class="cell-status"><span class="status-tag success">{{ f.status or '접수완료' }}</span></td>
                                         <td class="cell-action">
-                                            {% if f.public_url and f.public_url != '#' %}
+                                            {% if f.id %}
+                                            <a href="/api/company/download/{{ f.id }}" class="btn-table-action download">다운로드</a>
+                                            {% elif f.public_url and f.public_url != '#' %}
                                             <a href="{{ f.public_url }}" target="_blank" class="btn-table-action download">다운로드</a>
                                             {% else %}
                                             <a href="javascript:void(0);" class="btn-table-action download" onclick="alert('제출 파일: {{ f.file_name }}')">다운로드</a>
@@ -1712,56 +1902,34 @@
                             </tr>
                         </thead>
                         <tbody id="modal-all-submissions-tbody">
-                            <!-- 전체 서류 렌더링 -->
-                            <tr>
-                                <td class="cell-date">2026-09-18 14:32</td>
-                                <td class="cell-category"><span class="table-chip pfile">회사기본사항</span> [PBC-P-01] 최신 정관</td>
-                                <td class="cell-filename">2026_정관전문_최종.pdf</td>
-                                <td class="cell-status"><span class="status-tag success">접수완료</span></td>
-                                <td class="cell-action"><a href="javascript:void(0);" class="btn-table-action download">다운로드</a></td>
-                            </tr>
-                            <tr>
-                                <td class="cell-date">2026-09-18 14:30</td>
-                                <td class="cell-category"><span class="table-chip pfile">회사기본사항</span> [PBC-P-02] 등기부등본</td>
-                                <td class="cell-filename">법인등기부_말소포함.pdf</td>
-                                <td class="cell-status"><span class="status-tag success">접수완료</span></td>
-                                <td class="cell-action"><a href="javascript:void(0);" class="btn-table-action download">다운로드</a></td>
-                            </tr>
-                            <tr>
-                                <td class="cell-date">2026-09-17 11:15</td>
-                                <td class="cell-category"><span class="table-chip written">서면제출자료</span> 합계잔액시산표</td>
-                                <td class="cell-filename">2025_결산_합계잔액시산표.xlsx</td>
-                                <td class="cell-status"><span class="status-tag audit">검토중</span></td>
-                                <td class="cell-action"><a href="javascript:void(0);" class="btn-table-action download">다운로드</a></td>
-                            </tr>
-                            <tr>
-                                <td class="cell-date">2026-09-17 11:10</td>
-                                <td class="cell-category"><span class="table-chip written">서면제출자료</span> 손익계산서</td>
-                                <td class="cell-filename">2025_손익계산서_확정.xlsx</td>
-                                <td class="cell-status"><span class="status-tag success">접수완료</span></td>
-                                <td class="cell-action"><a href="javascript:void(0);" class="btn-table-action download">다운로드</a></td>
-                            </tr>
-                            <tr>
-                                <td class="cell-date">2026-09-17 11:05</td>
-                                <td class="cell-category"><span class="table-chip written">서면제출자료</span> 재무상태표</td>
-                                <td class="cell-filename">2025_재무상태표_확정.xlsx</td>
-                                <td class="cell-status"><span class="status-tag success">접수완료</span></td>
-                                <td class="cell-action"><a href="javascript:void(0);" class="btn-table-action download">다운로드</a></td>
-                            </tr>
-                            <tr>
-                                <td class="cell-date">2026-09-17 10:55</td>
-                                <td class="cell-category"><span class="table-chip written">서면제출자료</span> 분개장</td>
-                                <td class="cell-filename">2025_전표분개장_전체.csv</td>
-                                <td class="cell-status"><span class="status-tag success">접수완료</span></td>
-                                <td class="cell-action"><a href="javascript:void(0);" class="btn-table-action download">다운로드</a></td>
-                            </tr>
-                            <tr>
-                                <td class="cell-date">2026-09-17 10:50</td>
-                                <td class="cell-category"><span class="table-chip written">서면제출자료</span> 계정별원장</td>
-                                <td class="cell-filename">2025_계정별원장_전체.xlsx</td>
-                                <td class="cell-status"><span class="status-tag success">접수완료</span></td>
-                                <td class="cell-action"><a href="javascript:void(0);" class="btn-table-action download">다운로드</a></td>
-                            </tr>
+                            {% if history_files and history_files|length > 0 %}
+                                {% for f in history_files %}
+                                <tr>
+                                    <td class="cell-date">{{ f.created_at[:16]|replace('T', ' ') if f.created_at else '-' }}</td>
+                                    <td class="cell-category">
+                                        <span class="table-chip {{ 'pfile' if 'P-File' in (f.file_name or '') or 'PBC-P' in (f.file_name or '') else 'written' }}">
+                                            {{ '회사기본사항' if 'P-File' in (f.file_name or '') or 'PBC-P' in (f.file_name or '') else '서면제출자료' }}
+                                        </span>
+                                        {{ f.file_name.split(']')[0] + ']' if ']' in (f.file_name or '') else (f.file_name or '서류') }}
+                                    </td>
+                                    <td class="cell-filename" title="{{ f.file_name }}">{{ f.file_name.split('] ')[1] if '] ' in (f.file_name or '') else (f.file_name or '-') }}</td>
+                                    <td class="cell-status"><span class="status-tag success">{{ f.status or '접수완료' }}</span></td>
+                                    <td class="cell-action">
+                                        {% if f.id %}
+                                        <a href="/api/company/download/{{ f.id }}" class="btn-table-action download">다운로드</a>
+                                        {% elif f.public_url and f.public_url != '#' %}
+                                        <a href="{{ f.public_url }}" target="_blank" class="btn-table-action download">다운로드</a>
+                                        {% else %}
+                                        <a href="javascript:void(0);" class="btn-table-action download" onclick="alert('제출 파일: {{ f.file_name }}')">다운로드</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 30px;">해당 감사연도에 제출된 서류 내역이 없습니다.</td>
+                                </tr>
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>

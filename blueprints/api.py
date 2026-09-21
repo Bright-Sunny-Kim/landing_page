@@ -4,10 +4,12 @@ import csv
 import json
 import time
 import re
+import io
+import mimetypes
 import datetime
 import requests
 from io import StringIO
-from flask import Blueprint, request, jsonify, session, Response, stream_with_context, send_from_directory, current_app
+from flask import Blueprint, request, jsonify, session, Response, stream_with_context, send_from_directory, send_file, current_app
 from werkzeug.utils import secure_filename
 from core.extensions import (
     supabase, openai_client, s3_client, minio_endpoint, get_safe_path_name, MASTER_EMAIL, logger
@@ -657,6 +659,7 @@ def get_notion_calendar_ics():
 
 
 @api_bp.route('/api/upload-single-file', methods=['POST'])
+@api_bp.route('/api/company/upload-single-file', methods=['POST'])
 def upload_single_file():
     """
     개별 서류 항목 선택 시 파일을 MinIO와 Supabase DB에 즉시 비동기 업로드하는 엔드포인트
@@ -688,21 +691,22 @@ def upload_single_file():
 
         field_name = request.form.get('field_name', 'other_current').strip()
         label = request.form.get('label', '').strip()
+        fiscal_year = request.form.get('fiscal_year', '').strip() or '2025'
         original_filename = os.path.basename(file.filename)
         safe_filename = get_safe_path_name(original_filename)
         safe_company = get_safe_path_name(target_company)
 
-        # 폴더 구분자 산출
+        # 기준 사업연도별 폴더 구분자 산출 (예: 혜안_임시/2025/Temp/Temp_L)
         if field_name.startswith('pfile_'):
-            year_folder = 'P-File'
+            year_folder = f"{fiscal_year}/P-File"
         elif 'finance' in field_name:
-            year_folder = 'Ext_F'
+            year_folder = f"{fiscal_year}/Ext_F"
         elif 'partner' in field_name:
-            year_folder = 'Ext_C'
+            year_folder = f"{fiscal_year}/Ext_C"
         elif 'current' in field_name:
-            year_folder = 'Temp/Temp_P'
+            year_folder = f"{fiscal_year}/Temp/Temp_P"
         else:
-            year_folder = 'Temp/Temp_L'
+            year_folder = f"{fiscal_year}/Temp/Temp_L"
 
         timestamp = int(time.time() * 1000)
         file_key = f"{safe_company}/{year_folder}/{timestamp}_{field_name}_{safe_filename}"
@@ -710,8 +714,8 @@ def upload_single_file():
         file_url = None
         bucket_name = 'company-uploads'
 
-        logger.info("[UPLOAD_SINGLE:START] User=%s, Company=%s, Field=%s (%s), Filename=%s, Size=%d bytes",
-                    email, target_company, field_name, label, original_filename, len(file_bytes))
+        logger.info("[UPLOAD_SINGLE:START] User=%s, Company=%s, Year=%s, Field=%s (%s), Filename=%s, Size=%d bytes, S3Key=%s",
+                    email, target_company, fiscal_year, field_name, label, original_filename, len(file_bytes), file_key)
 
         # 1. MinIO 업로드
         if s3_client:
@@ -743,7 +747,7 @@ def upload_single_file():
 
         # 2. Supabase DB 기록
         db_filename = f"[{label}] {original_filename}" if label else original_filename
-        formatted_help = f"[{label}] 상태: 제출 (즉시 업로드)"
+        formatted_help = f"[{fiscal_year}년도] [{label}] 상태: 제출 (즉시 업로드)"
         inserted_id = None
 
         if supabase:
@@ -777,5 +781,286 @@ def upload_single_file():
     except Exception as e:
         logger.error("[UPLOAD_SINGLE:UNHANDLED_ERROR] %s", e, exc_info=True)
         return jsonify({'success': False, 'error': f'서버 처리 오류: {str(e)}'}), 500
+
+
+def check_storage_file_exists(file_url: str) -> bool:
+    """
+    우분투 MinIO S3 또는 스토리지에 실제 물리적 파일이 존재하는지 빠르게 검증하는 헬퍼 함수
+    """
+    if not file_url:
+        return False
+
+    is_minio_url = (minio_endpoint in file_url) or ('company-uploads/' in file_url) or ('audit-lakehouse/' in file_url)
+
+    # 1. MinIO S3 head_object 확인
+    if s3_client:
+        s3_key = None
+        bucket_to_use = 'company-uploads'
+        if 'company-uploads/' in file_url:
+            s3_key = file_url.split('company-uploads/')[-1]
+            bucket_to_use = 'company-uploads'
+        elif 'audit-lakehouse/' in file_url:
+            s3_key = file_url.split('audit-lakehouse/')[-1]
+            bucket_to_use = 'audit-lakehouse'
+        elif file_url.startswith('http'):
+            path_part = file_url.replace(minio_endpoint, '').lstrip('/')
+            parts = path_part.split('/', 1)
+            if len(parts) == 2:
+                bucket_to_use, s3_key = parts[0], parts[1]
+            else:
+                s3_key = path_part
+        else:
+            s3_key = file_url
+
+        if s3_key:
+            try:
+                s3_client.head_object(Bucket=bucket_to_use, Key=s3_key)
+                return True
+            except Exception:
+                if bucket_to_use != 'audit-lakehouse':
+                    try:
+                        s3_client.head_object(Bucket='audit-lakehouse', Key=s3_key)
+                        return True
+                    except Exception:
+                        pass
+            if is_minio_url:
+                # MinIO S3 경로인데 오브젝트가 없으면 즉시 False 반환 (0.01초 내 완료)
+                return False
+
+    # 2. Supabase Storage 또는 일반 외부 HTTP URL 확인
+    if not is_minio_url and file_url.startswith('http'):
+        try:
+            resp = requests.head(file_url, timeout=1)
+            if resp.status_code == 200:
+                return True
+        except Exception:
+            pass
+
+    return False
+
+
+@api_bp.route('/api/company/recent-submissions/<path:company_name>', methods=['GET'])
+@api_bp.route('/api/company/recent-submissions', methods=['GET'])
+def get_recent_submissions(company_name=None):
+    """
+    해당 고객사가 업로드한 최근 제출 서류 목록(최신 5건)을 실시간으로 반환하는 API
+    """
+    try:
+        target_company = company_name or request.args.get('company_name', '').strip()
+        if not target_company and 'company' in session:
+            target_company = session.get('company', '')
+
+        if not target_company:
+            logger.warning("[RECENT_SUBMISSIONS:WARN] Missing company_name")
+            return jsonify({'success': False, 'error': '회사명이 제공되지 않았습니다.'}), 400
+
+        target_year = request.args.get('fiscal_year', '').strip() or request.args.get('year', '').strip() or '2025'
+
+        logger.info("[RECENT_SUBMISSIONS:REQ] Fetching recent submissions for company: %s, fiscal_year: %s", target_company, target_year)
+
+        recent_files = []
+        if supabase:
+            try:
+                # DB 이력에서 최신순으로 조회 후, 우분투 서버에 실존하며 해당 감사연도(또는 P-File)인 파일만 최대 5건 선별
+                res = supabase.table('company_files').select('*').eq('company_name', target_company).order('created_at', desc=True).limit(100).execute()
+                raw_files = res.data or []
+
+                for f in raw_files:
+                    file_url_path = f.get('file_url')
+                    if not file_url_path:
+                        continue
+
+                    # 우분투 서버(MinIO S3/스토리지) 실존 여부 즉시 검증
+                    if not check_storage_file_exists(file_url_path):
+                        logger.debug("[RECENT_SUBMISSIONS:SKIP_GHOST] Skipping non-existing file: ID=%s, URL=%s", f.get('id'), file_url_path)
+                        continue
+
+                    fn = f.get('file_name', '')
+                    ht = f.get('help_text', '')
+
+                    # P-File (영구문서) 여부 확인
+                    is_pfile = ('P-File' in file_url_path) or ('pfile_' in file_url_path) or ('[PBC-P-' in fn) or ('회사기본사항' in ht)
+
+                    # 해당 연도 파일 여부 확인
+                    year_tag = f"[{target_year}년도]"
+                    year_path = f"/{target_year}/"
+                    is_this_year = (year_path in file_url_path) or (year_tag in ht)
+
+                    # 과거 연도 태그가 없던 레코드는 2025년도 기본 귀속
+                    if not is_this_year and not is_pfile:
+                        has_other_year = any(f"/{y}/" in file_url_path or f"[{y}년도]" in ht for y in ['2023', '2024', '2026', '2027', '2028', '2029', '2030'])
+                        if not has_other_year and target_year == '2025':
+                            is_this_year = True
+
+                    if not (is_pfile or is_this_year):
+                        continue
+
+                    public_url = '#'
+                    if file_url_path.startswith('http'):
+                        public_url = file_url_path
+                    else:
+                        try:
+                            public_url = supabase.storage.from_('company-uploads').get_public_url(file_url_path)
+                        except Exception:
+                            public_url = file_url_path
+
+                    # 날짜 포맷 정리 (예: 2026-09-21T16:00:00 -> 2026-09-21 16:00)
+                    created_at_raw = f.get('created_at', '')
+                    formatted_date = ''
+                    if created_at_raw:
+                        formatted_date = created_at_raw.replace('T', ' ')[:16]
+
+                    raw_file_name = f.get('file_name', '파일명 없음')
+                    clean_file_name = re.sub(r'\[PBC-P-\d+\]\s*', '', raw_file_name) if raw_file_name else ''
+
+                    recent_files.append({
+                        'id': f.get('id'),
+                        'file_name': clean_file_name,
+                        'created_at': formatted_date,
+                        'status': f.get('status') or '제출완료',
+                        'public_url': public_url,
+                        'help_text': f.get('help_text', '')
+                    })
+
+                    if len(recent_files) >= 5:
+                        break
+
+                logger.info("[RECENT_SUBMISSIONS:RES] Successfully fetched %d verified files for %s (Year: %s)", len(recent_files), target_company, target_year)
+            except Exception as db_err:
+                logger.error("[RECENT_SUBMISSIONS:DB_ERROR] Failed to fetch company files: %s", db_err, exc_info=True)
+                return jsonify({'success': False, 'error': '데이터베이스 조회 중 오류가 발생했습니다.'}), 500
+        else:
+            logger.warning("[RECENT_SUBMISSIONS:WARN] Supabase client not initialized")
+
+        return jsonify({
+            'success': True,
+            'company_name': target_company,
+            'fiscal_year': target_year,
+            'files': recent_files
+        })
+    except Exception as e:
+        logger.error("[RECENT_SUBMISSIONS:UNHANDLED_ERROR] %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': f'서버 처리 오류: {str(e)}'}), 500
+
+
+@api_bp.route('/api/company/download/<int:file_id>', methods=['GET'])
+@api_bp.route('/api/company/download-file', methods=['GET'])
+def download_company_file(file_id=None):
+    """
+    고객사 제출 서류를 MinIO S3 또는 Supabase Storage에서 안전하게 다운로드 제공하는 프록시 엔드포인트
+    """
+    try:
+        req_file_id = file_id or request.args.get('file_id')
+        req_file_url = request.args.get('file_url', '').strip()
+        req_file_name = request.args.get('file_name', '').strip()
+
+        file_record = None
+        if req_file_id and supabase:
+            try:
+                res = supabase.table('company_files').select('*').eq('id', req_file_id).execute()
+                if res.data and len(res.data) > 0:
+                    file_record = res.data[0]
+            except Exception as dberr:
+                logger.warning("[DOWNLOAD:DB_WARN] Could not fetch record for id %s: %s", req_file_id, dberr)
+
+        file_url = (file_record.get('file_url') if file_record else req_file_url) or ''
+        raw_file_name = (file_record.get('file_name') if file_record else req_file_name) or 'downloaded_file'
+
+        # 파일명에서 대괄호 라벨 제거 및 깨끗한 파일명 생성
+        clean_file_name = re.sub(r'\[.*?\]\s*', '', raw_file_name).strip()
+        if not clean_file_name:
+            clean_file_name = 'document'
+
+        if not file_url:
+            logger.warning("[DOWNLOAD:WARN] File URL not found for file_id=%s", req_file_id)
+            return jsonify({'success': False, 'error': '파일 정보를 찾을 수 없습니다.'}), 404
+
+        logger.info("[DOWNLOAD:START] Downloading file: ID=%s, Name=%s, URL=%s", req_file_id, clean_file_name, file_url)
+
+        file_bytes = None
+        content_type = 'application/octet-stream'
+
+        # 1. MinIO S3 다운로드 시도
+        if s3_client:
+            s3_key = None
+            bucket_to_use = 'company-uploads'
+            if 'company-uploads/' in file_url:
+                s3_key = file_url.split('company-uploads/')[-1]
+                bucket_to_use = 'company-uploads'
+            elif 'audit-lakehouse/' in file_url:
+                s3_key = file_url.split('audit-lakehouse/')[-1]
+                bucket_to_use = 'audit-lakehouse'
+            elif file_url.startswith('http'):
+                path_part = file_url.replace(minio_endpoint, '').lstrip('/')
+                parts = path_part.split('/', 1)
+                if len(parts) == 2:
+                    bucket_to_use, s3_key = parts[0], parts[1]
+                else:
+                    s3_key = path_part
+            else:
+                s3_key = file_url
+
+            if s3_key:
+                try:
+                    s3_obj = s3_client.get_object(Bucket=bucket_to_use, Key=s3_key)
+                    file_bytes = s3_obj['Body'].read()
+                    content_type = s3_obj.get('ContentType', 'application/octet-stream')
+                    logger.info("[DOWNLOAD:MINIO_OK] Downloaded %d bytes from MinIO (Bucket=%s, Key=%s)", len(file_bytes), bucket_to_use, s3_key)
+                except Exception as s3_err:
+                    logger.warning("[DOWNLOAD:MINIO_WARN] MinIO download failed for key %s: %s", s3_key, s3_err)
+
+        # 2. Supabase Storage 다운로드 시도 (MinIO 미존재 또는 실패 시)
+        if not file_bytes and supabase:
+            try:
+                storage_path = file_url
+                if 'company-uploads/' in file_url:
+                    storage_path = file_url.split('company-uploads/')[-1]
+                file_bytes = supabase.storage.from_('company-uploads').download(storage_path)
+                logger.info("[DOWNLOAD:SUPABASE_OK] Downloaded %d bytes from Supabase Storage", len(file_bytes))
+            except Exception as sb_err:
+                logger.warning("[DOWNLOAD:SUPABASE_WARN] Supabase storage download failed: %s", sb_err)
+
+        # 3. Direct HTTP 요청 시도 (URL이 외부 공개 URL인 경우)
+        if not file_bytes and file_url.startswith('http'):
+            try:
+                resp = requests.get(file_url, timeout=10)
+                if resp.status_code == 200:
+                    file_bytes = resp.content
+                    content_type = resp.headers.get('Content-Type', content_type)
+                    logger.info("[DOWNLOAD:HTTP_OK] Downloaded %d bytes via HTTP GET", len(file_bytes))
+            except Exception as http_err:
+                logger.warning("[DOWNLOAD:HTTP_WARN] Direct HTTP fetch failed: %s", http_err)
+
+        if not file_bytes:
+            logger.error("[DOWNLOAD:FAIL] All download attempts failed for file_id=%s, url=%s", req_file_id, file_url)
+            return jsonify({'success': False, 'error': '파일을 스토리지에서 다운로드하지 못했습니다.'}), 404
+
+        # 파일 확장자 보완 (파일명에 확장자가 없는 경우)
+        if '.' not in clean_file_name:
+            if 'pdf' in file_url.lower() or 'pdf' in content_type.lower():
+                clean_file_name += '.pdf'
+            elif 'xlsx' in file_url.lower():
+                clean_file_name += '.xlsx'
+            elif 'xls' in file_url.lower():
+                clean_file_name += '.xls'
+            elif 'csv' in file_url.lower():
+                clean_file_name += '.csv'
+            elif 'zip' in file_url.lower():
+                clean_file_name += '.zip'
+
+        guessed_type, _ = mimetypes.guess_type(clean_file_name)
+        if guessed_type:
+            content_type = guessed_type
+
+        return send_file(
+            io.BytesIO(file_bytes),
+            mimetype=content_type,
+            as_attachment=True,
+            download_name=clean_file_name
+        )
+    except Exception as e:
+        logger.error("[DOWNLOAD:UNHANDLED_ERROR] %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': f'다운로드 처리 중 오류: {str(e)}'}), 500
+
 
 
