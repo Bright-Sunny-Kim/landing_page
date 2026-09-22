@@ -2479,11 +2479,11 @@ window.resetAICpaChat = function () {
     const messagesEl = document.getElementById('ai-cpa-messages');
     if (messagesEl) {
         messagesEl.innerHTML = `
-            <div class="chat-bubble ai-bubble">
-                <div class="bubble-avatar">🤖</div>
-                <div class="bubble-content">
-                    안녕하세요! <strong>혜안 AI 회계기준 어시스턴트</strong>입니다.<br>
-                    K-IFRS, K-GAAP, 감사기준 등 회계·세무 관련 궁금한 점을 질문해 주시면 관련 기준서를 찾아 정확하게 답변해 드립니다.
+            <div class="chat-bubble ai-bubble" style="display: flex; gap: 8px; align-self: flex-start; width: 100%; max-width: 100%; margin: 0;">
+                <div class="bubble-avatar" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); flex-shrink: 0; margin-top: 2px;">🤖</div>
+                <div class="bubble-content" style="flex: 1; min-width: 0; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); padding: 8px 12px; border-radius: 12px; border-top-left-radius: 4px; font-size: 0.94rem; line-height: 1.55; color: #f8fafc; text-align: left !important;">
+                    안녕하세요! <strong style="color: #a5b4fc;">혜안 AI 회계기준 어시스턴트</strong>입니다.<br>
+                    K-IFRS, K-GAAP, 감사기준 등 회계·세무 관련 궁금한 점을 질문해 주시면 사내 회계기준서에서 정확한 조항을 찾아 답변해 드립니다.
                 </div>
             </div>
         `;
@@ -2491,6 +2491,7 @@ window.resetAICpaChat = function () {
     const inputEl = document.getElementById('ai-cpa-question-input');
     if (inputEl) {
         inputEl.value = '';
+        inputEl.style.height = '46px';
         inputEl.focus();
     }
 };
@@ -2502,6 +2503,7 @@ function appendAICpaMessage(role, text, sources = []) {
 
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}-bubble`;
+    bubble.style.cssText = 'display: flex !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; align-self: ' + (role === 'ai' ? 'flex-start' : 'flex-end') + ' !important; ' + (role === 'user' ? 'flex-direction: row-reverse !important;' : '');
 
     const avatar = role === 'ai' ? '🤖' : '👤';
     let formattedText = '';
@@ -2511,17 +2513,21 @@ function appendAICpaMessage(role, text, sources = []) {
 
     let sourcesHtml = '';
     if (sources && sources.length > 0) {
-        sourcesHtml = '<div class="faq-sources"><div class="faq-sources-title">참조 기준:</div>';
+        sourcesHtml = '<div class="faq-sources" style="margin-top: 10px; padding: 8px 10px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; text-align: left !important;"><div class="faq-sources-title" style="font-weight: 700; font-size: 0.82rem; color: #a5b4fc; margin-bottom: 4px; text-align: left !important;">참조 기준:</div>';
         sources.forEach(src => {
-            sourcesHtml += `<span class="faq-source-tag">${src}</span>`;
+            sourcesHtml += `<span class="faq-source-tag" style="display: inline-block; background: rgba(255, 255, 255, 0.12); color: #e2e8f0; padding: 3px 8px; border-radius: 5px; margin-right: 5px; margin-bottom: 3px; font-size: 0.8rem; font-weight: 500;">${src}</span>`;
         });
         sourcesHtml += '</div>';
     }
 
+    const bubbleBg = role === 'ai' 
+        ? 'background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; border-top-left-radius: 4px; color: #f8fafc;' 
+        : 'background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(79, 70, 229, 0.5)); border: 1px solid rgba(99, 102, 241, 0.5); border-radius: 12px; border-top-right-radius: 4px; color: #ffffff;';
+
     bubble.innerHTML = `
-        <div class="bubble-avatar">${avatar}</div>
-        <div class="bubble-content">
-            <div class="message-text-container">${formattedText}</div>
+        <div class="bubble-avatar" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; background: ${role === 'ai' ? 'rgba(255, 255, 255, 0.08)' : 'linear-gradient(135deg, #6366f1, #4f46e5)'}; border: 1px solid rgba(255, 255, 255, 0.18); flex-shrink: 0; margin-top: 2px;">${avatar}</div>
+        <div class="bubble-content" style="flex: 1; min-width: 0; padding: 8px 12px; font-size: 0.94rem; line-height: 1.55; text-align: left !important; word-break: keep-all; overflow-wrap: break-word; white-space: pre-wrap; ${bubbleBg}">
+            <div class="message-text-container" style="text-align: left !important;">${formattedText}</div>
             ${sourcesHtml}
         </div>
     `;
@@ -2649,16 +2655,122 @@ window.submitAICpaQuestion = async function () {
     }
 };
 
-// 5. Enter 키 전송 이벤트 리스너
+// 5. Enter 키 전송 및 Textarea 자동 높이 조절 & 위젯 리사이저 이벤트 리스너
 document.addEventListener('DOMContentLoaded', () => {
     const inputEl = document.getElementById('ai-cpa-question-input');
     if (inputEl) {
+        inputEl.addEventListener('input', function() {
+            this.style.height = '46px';
+            const newHeight = Math.min(this.scrollHeight, 120);
+            this.style.height = newHeight + 'px';
+        });
+
         inputEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 submitAICpaQuestion();
+                inputEl.style.height = '46px';
             }
         });
     }
+
+    // 6. 위젯 리사이징 (PC 웹 마우스 드래그 조절)
+    initAICpaWidgetResizer();
 });
+
+// 사용자 정의 위젯 크기 초기화 및 드래그 핸들러
+function initAICpaWidgetResizer() {
+    const card = document.getElementById('ai-cpa-widget-card');
+    const handleNW = document.getElementById('ai-cpa-resize-nw');
+    const handleW = document.getElementById('ai-cpa-resize-w');
+    const handleN = document.getElementById('ai-cpa-resize-n');
+
+    if (!card) return;
+
+    // 저장된 크기 복원
+    try {
+        const savedSize = localStorage.getItem('hyean_ai_cpa_widget_size');
+        if (savedSize && window.innerWidth > 768) {
+            const { w, h } = JSON.parse(savedSize);
+            if (w && h) {
+                card.style.width = `${Math.min(Math.max(w, 360), window.innerWidth - 40)}px`;
+                card.style.height = `${Math.min(Math.max(h, 450), window.innerHeight - 100)}px`;
+            }
+        }
+    } catch (e) {
+        console.warn('[RESIZE] Failed to load saved widget size', e);
+    }
+
+    let isResizing = false;
+    let resizeType = ''; // 'nw', 'w', 'n'
+    let startX = 0, startY = 0;
+    let startWidth = 0, startHeight = 0;
+
+    function startResize(e, type) {
+        if (window.innerWidth <= 768) return; // 모바일에서는 바텀시트 고정
+        e.preventDefault();
+        e.stopPropagation();
+
+        isResizing = true;
+        resizeType = type;
+        startX = e.clientX;
+        startY = e.clientY;
+
+        const rect = card.getBoundingClientRect();
+        startWidth = rect.width;
+        startHeight = rect.height;
+
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = type === 'nw' ? 'nwse-resize' : (type === 'w' ? 'ew-resize' : 'ns-resize');
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', stopResize);
+    }
+
+    function onMouseMove(e) {
+        if (!isResizing) return;
+        const dx = startX - e.clientX; // 왼쪽으로 끌면 가로 커짐
+        const dy = startY - e.clientY; // 위쪽으로 끌면 세로 커짐
+
+        const minW = 360;
+        const maxW = window.innerWidth - 40;
+        const minH = 450;
+        const maxH = window.innerHeight - 100;
+
+        if (resizeType === 'nw' || resizeType === 'w') {
+            const newW = Math.min(Math.max(startWidth + dx, minW), maxW);
+            card.style.width = `${newW}px`;
+        }
+
+        if (resizeType === 'nw' || resizeType === 'n') {
+            const newH = Math.min(Math.max(startHeight + dy, minH), maxH);
+            card.style.height = `${newH}px`;
+        }
+    }
+
+    function stopResize() {
+        if (!isResizing) return;
+        isResizing = false;
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', stopResize);
+
+        // 변경된 크기 영구 저장
+        try {
+            const rect = card.getBoundingClientRect();
+            localStorage.setItem('hyean_ai_cpa_widget_size', JSON.stringify({
+                w: Math.round(rect.width),
+                h: Math.round(rect.height)
+            }));
+            console.log(`[RESIZE] Widget size saved: ${Math.round(rect.width)}x${Math.round(rect.height)}`);
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    if (handleNW) handleNW.addEventListener('mousedown', (e) => startResize(e, 'nw'));
+    if (handleW) handleW.addEventListener('mousedown', (e) => startResize(e, 'w'));
+    if (handleN) handleN.addEventListener('mousedown', (e) => startResize(e, 'n'));
+}
 

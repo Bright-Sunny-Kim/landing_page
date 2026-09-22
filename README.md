@@ -162,10 +162,16 @@ UBUNTU_PG_PASSWORD=your_password
   - 카카오톡 스타일 1:1 실시간 자문 상담실 모바일 UI 및 터치 최적화
   - PWA (`manifest.json`, `sw.js`, 192x192/512x512 아이콘) 홈 화면 추가 지원
 - [x] **Phase 5. 전역 플로팅 AI 회계사 팝업 & 3계층 무중단 하이브리드 RAG 엔진 고도화** (완료)
-  - **전역 플로팅 팝업 위젯 (`templates/components/ai_cpa_widget.html`)**: 파트너사 포털(`company.html`), 마스터 관리자 7개 전 탭(`master.html`), 파트너사 상세 관리(`master_detail.html`) 등 로그인된 모든 창에서 FAB 버튼 및 사이드바 연동을 통한 독립 모달 팝업 상시 가동
+  - **전역 플로팅 팝업 위젯 (`templates/components/ai_cpa_widget.html`)**: 파트너사 포털(`company.html`), 마스터 관리자 7개 전 탭(`master.html`), 파트너사 상세 관리(`master_detail.html`), 회계감사 포털(`audit.html`) 등 로그인된 모든 창에서 FAB 버튼 및 사이드바 연동을 통한 독립 모달 팝업 상시 가동
   - **3단계 무중단 RAG Fallback 파이프라인 (`blueprints/api.py`)**: 사내 Ubuntu 서버(ChromaDB/Dify) 접속 불가 시에도 내부 로컬 K-GAAP 기준서 코퍼스(`core/audit_engine.py`) 및 OpenAI 모델로 자동 전환되어 '서버 에러' 없는 100% 정상 스트리밍 답변 보장
-  - **모바일/앱 뷰포트 텍스트 찌그러짐 원천 차단 (`static/css/style.css`)**: 한글 단어 단위 줄바꿈(`word-break: keep-all; min-width: 0;`) 및 100% 풀스크린 반응형 오버레이 적용
-  - **레이아웃 무결성 및 탭 독립화 (`static/js/main.js`)**: 마스터 관리자 HTML DOM 중첩 버그 수정 및 사이드바 클릭 인터셉트를 통해 모든 탭 전환 시 위젯 상시 표시 보장
+  - **웹 마우스 드래그 창 크기 조절(Resizer) & 영구 기억 (`static/js/main.js`, `static/css/style.css`)**:
+    - 좌측 상단 모서리(`⤡` 아이콘), 좌측 테두리, 상단 테두리 마우스 드래그를 통해 가로·세로 크기 자유 조절 지원
+    - 조절된 사용자 맞춤 크기를 `localStorage`에 자동 저장하여 재접속 시에도 완벽 복원
+  - **모바일 90dvh 바텀시트 모달 & 콤팩트 가독성 최적화**:
+    - 스마트폰 뷰포트에서 상단 10%가 보이는 90% 높이 앱 바텀시트 모달 및 상단 손잡이 인디케이터 바 적용
+    - 말풍선 내부 패딩(`8px 12px`), 메시지 간격(`gap: 8px`), 문단 하단 마진(`3px`) 최소화로 휑한 공백 없는 밀착 가독성 확보
+    - 질문 입력창 Flexbox 85% 시원한 가로 확장, 브라우저 기본 스크롤 화살표(`▲ ▼`) 제거 및 입력 내용에 따른 `auto-grow` 적용
+  - **레이아웃 무결성 및 캐시 무효화(`?v=20260922-cpa-v9`)**: 전 템플릿 정적 파일 버전 일괄 갱신으로 브라우저 즉시 렌더링 보장
 - [x] **Phase 6. 6대 장부(계정별원장 7대 필드) 확장 & 실시간 업로드 이력 관리 센터 & 시점별 영구 누적 스토리지 구축** (완료)
   - **계정별원장(General Ledger) 7대 필드 전수 추출 파서**: 계정과목, 거래일자, 적요, 거래처코드, 거래처명, 차변, 대변, 잔액
   - **사내 Ubuntu & 로컬 시점별(`YYYYMMDD_HHMMSS`) 영구 보관함**: 원본 엑셀(`raw_files/`), `data.json`, `report.md`, `metadata.json`
@@ -209,7 +215,26 @@ UBUNTU_PG_PASSWORD=your_password
 
 ---
 
-## 🛠️ 6. 개발 지침 및 마스터 프롬프트 (Master Prompt for Antigravity CLI & PowerShell)
+## 🔮 6. 향후 과제 로드맵 (Dify & n8n 기반 5대 지능형 확장)
+
+사내 구축 완료된 **Dify (AI 관제탑: `https://dify.hyean-dskim.com`)** 및 **n8n (자동화 워크플로우: `https://n8n.hyean-dskim.com`)**을 연동하여 추진할 5대 고도화 과제입니다.
+
+- [ ] **과제 1. 파트너사 회계장부 업로드 즉시 「AI 자동 정밀진단 & 감사 리포트」 (Dify + n8n)**
+  - 파트너사가 엑셀 5대 장부(합잔, 재무제표, 계정별원장) 업로드 시 n8n이 트리거되어 자동 파싱
+  - Dify가 K-GAAP 기준 대조 및 이상치(가수금, 가지급금, 전표 오류) 진단 후 10초 만에 완벽한 AI 경영진단 리포트(PDF/Web) 자동 발행
+- [ ] **과제 2. 국세청 세법 개정 & DART 공시 「실시간 맞춤 알림봇」 (n8n + Dify)**
+  - n8n이 매일 아침 국세청 세법 개정안 및 DART 전자공시 자동 수집
+  - Dify가 파트너사 업종별 실무 영향을 요약하여 포털 대시보드 및 카카오 알림톡/이메일로 자동 전송
+- [ ] **과제 3. 세무·노무 계약서 「AI 원클릭 위험조항 검토기」 (Dify Document Workflow)**
+  - 고객사가 용역/근로/투자계약서 PDF 업로드 시 Dify가 세무/회계적 위험 조항(원천징수 누락, 세금계산서 미발행 위험 등)을 빨간펜 첨삭하듯 자동 분석하여 체크리스트 제공
+- [ ] **과제 4. 1:1 자문 상담실 「AI 사전 브리핑 & 회계사 답변 초안 자동 생성」 (n8n + Dify)**
+  - 고객사 질의 등록 시 Dify가 사내 회계기준서와 과거 상담 데이터를 검색하여 회계사용 답변 초안을 1초 만에 프리뷰 제공 ➔ 담당 회계사 원클릭 검토 및 승인 전송
+- [ ] **과제 5. 파트너사별 세무 캘린더 & 납부 기한 「스마트 리마인더」 (n8n Scheduler)**
+  - 부가세, 원천세, 법인세 신고 시즌별 납부 세액 및 마감일(D-7, D-3) 자동 푸시 알림 및 서류 제출 상태 실시간 동기화
+
+---
+
+## 🛠️ 7. 개발 지침 및 마스터 프롬프트 (Master Prompt for Antigravity CLI & PowerShell)
 
 ### 📌 Antigravity CLI 및 Windows PowerShell 직접 실행 원칙
 본 프로젝트의 모든 변경 및 고도화 작업은 사용자가 **Antigravity CLI**와 **Windows PowerShell**을 통해 직접 통제하며 진행합니다.

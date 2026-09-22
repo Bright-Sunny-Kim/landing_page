@@ -11,6 +11,16 @@
 
     <!-- 3. 플로팅 챗봇 팝업 카드 -->
     <div id="ai-cpa-widget-card" class="ai-cpa-widget-card" role="dialog" aria-modal="true" aria-labelledby="ai-cpa-header-title">
+        <!-- 웹 크기 조절(Resize) 드래그 핸들 (좌상단 모서리, 좌측변, 상단변) -->
+        <div class="ai-cpa-resize-handle ai-cpa-resize-nw" id="ai-cpa-resize-nw" title="드래그하여 창 크기 조절">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        </div>
+        <div class="ai-cpa-resize-handle-edge ai-cpa-resize-w" id="ai-cpa-resize-w" title="가로 크기 조절"></div>
+        <div class="ai-cpa-resize-handle-edge ai-cpa-resize-n" id="ai-cpa-resize-n" title="세로 크기 조절"></div>
+
+        <!-- 모바일 바텀시트 핸들 바 -->
+        <div class="ai-cpa-sheet-handle" style="width: 36px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 2px; margin: 8px auto 0 auto; display: none;"></div>
+
         <!-- 헤더 -->
         <div class="ai-cpa-widget-header">
             <div class="ai-cpa-header-title-box">
@@ -28,20 +38,20 @@
 
         <!-- 바디 & 대화창 -->
         <div class="ai-cpa-widget-body">
-            <div class="ai-cpa-widget-messages" id="ai-cpa-messages">
-                <div class="chat-bubble ai-bubble">
-                    <div class="bubble-avatar">🤖</div>
-                    <div class="bubble-content">
-                        안녕하세요! <strong>혜안 AI 회계기준 어시스턴트</strong>입니다.<br>
-                        K-IFRS, K-GAAP, 감사기준 등 회계·세무 관련 궁금한 점을 질문해 주시면 관련 기준서를 찾아 정확하게 답변해 드립니다.
+            <div class="ai-cpa-widget-messages" id="ai-cpa-messages" style="display: flex; flex-direction: column; align-items: stretch; gap: 8px !important; padding: 10px 12px !important;">
+                <div class="chat-bubble ai-bubble" style="display: flex; gap: 8px; align-self: flex-start; width: 100%; max-width: 100%; margin: 0;">
+                    <div class="bubble-avatar" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); flex-shrink: 0; margin-top: 2px;">🤖</div>
+                    <div class="bubble-content" style="flex: 1; min-width: 0; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); padding: 8px 12px; border-radius: 12px; border-top-left-radius: 4px; font-size: 0.94rem; line-height: 1.55; color: #f8fafc; text-align: left !important;">
+                        안녕하세요! <strong style="color: #a5b4fc;">혜안 AI 회계기준 어시스턴트</strong>입니다.<br>
+                        K-IFRS, K-GAAP, 감사기준 등 회계·세무 관련 궁금한 점을 질문해 주시면 사내 회계기준서에서 정확한 조항을 찾아 답변해 드립니다.
                     </div>
                 </div>
             </div>
 
             <!-- 입력 영역 -->
-            <div class="ai-cpa-widget-input-area">
-                <div class="faq-input-top" style="margin-bottom: 8px;">
-                    <select id="ai-cpa-category-select" class="faq-select" style="font-size: 0.85rem; padding: 6px 10px;">
+            <div class="ai-cpa-widget-input-area" style="padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background: rgba(15, 23, 42, 0.98); border-top: 1px solid rgba(255, 255, 255, 0.08);">
+                <div style="margin-bottom: 8px;">
+                    <select id="ai-cpa-category-select" style="width: 100%; padding: 8px 12px; border-radius: 8px; font-size: 0.88rem; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15); color: #ffffff; cursor: pointer; outline: none;">
                         <option value="전체">전체 회계 기준서</option>
                         <option value="K-IFRS">한국채택국제회계기준 (K-IFRS)</option>
                         <option value="K-GAAP">일반기업회계기준 (K-GAAP)</option>
@@ -51,10 +61,10 @@
                         <option value="K-GAAS">한국회계감사기준</option>
                     </select>
                 </div>
-                <div class="faq-input-bottom" style="gap: 8px;">
-                    <textarea id="ai-cpa-question-input" rows="1" placeholder="회계/감사 기준을 질문하세요... (예: 금융상품의 회계상 분류 방법은?)" style="flex: 1; min-height: 40px; max-height: 100px; resize: none; border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; outline: none;"></textarea>
-                    <button type="button" id="btn-ai-cpa-submit" class="btn-submit" onclick="submitAICpaQuestion()" style="width: auto; padding: 0 16px; height: 40px; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
-                        <span>질문</span>
+                <div style="display: flex !important; gap: 8px !important; align-items: flex-end !important; width: 100% !important;">
+                    <textarea id="ai-cpa-question-input" rows="1" placeholder="회계/감사 기준을 질문하세요... (예: 금융상품의 회계상 분류 방법은?)" style="flex: 1 1 auto !important; min-width: 0 !important; height: 46px !important; min-height: 46px !important; max-height: 120px !important; resize: none !important; overflow-y: hidden !important; border-radius: 10px !important; padding: 11px 14px !important; font-size: 0.93rem !important; line-height: 1.45 !important; background: rgba(255, 255, 255, 0.08) !important; border: 1px solid rgba(255, 255, 255, 0.18) !important; color: #ffffff !important; outline: none !important; box-sizing: border-box !important; font-family: inherit !important;"></textarea>
+                    <button type="button" id="btn-ai-cpa-submit" onclick="submitAICpaQuestion()" style="flex: 0 0 68px !important; width: 68px !important; height: 46px !important; padding: 0 !important; border-radius: 10px !important; font-size: 0.95rem !important; font-weight: 700 !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; background: linear-gradient(135deg, #6366f1, #4f46e5) !important; color: #ffffff !important; border: none !important; cursor: pointer !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;">
+                        질문
                     </button>
                 </div>
             </div>

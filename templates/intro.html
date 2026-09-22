@@ -44,9 +44,9 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1.5rem 5%;
+      padding: 1.25rem 5%;
       z-index: 1000;
-      background: rgba(9, 9, 11, 0.7);
+      background: rgba(9, 9, 11, 0.8);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--card-border);
@@ -55,19 +55,28 @@
 
     .header-logo {
       font-family: var(--font-header);
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 800;
       color: var(--text-primary);
       text-decoration: none;
-      letter-spacing: -0.05em;
+      letter-spacing: -0.04em;
       display: flex;
       align-items: center;
       gap: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .header-logo img {
-      height: 32px;
+      height: 30px;
+      width: auto;
       filter: drop-shadow(0 0 8px rgba(167, 139, 250, 0.2));
+    }
+
+    .nav-links-desktop {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
     }
 
     .nav-link {
@@ -75,23 +84,37 @@
       text-decoration: none;
       font-weight: 500;
       font-family: var(--font-header);
+      font-size: 0.95rem;
       transition: color 0.3s;
+      white-space: nowrap;
     }
 
     .nav-link:hover {
       color: #a78bfa;
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
     .login-btn-top {
       background: var(--primary-gradient);
       color: white;
-      padding: 0.6rem 1.5rem;
+      padding: 0.55rem 1.3rem;
       border-radius: 50px;
       text-decoration: none;
       font-weight: 600;
+      font-size: 0.9rem;
       font-family: var(--font-header);
       transition: transform 0.3s, box-shadow 0.3s;
       box-shadow: 0 4px 15px var(--accent-glow);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .login-btn-top:hover {
@@ -103,23 +126,209 @@
     .cpa-btn-top {
       background: linear-gradient(135deg, #2563eb, #3b82f6);
       color: white;
-      padding: 0.6rem 1.3rem;
+      padding: 0.55rem 1.15rem;
       border-radius: 50px;
       text-decoration: none;
       font-weight: 600;
+      font-size: 0.9rem;
       font-family: var(--font-header);
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
       transition: transform 0.3s, box-shadow 0.3s;
       box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
       border: 1px solid rgba(255, 255, 255, 0.15);
+      white-space: nowrap;
     }
 
     .cpa-btn-top:hover {
       transform: translateY(-2px);
       background: linear-gradient(135deg, #1d4ed8, #2563eb);
       box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+    }
+
+    /* Mobile Hamburger Button */
+    .mobile-menu-toggle {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 8px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .mobile-menu-toggle:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .hamburger-line {
+      width: 20px;
+      height: 2px;
+      background: #ffffff;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    /* Mobile Drawer */
+    .mobile-drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      z-index: 1998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .mobile-drawer-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-drawer {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 82%;
+      max-width: 320px;
+      height: 100vh;
+      background: #111116;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 1999;
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+    }
+
+    .mobile-drawer.active {
+      right: 0;
+    }
+
+    .mobile-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 1.5rem;
+    }
+
+    .mobile-drawer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .mobile-drawer-logo img {
+      height: 24px;
+    }
+
+    .mobile-drawer-close {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      width: 34px;
+      height: 34px;
+      font-size: 1.4rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .mobile-drawer-close:hover {
+      color: white;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .mobile-nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .mobile-nav-link {
+      display: flex;
+      align-items: center;
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .mobile-nav-link:hover, .mobile-nav-link:active {
+      background: rgba(167, 139, 250, 0.12);
+      color: #a78bfa;
+    }
+
+    .mobile-drawer-actions {
+      margin-top: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mobile-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 1rem;
+      border-radius: 14px;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .mobile-action-btn.cpa-action {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+    }
+
+    .mobile-action-btn.login-action {
+      background: linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(99, 102, 241, 0.1) 100%);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      color: #c4b5fd;
+    }
+
+    .mobile-action-btn .action-icon {
+      font-size: 1.5rem;
+    }
+
+    .mobile-action-btn .action-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .mobile-action-btn .action-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
     }
 
     /* Hero Section */
@@ -153,12 +362,13 @@
     }
 
     .hero h1 {
-      font-size: clamp(3rem, 6vw, 4.5rem);
-      line-height: 1.15;
+      font-size: clamp(2.3rem, 5.5vw, 4.5rem);
+      line-height: 1.2;
       font-weight: 800;
       margin-bottom: 1.5rem;
       letter-spacing: -0.02em;
       text-align: left;
+      word-break: keep-all;
     }
 
     .hero h1 span {
@@ -168,11 +378,12 @@
     }
 
     .hero p {
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       color: var(--text-secondary);
-      margin-bottom: 3rem;
+      margin-bottom: 2.5rem;
       max-width: 600px;
       line-height: 1.7;
+      word-break: keep-all;
     }
 
     /* Stats Section */
@@ -193,7 +404,6 @@
     .stat-card {
       text-align: center;
       padding: 2.5rem 2rem;
-      /* Using Glass Card from design system */
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       backdrop-filter: blur(20px) saturate(140%);
@@ -323,6 +533,153 @@
       margin: 0 auto;
       text-decoration: none;
     }
+
+    /* ==========================================================================
+       Responsive Media Queries for Landing Page
+       ========================================================================== */
+
+    /* Tablet & Small Desktop (1024px 이하) */
+    @media screen and (max-width: 1024px) {
+      .nav-links-desktop {
+        display: none;
+      }
+      .mobile-menu-toggle {
+        display: flex;
+      }
+    }
+
+    /* Mobile (768px 이하) */
+    @media screen and (max-width: 768px) {
+      header {
+        padding: 0.9rem 4%;
+      }
+
+      .header-logo {
+        font-size: 1.2rem;
+        gap: 8px;
+      }
+
+      .header-logo img {
+        height: 26px;
+      }
+
+      .header-actions {
+        gap: 8px;
+      }
+
+      .cpa-btn-top {
+        padding: 0.45rem 0.85rem;
+        font-size: 0.82rem;
+      }
+
+      .login-btn-top {
+        padding: 0.45rem 1rem;
+        font-size: 0.82rem;
+      }
+
+      .hero {
+        padding: 0 4%;
+        min-height: auto;
+        padding-top: 7rem;
+        padding-bottom: 4rem;
+      }
+
+      .hero-content {
+        margin-top: 1rem;
+      }
+
+      .hero h1 {
+        font-size: clamp(2rem, 7.5vw, 2.8rem);
+        line-height: 1.25;
+        margin-bottom: 1.2rem;
+      }
+
+      .hero p {
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+      }
+
+      .stats {
+        padding: 1rem 4% 4rem;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .stat-card {
+        padding: 1.5rem 1rem;
+        border-radius: 18px;
+      }
+
+      .stat-number {
+        font-size: 2.2rem;
+      }
+
+      .stat-label {
+        font-size: 0.95rem;
+      }
+
+      .features {
+        padding: 4rem 4%;
+      }
+
+      .section-title {
+        font-size: 1.85rem;
+        margin-bottom: 2.5rem;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .feature-card {
+        padding: 2rem 1.5rem;
+        border-radius: 18px;
+      }
+
+      .team, .track-record, .contact, .cta {
+        padding-left: 4% !important;
+        padding-right: 4% !important;
+      }
+
+      .cta h2 {
+        font-size: 2rem;
+      }
+    }
+
+    /* Small Mobile (480px 이하) */
+    @media screen and (max-width: 480px) {
+      header {
+        padding: 0.75rem 3%;
+      }
+
+      .header-logo {
+        font-size: 1.05rem;
+      }
+
+      .cpa-btn-top span.btn-text {
+        display: none; /* 초소형 화면에서는 텍스트 숨기고 아이콘만 노출 */
+      }
+
+      .cpa-btn-top {
+        padding: 0.45rem 0.65rem;
+        font-size: 1rem;
+      }
+
+      .login-btn-top {
+        padding: 0.45rem 0.75rem;
+        font-size: 0.78rem;
+      }
+
+      .mobile-menu-toggle {
+        width: 36px;
+        height: 36px;
+        padding: 6px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -333,18 +690,26 @@
       <div class="circle circle-2"></div>
   </div>
 
+  <!-- Header Section -->
   <header>
     <a href="#" class="header-logo">
       <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="혜안 로고" onerror="this.style.display='none'">
-      회계법인 혜안
+      <span>회계법인 혜안</span>
     </a>
-    <div style="display: flex; gap: 1.5rem; align-items: center;">
+
+    <!-- 데스크톱 전용 네비게이션 링크 -->
+    <nav class="nav-links-desktop">
       <a href="#services" class="nav-link">솔루션</a>
       <a href="#team" class="nav-link">전문가</a>
       <a href="#track-record" class="nav-link">실적</a>
       <a href="#contact" class="nav-link">문의하기</a>
-      <a href="{{ url_for('audit.audit_page') }}" class="cpa-btn-top">
-        <span>🏛️ CPA 회계감사</span>
+    </nav>
+
+    <!-- 헤더 우측 액션 버튼 및 모바일 햄버거 -->
+    <div class="header-actions">
+      <a href="{{ url_for('audit.audit_page') }}" class="cpa-btn-top" title="CPA 회계감사 포털">
+        <span>🏛️</span>
+        <span class="btn-text">CPA 회계감사</span>
       </a>
       <a href="{{ url_for('auth.login_page') }}" class="login-btn-top">
         {% if 'email' in session %}
@@ -353,8 +718,49 @@
         고객사 로그인
         {% endif %}
       </a>
+      <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="메뉴 열기">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
     </div>
   </header>
+
+  <!-- Mobile Drawer & Overlay -->
+  <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="mobile-drawer-header">
+      <div class="mobile-drawer-logo">
+        <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="혜안 로고" onerror="this.style.display='none'">
+        <span>회계법인 혜안</span>
+      </div>
+      <button type="button" class="mobile-drawer-close" id="mobile-drawer-close" aria-label="메뉴 닫기">×</button>
+    </div>
+    <div class="mobile-drawer-body">
+      <nav class="mobile-nav-links">
+        <a href="#services" class="mobile-nav-link" onclick="closeMobileDrawer()"><span>📊 주요 솔루션</span></a>
+        <a href="#team" class="mobile-nav-link" onclick="closeMobileDrawer()"><span>👥 전문가 팀</span></a>
+        <a href="#track-record" class="mobile-nav-link" onclick="closeMobileDrawer()"><span>🏆 주요 실적</span></a>
+        <a href="#contact" class="mobile-nav-link" onclick="closeMobileDrawer()"><span>✉️ 문의하기 (Contact)</span></a>
+      </nav>
+      <div class="mobile-drawer-actions">
+        <a href="{{ url_for('audit.audit_page') }}" class="mobile-action-btn cpa-action">
+          <span class="action-icon">🏛️</span>
+          <div>
+            <div class="action-title">CPA 감사 포털</div>
+            <div class="action-sub">회계사용 감사 조서·업무 전용</div>
+          </div>
+        </a>
+        <a href="{{ url_for('auth.login_page') }}" class="mobile-action-btn login-action">
+          <span class="action-icon">🔐</span>
+          <div>
+            <div class="action-title">{% if 'email' in session %}내 포털 바로가기{% else %}고객사 포털 로그인{% endif %}</div>
+            <div class="action-sub">기업 고객 전용 대시보드</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
 
   <section class="hero" id="home">
     <div class="hero-content">
@@ -507,5 +913,38 @@
   </section>
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // Mobile Drawer Toggle Logic
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const mobileDrawer = document.getElementById('mobile-drawer');
+    const mobileDrawerOverlay = document.getElementById('mobile-drawer-overlay');
+    const mobileDrawerClose = document.getElementById('mobile-drawer-close');
+
+    function openMobileDrawer() {
+      if (mobileDrawer && mobileDrawerOverlay) {
+        mobileDrawer.classList.add('active');
+        mobileDrawerOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeMobileDrawer() {
+      if (mobileDrawer && mobileDrawerOverlay) {
+        mobileDrawer.classList.remove('active');
+        mobileDrawerOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+
+    if (mobileMenuToggle) {
+      mobileMenuToggle.addEventListener('click', openMobileDrawer);
+    }
+    if (mobileDrawerClose) {
+      mobileDrawerClose.addEventListener('click', closeMobileDrawer);
+    }
+    if (mobileDrawerOverlay) {
+      mobileDrawerOverlay.addEventListener('click', closeMobileDrawer);
+    }
+  </script>
 </body>
 </html>

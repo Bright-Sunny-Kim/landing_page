@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Style CSS -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260922-cpa-v9') }}">
     <!-- html2pdf for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -1463,7 +1463,7 @@
     {% include 'components/ai_cpa_widget.html' %}
 
     <!-- Script JS -->
-    <script src="/static/js/main.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v='20260922-cpa-v9') }}"></script>
 
     <!-- 외부조회 서브탭 전환 스크립트 -->
     <script>

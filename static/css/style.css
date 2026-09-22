@@ -4258,14 +4258,14 @@ button:active,
     position: fixed;
     bottom: 92px;
     right: 28px;
-    width: 460px;
+    width: 480px;
     max-width: calc(100vw - 36px);
-    height: 650px;
+    height: 680px;
     max-height: calc(100vh - 120px);
-    background: rgba(15, 23, 42, 0.92);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(99, 102, 241, 0.35);
     border-radius: 20px;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.65), 0 0 30px rgba(99, 102, 241, 0.2);
     backdrop-filter: blur(24px);
     z-index: 99999;
     display: flex;
@@ -4273,7 +4273,7 @@ button:active,
     overflow: hidden;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(20px) scale(0.96);
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -4283,14 +4283,62 @@ button:active,
     transform: translateY(0) scale(1);
 }
 
+/* 3-1. 웹 리사이즈 핸들러 (좌상단 모서리 & 테두리) */
+.ai-cpa-resize-handle {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: nwse-resize;
+    z-index: 100000;
+    transition: background 0.2s, color 0.2s, transform 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ai-cpa-resize-handle:hover {
+    background: rgba(99, 102, 241, 0.4);
+    color: #ffffff;
+    transform: scale(1.15);
+}
+
+.ai-cpa-resize-handle-edge.ai-cpa-resize-w {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 99999;
+}
+
+.ai-cpa-resize-handle-edge.ai-cpa-resize-n {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    cursor: ns-resize;
+    z-index: 99999;
+}
+
 /* 4. 위젯 헤더 */
 .ai-cpa-widget-header {
     padding: 16px 20px;
-    background: rgba(30, 41, 59, 0.7);
+    background: rgba(30, 41, 59, 0.85);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
 }
 
 .ai-cpa-header-title-box {
@@ -4303,11 +4351,12 @@ button:active,
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 3px 8px;
+    padding: 3px 10px;
     border-radius: 12px;
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.3);
+    background: rgba(99, 102, 241, 0.18);
+    border: 1px solid rgba(99, 102, 241, 0.35);
     font-size: 0.75rem;
+    font-weight: 600;
     color: #a5b4fc;
 }
 
@@ -4316,103 +4365,360 @@ button:active,
     font-weight: 700;
     color: #ffffff;
     margin: 0;
+    letter-spacing: -0.02em;
 }
 
 .ai-cpa-header-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 .ai-cpa-btn-icon {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     color: #cbd5e1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     transition: all 0.2s ease;
 }
 
 .ai-cpa-btn-icon:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.18);
     color: #ffffff;
 }
 
-/* 5. 위젯 내부 채팅 영역 */
+/* 5. 위젯 내부 채팅 영역 & 가독성 타이포그래피 */
 .ai-cpa-widget-body {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
 }
 
-.ai-cpa-widget-messages {
+.ai-cpa-widget-messages,
+#ai-cpa-global-widget .ai-cpa-widget-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
+    padding: 10px 12px !important;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 8px !important;
+    scroll-behavior: smooth;
 }
 
-.ai-cpa-widget-input-area {
-    padding: 12px 16px;
-    background: rgba(15, 23, 42, 0.95);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+.ai-cpa-widget-messages::-webkit-scrollbar {
+    width: 5px;
+}
+.ai-cpa-widget-messages::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
 }
 
-/* 6. 모바일 및 스마트폰 뷰포트 반응형 최적화 */
+/* 말풍선 가독성 강화 & 콤팩트 여백 */
+#ai-cpa-global-widget .chat-bubble {
+    display: flex !important;
+    gap: 8px !important;
+    max-width: 95% !important;
+    margin: 0 !important;
+}
+
+#ai-cpa-global-widget .chat-bubble.ai-bubble {
+    align-self: flex-start !important;
+}
+
+#ai-cpa-global-widget .chat-bubble.user-bubble {
+    align-self: flex-end !important;
+    flex-direction: row-reverse !important;
+}
+
+#ai-cpa-global-widget .bubble-avatar {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1rem !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    flex-shrink: 0 !important;
+    margin-top: 2px !important;
+}
+
+#ai-cpa-global-widget .user-bubble .bubble-avatar {
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    border: none !important;
+    color: #fff !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+}
+
+#ai-cpa-global-widget .bubble-content {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    padding: 8px 12px !important;
+    border-radius: 12px !important;
+    border-top-left-radius: 4px !important;
+    font-size: 0.94rem !important;
+    line-height: 1.55 !important;
+    color: #f8fafc !important;
+    text-align: left !important;
+    word-break: keep-all !important;
+    overflow-wrap: break-word !important;
+    white-space: pre-wrap !important;
+    min-width: 0 !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+#ai-cpa-global-widget .message-text-container {
+    text-align: left !important;
+}
+
+#ai-cpa-global-widget .user-bubble .bubble-content {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(79, 70, 229, 0.45)) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    border-radius: 18px !important;
+    border-top-right-radius: 4px !important;
+    color: #ffffff !important;
+    text-align: left !important;
+}
+
+/* 마크다운 내부 문단/목록 가독성 여백 (미니멀하고 콤팩트한 줄간격) */
+#ai-cpa-global-widget .bubble-content p {
+    margin-top: 0 !important;
+    margin-bottom: 3px !important;
+    line-height: 1.55 !important;
+    text-align: left !important;
+}
+#ai-cpa-global-widget .bubble-content p:last-child {
+    margin-bottom: 0 !important;
+}
+#ai-cpa-global-widget .bubble-content p:empty {
+    display: none !important;
+}
+#ai-cpa-global-widget .bubble-content ul, #ai-cpa-global-widget .bubble-content ol {
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+    padding-left: 18px !important;
+    text-align: left !important;
+}
+#ai-cpa-global-widget .bubble-content li {
+    margin-top: 0 !important;
+    margin-bottom: 2px !important;
+    line-height: 1.52 !important;
+    text-align: left !important;
+}
+#ai-cpa-global-widget .bubble-content li > p {
+    margin: 0 !important;
+    display: inline !important;
+}
+#ai-cpa-global-widget .bubble-content strong {
+    color: #a5b4fc !important;
+    font-weight: 700 !important;
+}
+#ai-cpa-global-widget .bubble-content h1,
+#ai-cpa-global-widget .bubble-content h2,
+#ai-cpa-global-widget .bubble-content h3,
+#ai-cpa-global-widget .bubble-content h4 {
+    margin-top: 6px !important;
+    margin-bottom: 2px !important;
+    line-height: 1.35 !important;
+    color: #e0e7ff !important;
+    font-size: 1rem !important;
+}
+#ai-cpa-global-widget .bubble-content br + br {
+    display: none !important;
+}
+
+/* 참조 기준서 박스 */
+#ai-cpa-global-widget .faq-sources {
+    margin-top: 14px !important;
+    padding: 12px 14px !important;
+    background: rgba(99, 102, 241, 0.12) !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    border-radius: 10px !important;
+    text-align: left !important;
+}
+
+#ai-cpa-global-widget .faq-sources-title {
+    font-weight: 700 !important;
+    font-size: 0.84rem !important;
+    color: #a5b4fc !important;
+    margin-bottom: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    text-align: left !important;
+}
+
+#ai-cpa-global-widget .faq-source-tag {
+    display: inline-block !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #e2e8f0 !important;
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
+    margin-right: 6px !important;
+    margin-bottom: 4px !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+}
+
+/* 6. 위젯 입력창 영역 */
+#ai-cpa-global-widget .ai-cpa-widget-input-area {
+    padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+    background: rgba(15, 23, 42, 0.98) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    flex-shrink: 0 !important;
+}
+
+#ai-cpa-global-widget .faq-input-top {
+    margin-bottom: 10px !important;
+}
+
+#ai-cpa-global-widget #ai-cpa-category-select {
+    width: 100% !important;
+    padding: 9px 12px !important;
+    border-radius: 8px !important;
+    font-size: 0.88rem !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
+    outline: none !important;
+}
+
+#ai-cpa-global-widget .faq-input-bottom {
+    display: flex !important;
+    gap: 10px !important;
+    align-items: flex-end !important;
+}
+
+#ai-cpa-global-widget #ai-cpa-question-input {
+    flex: 1 !important;
+    min-height: 44px !important;
+    max-height: 120px !important;
+    resize: none !important;
+    overflow-y: hidden !important;
+    border-radius: 10px !important;
+    padding: 11px 14px !important;
+    font-size: 0.92rem !important;
+    line-height: 1.45 !important;
+    background: rgba(255, 255, 255, 0.07) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    font-family: inherit !important;
+}
+
+#ai-cpa-global-widget #ai-cpa-question-input::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+}
+
+#ai-cpa-global-widget #btn-ai-cpa-submit {
+    height: 44px !important;
+    padding: 0 20px !important;
+    border-radius: 10px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    color: #ffffff !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: opacity 0.2s, transform 0.2s !important;
+}
+
+#ai-cpa-global-widget #btn-ai-cpa-submit:hover {
+    opacity: 0.9 !important;
+    transform: translateY(-1px) !important;
+}
+
+/* 7. 모바일 및 스마트폰 뷰포트 반응형 최적화 (세련된 90dvh 바텀시트 모달) */
 @media (max-width: 768px) {
-    .ai-cpa-fab-btn {
-        bottom: 18px;
-        right: 18px;
-        padding: 10px 16px;
-        font-size: 0.85rem;
+    #ai-cpa-global-widget .ai-cpa-fab-btn {
+        bottom: 18px !important;
+        right: 18px !important;
+        padding: 11px 18px !important;
+        font-size: 0.88rem !important;
+        border-radius: 40px !important;
     }
     
-    .ai-cpa-widget-card {
+    /* 앱 스타일 바텀시트 모달 (상단 10% 남김) */
+    #ai-cpa-global-widget .ai-cpa-sheet-handle {
+        display: block !important;
+    }
+
+    #ai-cpa-global-widget .ai-cpa-resize-handle,
+    #ai-cpa-global-widget .ai-cpa-resize-handle-edge {
+        display: none !important;
+    }
+
+    #ai-cpa-global-widget .ai-cpa-widget-card {
         bottom: 0 !important;
         right: 0 !important;
         left: 0 !important;
-        top: 0 !important;
+        top: auto !important;
         width: 100vw !important;
         max-width: 100vw !important;
-        height: 100% !important;
-        max-height: 100dvh !important;
-        border-radius: 0 !important;
-        border: none !important;
-    }
-    
-    .ai-cpa-widget-messages {
-        padding: 12px !important;
-        gap: 12px !important;
-    }
-    
-    .faq-chat-container {
-        height: 480px !important;
+        height: 90dvh !important;
+        max-height: 90dvh !important;
+        border-radius: 22px 22px 0 0 !important;
+        border: 1px solid rgba(99, 102, 241, 0.35) !important;
+        border-bottom: none !important;
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.75) !important;
     }
 
-    .chat-bubble, .chat-bubble-row {
-        max-width: 95% !important;
+    #ai-cpa-global-widget .ai-cpa-widget-header {
+        padding: 14px 18px !important;
+    }
+
+    #ai-cpa-global-widget .ai-cpa-header-title {
+        font-size: 1rem !important;
+    }
+    
+    #ai-cpa-global-widget .ai-cpa-widget-messages {
+        padding: 16px 14px !important;
+        gap: 16px !important;
+    }
+
+    #ai-cpa-global-widget .chat-bubble, #ai-cpa-global-widget .chat-bubble-row {
+        max-width: 96% !important;
         width: auto !important;
         min-width: 0 !important;
         flex-shrink: 0 !important;
     }
 
-    .bubble-content, .chat-bubble-content {
+    #ai-cpa-global-widget .bubble-avatar {
+        width: 34px !important;
+        height: 34px !important;
+        font-size: 1.1rem !important;
+    }
+
+    #ai-cpa-global-widget .bubble-content, #ai-cpa-global-widget .chat-bubble-content {
         word-break: keep-all !important;
         overflow-wrap: break-word !important;
         white-space: pre-wrap !important;
-        font-size: 0.88rem !important;
-        line-height: 1.55 !important;
-        padding: 10px 14px !important;
+        font-size: 0.95rem !important;
+        line-height: 1.68 !important;
+        padding: 14px 16px !important;
         min-width: 0 !important;
+    }
+
+    #ai-cpa-global-widget .ai-cpa-widget-input-area {
+        padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
 
@@ -6362,4 +6668,470 @@ body.audit-portal-body {
 /* Modal Overlay Animation */
 .all-submissions-modal-overlay {
     transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+/* ==========================================================================
+   Login Page Split-Card & Responsive Styles
+   ========================================================================== */
+
+.login-container {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 1.5rem;
+    position: relative;
+    z-index: 10;
+}
+
+.login-split-card {
+    display: flex;
+    flex-direction: row;
+    max-width: 1060px;
+    width: 100%;
+    padding: 0 !important;
+    overflow: hidden;
+    border-radius: 28px;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 좌측 인트로 영역 */
+.login-intro-side {
+    flex: 1.05;
+    background: linear-gradient(145deg, rgba(30, 27, 75, 0.4) 0%, rgba(15, 15, 25, 0.6) 100%);
+    padding: 3.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+}
+
+.login-intro-side::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    left: -30%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.18) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.login-intro-side .logo {
+    justify-content: flex-start;
+    margin-bottom: 2rem;
+}
+
+.welcome-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    background: rgba(167, 139, 250, 0.12);
+    border: 1px solid rgba(167, 139, 250, 0.25);
+    border-radius: 50px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #a78bfa;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.5px;
+}
+
+.title-greet {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+}
+
+.title-main {
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.3;
+    color: var(--text-primary);
+    font-family: var(--font-header);
+    letter-spacing: -0.03em;
+    text-align: left;
+}
+
+.text-glow {
+    background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.text-highlight {
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.intro-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-top: 1.5rem;
+}
+
+/* 우측 로그인 폼 영역 */
+.login-form-side {
+    flex: 1.15;
+    padding: 3.5rem 3.5rem;
+    background: rgba(18, 18, 24, 0.65);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.form-side-header {
+    margin-bottom: 2rem;
+}
+
+.form-title {
+    font-size: 1.85rem;
+    font-weight: 700;
+    font-family: var(--font-header);
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    text-align: left;
+}
+
+.form-side-header .subtitle {
+    text-align: left;
+    margin-bottom: 0;
+    margin-top: 6px;
+    font-size: 0.88rem;
+}
+
+/* 에러 알림 박스 */
+.error-alert-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    color: #fca5a5;
+    font-size: 0.88rem;
+    margin-bottom: 1.5rem;
+}
+
+.error-alert-icon {
+    font-size: 1.1rem;
+    color: #ef4444;
+}
+
+/* 로그인 상태 유지 */
+.remember-group {
+    margin-top: -8px;
+    margin-bottom: 4px;
+}
+
+.remember-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+}
+
+.remember-checkbox {
+    display: none;
+}
+
+.remember-custom {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.remember-checkbox:checked ~ .remember-custom {
+    background: #6366f1;
+    border-color: #818cf8;
+}
+
+.remember-checkbox:checked ~ .remember-custom::after {
+    content: "✓";
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* 소셜 로그인 */
+.social-login-container {
+    margin-top: 1.75rem;
+}
+
+.social-divider {
+    position: relative;
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+.social-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.social-divider span {
+    position: relative;
+    background: #14141a;
+    padding: 0 14px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.social-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.btn-social {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-family: var(--font-body);
+}
+
+.btn-google {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f4f4f5;
+}
+
+.btn-google:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+}
+
+.btn-naver {
+    background: #03C75A;
+    color: #ffffff;
+    border-color: transparent;
+}
+
+.btn-naver:hover {
+    background: #02b350;
+    box-shadow: 0 4px 15px rgba(3, 199, 90, 0.3);
+    transform: translateY(-2px);
+}
+
+.social-icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* Mock OAuth Modal */
+.oauth-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.oauth-modal-overlay.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.oauth-modal-card {
+    background: #18181f;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 460px;
+    margin: 1.5rem;
+    padding: 2rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.oauth-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.oauth-modal-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.oauth-modal-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.oauth-modal-close:hover {
+    color: white;
+}
+
+.oauth-provider-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0 auto 1rem;
+    color: #60a5fa;
+}
+
+.oauth-modal-text {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.oauth-warn-text {
+    font-size: 0.82rem;
+    color: #a78bfa;
+    margin-bottom: 1rem;
+    padding: 8px 12px;
+    background: rgba(167, 139, 250, 0.1);
+    border-radius: 8px;
+}
+
+/* ==========================================================================
+   Global Responsive Media Queries (Mobile & Tablet)
+   ========================================================================== */
+
+/* 태블릿 & 중소형 화면 (960px 이하) */
+@media screen and (max-width: 960px) {
+    .login-split-card {
+        flex-direction: column;
+        max-width: 580px;
+    }
+
+    .login-intro-side {
+        padding: 2.5rem 2rem 2rem;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .title-main {
+        font-size: 1.6rem;
+    }
+
+    .intro-description {
+        display: none; /* 모바일/태블릿에선 간결하게 생략하여 폼에 집중 */
+    }
+
+    .login-form-side {
+        padding: 2.5rem 2rem;
+    }
+}
+
+/* 모바일 스마트폰 화면 (640px 이하) */
+@media screen and (max-width: 640px) {
+    .login-container {
+        padding: 1rem 0.8rem;
+    }
+
+    .login-split-card {
+        border-radius: 20px;
+        width: 100%;
+    }
+
+    .login-intro-side {
+        padding: 1.75rem 1.25rem 1.25rem;
+    }
+
+    .login-intro-side .logo {
+        margin-bottom: 1rem;
+    }
+
+    .logo-img {
+        height: 42px;
+    }
+
+    .title-greet {
+        font-size: 1rem;
+    }
+
+    .title-main {
+        font-size: 1.35rem;
+    }
+
+    .welcome-badge {
+        font-size: 0.75rem;
+        padding: 3px 10px;
+        margin-bottom: 0.75rem;
+    }
+
+    .login-form-side {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .form-title {
+        font-size: 1.4rem;
+    }
+
+    .social-buttons {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .btn-social {
+        padding: 10px;
+        font-size: 0.84rem;
+    }
+
+    .oauth-modal-card {
+        padding: 1.5rem 1.25rem;
+        margin: 1rem;
+    }
 }
