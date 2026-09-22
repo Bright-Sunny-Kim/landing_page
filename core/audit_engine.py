@@ -1640,15 +1640,25 @@ def run_subledger_risk_analysis(subledger_records, base_date="2025-12-31"):
 
 
 
+def _to_amount_or_none(v):
+    """값이 비어있는지 구분하여 None 또는 float 반환."""
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return None
+    s = str(v).strip()
+    if not s or s.lower() == "nan" or s == "-":
+        return None
+    return _to_amount(v)
+
+
 def parse_trial_balance_structured(file_content, filename):
     """
-    합계잔액시산표(차변잔액/차변합계/계정과목/대변합계/대변잔액 5컬럼) 구조를 그대로 파싱.
-    형식이 다르면 ValueError를 던져서 호출부가 기존 parse_tb_file(키워드 매칭)로 폴백하게 한다.
+    합계잔액시산표(A:차변잔액, B:차변합계, C:계정과목, D:대변합계, E:대변잔액 5컬럼) 구조를 정밀 파싱.
+    총합계(◀...▶)와 부분합계(◁...▷)를 직접 계산/검증하고 leaf 계정의 4대 금액을 전수 추출한다.
     """
     df = _read_tabular(file_content, filename)
 
     header_row, account_col = None, None
-    for i in range(min(5, len(df))):
+    for i in range(min(6, len(df))):
         row_vals = [_normalize_account_name(x)[0] for x in df.iloc[i].tolist()]
         if "계정과목" in row_vals:
             header_row = i
@@ -1662,31 +1672,127 @@ def parse_trial_balance_structured(file_content, filename):
     if dr_bal_col < 0 or cr_bal_col >= len(df.columns):
         raise ValueError("합계잔액시산표 컬럼 배치가 예상(차변잔액/차변합계/계정과목/대변합계/대변잔액)과 다릅니다.")
 
-    # "계정과목" 컬럼명은 분개장 등 다른 장부에도 등장하므로, 시산표 특유의 2단 헤더(잔액/합계 소제목 행)가
-    # 실제로 있는지까지 확인해야 오분류를 막을 수 있음 (분개장을 시산표로 잘못 파싱한 사례로 확인됨)
-    subheader_text = "".join(_normalize_account_name(x)[0] for x in df.iloc[header_row + 1].tolist())
-    if "잔액" not in subheader_text and "합계" not in subheader_text:
-        raise ValueError("시산표 특유의 잔액/합계 2단 헤더가 확인되지 않아 다른 장부일 가능성이 높습니다.")
-
     records = []
+    # 소계 직접 계산을 위한 누적 버퍼
+    current_minor_calc = {"dr_bal": 0.0, "dr_sum": 0.0, "cr_sum": 0.0, "cr_bal": 0.0}
+    current_major_calc = {"dr_bal": 0.0, "dr_sum": 0.0, "cr_sum": 0.0, "cr_bal": 0.0}
+    current_minor_name = ""
+    current_major_name = ""
+
     for i in range(header_row + 2, len(df)):
-        raw_acc = df.iat[i, account_col]
-        if pd.isna(raw_acc):
+        raw_acc_val = df.iat[i, account_col]
+        if pd.isna(raw_acc_val):
             continue
-        acc, is_subtotal = _normalize_account_name(raw_acc)
+        raw_acc = str(raw_acc_val).strip()
+        if not raw_acc or raw_acc == "nan":
+            continue
+
+        acc, _ = _normalize_account_name(raw_acc)
         if not acc or acc == "합계":
             continue
+
         dr_bal = _to_amount(df.iat[i, dr_bal_col])
+        dr_sum = _to_amount(df.iat[i, dr_sum_col])
+        cr_sum = _to_amount(df.iat[i, cr_sum_col])
         cr_bal = _to_amount(df.iat[i, cr_bal_col])
-        records.append({
-            "Account": acc,
-            "IsSubtotal": is_subtotal,
-            "DebitBalance": dr_bal,
-            "CreditBalance": cr_bal,
-            "DebitTurnover": _to_amount(df.iat[i, dr_sum_col]),
-            "CreditTurnover": _to_amount(df.iat[i, cr_sum_col]),
-            "NetBalance": (dr_bal or 0.0) - (cr_bal or 0.0),
-        })
+        net_bal = round(dr_bal - cr_bal, 2)
+
+        is_major = ("◀" in raw_acc) or ("▶" in raw_acc)
+        is_minor = ("◁" in raw_acc) or ("▷" in raw_acc)
+
+        if is_major:
+            row_kind = "major_subtotal"
+            current_major_name = acc
+            current_minor_name = ""  # 새로운 대분류 시작 시 소분류 초기화
+            records.append({
+                "Account": acc,
+                "RawAccount": raw_acc,
+                "RowKind": row_kind,
+                "IsSubtotal": True,
+                "IsMajorSubtotal": True,
+                "IsMinorSubtotal": False,
+                "DebitBalance": dr_bal,
+                "DebitTurnover": dr_sum,
+                "CreditTurnover": cr_sum,
+                "CreditBalance": cr_bal,
+                "NetBalance": net_bal,
+                "CalcDebitBalance": 0.0,
+                "CalcDebitTurnover": 0.0,
+                "CalcCreditTurnover": 0.0,
+                "CalcCreditBalance": 0.0,
+                "ParentCategory": None,
+                "ParentSection": acc
+            })
+
+        elif is_minor:
+            row_kind = "minor_subtotal"
+            current_minor_name = acc
+            records.append({
+                "Account": acc,
+                "RawAccount": raw_acc,
+                "RowKind": row_kind,
+                "IsSubtotal": True,
+                "IsMajorSubtotal": False,
+                "IsMinorSubtotal": True,
+                "DebitBalance": dr_bal,
+                "DebitTurnover": dr_sum,
+                "CreditTurnover": cr_sum,
+                "CreditBalance": cr_bal,
+                "NetBalance": net_bal,
+                "CalcDebitBalance": 0.0,
+                "CalcDebitTurnover": 0.0,
+                "CalcCreditTurnover": 0.0,
+                "CalcCreditBalance": 0.0,
+                "ParentCategory": acc,
+                "ParentSection": current_major_name
+            })
+
+        else:
+            row_kind = "leaf"
+            records.append({
+                "Account": acc,
+                "RawAccount": raw_acc,
+                "RowKind": row_kind,
+                "IsSubtotal": False,
+                "IsMajorSubtotal": False,
+                "IsMinorSubtotal": False,
+                "DebitBalance": dr_bal,
+                "DebitTurnover": dr_sum,
+                "CreditTurnover": cr_sum,
+                "CreditBalance": cr_bal,
+                "NetBalance": net_bal,
+                "ParentCategory": current_minor_name,
+                "ParentSection": current_major_name
+            })
+
+    # 2-Pass: 각 소계(minor_subtotal) 및 총합계(major_subtotal)의 실제 leaf 계정 직접 계산 합산치 집계
+    for rec in records:
+        if rec["RowKind"] == "minor_subtotal":
+            sub_acc = rec["Account"]
+            child_leaves = [r for r in records if r["RowKind"] == "leaf" and r["ParentCategory"] == sub_acc]
+            rec["CalcDebitBalance"] = round(sum(r["DebitBalance"] for r in child_leaves), 2)
+            rec["CalcDebitTurnover"] = round(sum(r["DebitTurnover"] for r in child_leaves), 2)
+            rec["CalcCreditTurnover"] = round(sum(r["CreditTurnover"] for r in child_leaves), 2)
+            rec["CalcCreditBalance"] = round(sum(r["CreditBalance"] for r in child_leaves), 2)
+            rec["IsBalanced"] = (
+                abs(rec["DebitBalance"] - rec["CalcDebitBalance"]) <= 1.0 and
+                abs(rec["DebitTurnover"] - rec["CalcDebitTurnover"]) <= 1.0 and
+                abs(rec["CreditTurnover"] - rec["CalcCreditTurnover"]) <= 1.0 and
+                abs(rec["CreditBalance"] - rec["CalcCreditBalance"]) <= 1.0
+            )
+        elif rec["RowKind"] == "major_subtotal":
+            maj_acc = rec["Account"]
+            child_leaves = [r for r in records if r["RowKind"] == "leaf" and r["ParentSection"] == maj_acc]
+            rec["CalcDebitBalance"] = round(sum(r["DebitBalance"] for r in child_leaves), 2)
+            rec["CalcDebitTurnover"] = round(sum(r["DebitTurnover"] for r in child_leaves), 2)
+            rec["CalcCreditTurnover"] = round(sum(r["CreditTurnover"] for r in child_leaves), 2)
+            rec["CalcCreditBalance"] = round(sum(r["CreditBalance"] for r in child_leaves), 2)
+            rec["IsBalanced"] = (
+                abs(rec["DebitBalance"] - rec["CalcDebitBalance"]) <= 1.0 and
+                abs(rec["DebitTurnover"] - rec["CalcDebitTurnover"]) <= 1.0 and
+                abs(rec["CreditTurnover"] - rec["CalcCreditTurnover"]) <= 1.0 and
+                abs(rec["CreditBalance"] - rec["CalcCreditBalance"]) <= 1.0
+            )
 
     result = pd.DataFrame(records)
     if result.empty:
@@ -1695,35 +1801,27 @@ def parse_trial_balance_structured(file_content, filename):
 
 
 def _detect_statement_layout(df):
-    """재무상태표(5컬럼: 당기 상세/소계 + 전기 상세/소계) vs 손익계산서(7컬럼: 위 구성 + 비율(%) 컬럼)를 헤더로 구분."""
+    """재무상태표(5컬럼: 당기 세부/표시 + 전기 세부/표시) vs 손익계산서(7컬럼: 위 구성 + 비율(%) 컬럼)를 헤더로 구분."""
     row1_text = "".join(str(x) for x in df.iloc[1].tolist())
     if "비율" in row1_text:
         return {"account": 0, "cur_detail": 1, "cur_sub": 2, "prior_detail": 4, "prior_sub": 5}
     return {"account": 0, "cur_detail": 1, "cur_sub": 2, "prior_detail": 3, "prior_sub": 4}
 
 
-def _row_kind(acc_text, cur_val, prior_val):
-    t = acc_text.strip()
-    if not t or t == "nan":
-        return "blank"
-    if t in ("자산", "부채", "자본"):
-        return "group"
-    if t.startswith(_ROMAN_PREFIXES):
-        return "subtotal"
-    if re.match(r"^\(\d+\)", t):
-        return "subtotal"
-    if "총계" in t:
-        return "total"
-    if cur_val is None and prior_val is None:
-        return "annotation"
-    return "leaf"
+def _is_contra_keyword(acc_name):
+    """대손충당금, 감가상각누계액 등 차감 계정과목 키워드 판정."""
+    keywords = ["대손충당금", "감가상각누계액", "손상차손누계액", "국고보조금", "정부보조금", "보조금", "퇴직급여충당", "할인발행차금", "현재가치할인차금"]
+    clean = acc_name.replace(" ", "")
+    return any(k in clean for k in keywords)
 
 
 def parse_financial_statement(file_content, filename):
     """
-    회사 회계프로그램이 이미 대차 일치까지 맞춰 내보낸 재무상태표(과목별)/손익계산서(과목별)를 파싱.
-    각 행을 leaf(개별 계정)/subtotal(Ⅰ,Ⅱ../(1),(2).. 소계)/total(총계)/group/annotation으로 분류해
-    시산표 대사는 leaf 행만, 대차평형 검증은 total 행만 사용한다.
+    재무상태표(B/S) 및 손익계산서(I/S)를 4단 금액(총액/차감액/순액) 규칙에 맞게 정밀 파싱.
+    - B열: 당기 총액/차감액 (CurrentGross)
+    - C열: 당기 순액/표시액 (CurrentNet)
+    - D열: 전기 총액/차감액 (PriorGross)
+    - E열: 전기 순액/표시액 (PriorNet)
     """
     df = _read_tabular(file_content, filename)
     layout = _detect_statement_layout(df)
@@ -1731,17 +1829,72 @@ def parse_financial_statement(file_content, filename):
     records = []
     for i in range(2, len(df)):
         raw_acc = df.iat[i, layout["account"]]
-        acc = _normalize_account_name(raw_acc)[0] if pd.notna(raw_acc) else ""
-        cur = _to_amount(df.iat[i, layout["cur_detail"]])
-        if cur is None:
-            cur = _to_amount(df.iat[i, layout["cur_sub"]])
-        prior = _to_amount(df.iat[i, layout["prior_detail"]])
-        if prior is None:
-            prior = _to_amount(df.iat[i, layout["prior_sub"]])
-        kind = _row_kind(acc, cur, prior)
-        if kind == "blank":
+        if pd.isna(raw_acc):
             continue
-        records.append({"Account": acc, "Current": cur, "Prior": prior, "RowKind": kind})
+        raw_acc_str = str(raw_acc).strip()
+        acc, is_subtotal_flag = _normalize_account_name(raw_acc_str)
+        if not acc or acc == "nan":
+            continue
+
+        cur_gross = _to_amount_or_none(df.iat[i, layout["cur_detail"]])
+        cur_net = _to_amount_or_none(df.iat[i, layout["cur_sub"]])
+        prior_gross = _to_amount_or_none(df.iat[i, layout["prior_detail"]])
+        prior_net = _to_amount_or_none(df.iat[i, layout["prior_sub"]])
+
+        # 행 성격 판정
+        clean_acc = acc.replace(" ", "")
+        if clean_acc in ("자산", "부채", "자본"):
+            row_kind = "group"
+        elif "총계" in clean_acc:
+            row_kind = "total"
+        elif is_subtotal_flag or clean_acc.startswith(_ROMAN_PREFIXES) or bool(re.match(r"^\(\d+\)", clean_acc)):
+            row_kind = "subtotal"
+        elif _is_contra_keyword(clean_acc):
+            row_kind = "contra"
+        elif cur_gross is not None and cur_net is None:
+            # B열에 총액이 있고 C열이 빈 경우 (차감 모계정: 외상매출금, 건물, 기계장치 등)
+            row_kind = "contra_parent"
+        elif cur_gross is None and cur_net is None and prior_gross is None and prior_net is None:
+            row_kind = "annotation"
+        else:
+            row_kind = "leaf"
+
+        if row_kind == "annotation":
+            continue
+
+        # 실질 대사/분석 기준 금액(Current/Prior) 결정
+        if row_kind == "contra_parent":
+            cur_val = cur_gross
+            prior_val = prior_gross
+        elif row_kind == "contra":
+            cur_val = cur_gross if cur_gross is not None else cur_net
+            prior_val = prior_gross if prior_gross is not None else prior_net
+        else:
+            cur_val = cur_net if cur_net is not None else cur_gross
+            prior_val = prior_net if prior_net is not None else prior_gross
+
+        records.append({
+            "Account": acc,
+            "RawAccount": raw_acc_str,
+            "RowKind": row_kind,
+            "IsContra": (row_kind == "contra"),
+            "IsContraParent": (row_kind == "contra_parent"),
+            "CurrentGross": cur_gross,
+            "CurrentNet": cur_net,
+            "Current": cur_val,
+            "PriorGross": prior_gross,
+            "PriorNet": prior_net,
+            "Prior": prior_val
+        })
+
+    # 2-Pass: contra_parent의 CurrentNet을 후속 contra의 C열 순장부가액으로 연동 보정
+    for idx in range(len(records) - 1):
+        if records[idx]["RowKind"] == "contra_parent":
+            next_rec = records[idx + 1]
+            if next_rec["RowKind"] == "contra" and next_rec["CurrentNet"] is not None:
+                records[idx]["CurrentNet"] = next_rec["CurrentNet"]
+            if next_rec["RowKind"] == "contra" and next_rec["PriorNet"] is not None:
+                records[idx]["PriorNet"] = next_rec["PriorNet"]
 
     result = pd.DataFrame(records)
     if result.empty:
@@ -1771,47 +1924,66 @@ def check_balance(bs_df, tolerance=1.0):
 
 def reconcile_tb_to_statement(tb_df, stmt_df, tolerance=1.0):
     """
-    시산표 잔액(NetBalance)과 재무상태표 표시금액(leaf 행)을 계정별로 대사.
-    대손충당금/감가상각누계액처럼 동일 계정명이 여러 자산에 걸쳐 반복되는 경우 이름만으로 합산하면
-    서로 다른 자산의 충당금이 뒤섞여 오탐이 발생한다 (실제 원본 파일로 확인됨). 시산표와 재무제표가
-    같은 계정과목 나열 순서를 쓴다는 전제 하에, 동일 이름은 등장 순서대로 큐에서 하나씩 꺼내 짝짓는다.
+    시산표 잔액(NetBalance/DebitBalance/CreditBalance)과 재무상태표(B/S)의 총액/순액을 계정별로 정밀 대사.
+    - 차감 모계정(외상매출금 등): B/S의 CurrentGross와 T/B의 DebitBalance 대사
+    - 차감 계정(대손충당금 등): B/S의 CurrentGross와 T/B의 CreditBalance 대사
+    - 일반 Leaf 계정: B/S의 Current와 T/B의 NetBalance(또는 차/대 잔액) 대사
     """
     tb_queues = {}
     for _, row in tb_df[~tb_df["IsSubtotal"]].iterrows():
-        tb_queues.setdefault(row["Account"], deque()).append(row["NetBalance"])
+        acc = row["Account"]
+        dr_bal = row.get("DebitBalance", 0.0) or 0.0
+        cr_bal = row.get("CreditBalance", 0.0) or 0.0
+        net_bal = row.get("NetBalance", 0.0) or (dr_bal - cr_bal)
+        tb_queues.setdefault(acc, deque()).append({
+            "DebitBalance": dr_bal,
+            "CreditBalance": cr_bal,
+            "NetBalance": net_bal
+        })
 
     results = []
-    for _, row in stmt_df[stmt_df["RowKind"] == "leaf"].iterrows():
-        acc, stmt_amount = row["Account"], row["Current"]
+    for _, row in stmt_df[stmt_df["RowKind"].isin(["leaf", "contra", "contra_parent"])].iterrows():
+        acc = row["Account"]
+        row_kind = row["RowKind"]
+        stmt_amount = row["Current"]
         queue = tb_queues.get(acc)
+        
         if not queue:
             results.append({
                 "Account": acc, "StatementAmount": stmt_amount, "TBAmount": None,
                 "Diff": None, "Matched": False, "Reason": "시산표에서 해당 계정을 찾을 수 없음",
             })
             continue
-        tb_amount = queue.popleft()
-        diff = None if stmt_amount is None else round(stmt_amount - abs(tb_amount), 2)
+
+        tb_item = queue.popleft()
+        if row_kind == "contra_parent":
+            tb_target_amt = tb_item["DebitBalance"] if tb_item["DebitBalance"] > 0 else tb_item["NetBalance"]
+        elif row_kind == "contra":
+            tb_target_amt = tb_item["CreditBalance"] if tb_item["CreditBalance"] > 0 else abs(tb_item["NetBalance"])
+        else:
+            tb_target_amt = abs(tb_item["NetBalance"]) if tb_item["NetBalance"] != 0 else (tb_item["DebitBalance"] or tb_item["CreditBalance"])
+
+        diff = None if stmt_amount is None else round(abs(stmt_amount) - abs(tb_target_amt), 2)
         matched = diff is not None and abs(diff) <= tolerance
         results.append({
-            "Account": acc, "StatementAmount": stmt_amount, "TBAmount": tb_amount,
+            "Account": acc, "StatementAmount": stmt_amount, "TBAmount": tb_target_amt,
             "Diff": diff, "Matched": matched, "Reason": "" if matched else "금액 불일치",
         })
     return results
 
 
 def financial_statement_to_variance_input(bs_df, is_df):
-    """재무상태표+손익계산서의 leaf 행을 합쳐 run_variance_analysis가 기대하는 Account/Current/Prior 형태로 변환."""
-    leaf = pd.concat([bs_df[bs_df["RowKind"] == "leaf"], is_df[is_df["RowKind"] == "leaf"]], ignore_index=True)
+    """재무상태표+손익계산서의 leaf/contra 행을 합쳐 run_variance_analysis가 기대하는 Account/Current/Prior 형태로 변환."""
+    leaf = pd.concat([
+        bs_df[bs_df["RowKind"].isin(["leaf", "contra", "contra_parent"])],
+        is_df[is_df["RowKind"].isin(["leaf", "contra", "contra_parent"])]
+    ], ignore_index=True)
     return leaf[["Account", "Current", "Prior"]].fillna(0.0)
 
 
 def build_standard_statements(tb_df, bs_df=None, is_df=None):
     """
     대차평형 검증 + 시산표-재무상태표 계정별 대사 결과를 조서 저장(analysis_result_json)에 실을 수 있게 묶어 반환.
-    손익계산서 계정은 기말에 '손익' 계정으로 마감되어 시산표상 잔액(NetBalance)이 0으로 찍히므로
-    (실제 원본 파일로 확인됨 - 회전(turnover) 컬럼도 마감분개가 섞여 신뢰할 수 없는 경우가 있었음),
-    잔액 기준 대사는 재무상태표(영구계정)에만 적용하고 손익계산서는 이번 단계에서는 대사하지 않는다.
     """
     result = {"balance_check": None, "bs_reconciliation": [], "is_reconciliation": [],
               "is_reconciliation_note": "손익계산서 계정은 기말 마감으로 시산표 잔액이 0이 되어 잔액 기준 대사가 불가능함 (P2/추후 별도 방식 필요)"}

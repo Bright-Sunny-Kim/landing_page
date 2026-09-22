@@ -1023,8 +1023,11 @@
                                     <option value="2023">2023년</option>
                                 </select>
                             </div>
-                            <div>
-                                <button type="button" id="btn-run-ingest" class="btn-primary" style="padding: 10px 22px; font-size: 0.92rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer;">
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" id="btn-query-lakehouse" class="btn-secondary" style="padding: 10px 16px; font-size: 0.92rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.5); border-radius: 8px; color: #a5b4fc; cursor: pointer;">
+                                    <span>🔍 데이터 조회</span>
+                                </button>
+                                <button type="button" id="btn-run-ingest" class="btn-primary" style="padding: 10px 20px; font-size: 0.92rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 8px; color: white; cursor: pointer;">
                                     <span>📤 6대 회계자료 수집 & 저장</span>
                                 </button>
                             </div>
@@ -1060,7 +1063,7 @@
                     </div>
 
                     <!-- 1-1. 파싱 데이터 수집 현황 및 무결성 검증 블록 (Data Ingestion & Integrity Health) -->
-                    <div id="analytics-health-container" class="analytics-health-panel glass-card-nested" style="display: none; width: 100%; box-sizing: border-box; background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                    <div id="analytics-health-container" class="analytics-health-panel glass-card-nested" style="display: block; width: 100%; box-sizing: border-box; background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span style="font-size: 1.15rem;">🔍</span>
@@ -1068,10 +1071,16 @@
                                 <span style="font-size: 0.78rem; color: #94a3b8;">(100% Python 결정론적 정규화)</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 10px;">
+                                <div id="health-lakehouse-status-badge" style="display: flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.35); border-radius: 20px; color: #a5b4fc; font-size: 0.8rem; font-weight: 600;">
+                                    <span>🟢 사내 MinIO 실시간 연동</span>
+                                </div>
                                 <div id="health-integrity-badge" style="display: flex; align-items: center; gap: 6px; padding: 4px 14px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); border-radius: 20px; color: #34d399; font-size: 0.85rem; font-weight: 700;">
                                     <span>🛡️ 수집 무결성:</span>
                                     <span id="health-integrity-score">100점</span>
                                 </div>
+                                <button type="button" id="btn-rebuild-health-lakehouse" class="btn-secondary" style="padding: 4px 12px; font-size: 0.78rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="우분투 MinIO 원본 엑셀 기준 표준 DB 재구축">
+                                    <span>🔄 DB 재동기화</span>
+                                </button>
                             </div>
                         </div>
 
@@ -1497,7 +1506,7 @@
     {% include 'components/ai_cpa_widget.html' %}
 
     <!-- Script JS -->
-    <script src="{{ url_for('static', filename='js/main.js', v='20260922-cpa-v9') }}"></script>
-    <script src="{{ url_for('static', filename='js/master_analytics.js', v='20260922-cpa-v9') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js', v='20260922-cpa-v12') }}"></script>
+    <script src="{{ url_for('static', filename='js/master_analytics.js', v='20260922-cpa-v14') }}"></script>
 </body>
 </html>

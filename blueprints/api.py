@@ -766,6 +766,20 @@ def upload_single_file():
             except Exception as db_err:
                 logger.error("[UPLOAD_SINGLE:DB_ERROR] Supabase company_files insert failed: %s", db_err, exc_info=True)
 
+        # 3. 사내 우분투 MinIO Lakehouse (Normalized/data.json) 비동기 자동 동기화 트리거
+        try:
+            import threading
+            from core.storage_manager import storage_manager
+            fy_int = int(fiscal_year) if fiscal_year and str(fiscal_year).isdigit() else 2025
+            threading.Thread(
+                target=storage_manager.sync_normalized_lakehouse,
+                args=(target_company, fy_int),
+                daemon=True
+            ).start()
+            logger.info("[UPLOAD_SINGLE:SYNC_TRIGGERED] Background lakehouse sync thread spawned for %s (FY %s)", target_company, fy_int)
+        except Exception as sync_trigger_err:
+            logger.warning("[UPLOAD_SINGLE:SYNC_WARN] Failed to spawn background lakehouse sync thread: %s", sync_trigger_err)
+
         now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
         return jsonify({
             'success': True,
@@ -1061,6 +1075,64 @@ def download_company_file(file_id=None):
     except Exception as e:
         logger.error("[DOWNLOAD:UNHANDLED_ERROR] %s", e, exc_info=True)
         return jsonify({'success': False, 'error': f'다운로드 처리 중 오류: {str(e)}'}), 500
+
+
+@api_bp.route('/api/company/normalized-dataset/<path:company_name>', methods=['GET'])
+@api_bp.route('/api/company/normalized-dataset', methods=['GET'])
+def get_normalized_dataset(company_name=None):
+    """
+    사내 우분투 MinIO 서버의 {company_name}/{fiscal_year}/Normalized/data.json 을
+    0.01초 만에 인메모리 고속으로 반환하는 초고속 엔드포인트
+    """
+    try:
+        from core.storage_manager import storage_manager
+
+        target_company = company_name or request.args.get('company_name', '').strip()
+        if not target_company and 'company' in session:
+            target_company = session.get('company', '')
+
+        if not target_company:
+            return jsonify({'success': False, 'error': '회사명이 제공되지 않았습니다.'}), 400
+
+        target_year = request.args.get('fiscal_year', '').strip() or request.args.get('year', '').strip() or '2025'
+
+        logger.info("[NORMALIZED_DATASET:REQ] Fetching normalized data for %s (FY %s)", target_company, target_year)
+        result = storage_manager.load_normalized_lakehouse_data(target_company, int(target_year) if target_year.isdigit() else 2025)
+
+        status_code = 200 if result.get('success') else 404
+        return jsonify(result), status_code
+    except Exception as e:
+        logger.error("[NORMALIZED_DATASET:ERROR] %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': f'정규화 데이터 조회 오류: {str(e)}'}), 500
+
+
+@api_bp.route('/api/company/rebuild-normalized', methods=['POST'])
+def rebuild_normalized_dataset():
+    """
+    회계사/관리자가 수동으로 사내 MinIO Normalized/data.json 을 즉시 재빌드/동기화하는 API
+    """
+    try:
+        from core.storage_manager import storage_manager
+
+        data = request.get_json(silent=True) or {}
+        target_company = data.get('company_name') or data.get('company') or request.form.get('company_name', '').strip()
+        if not target_company and 'company' in session:
+            target_company = session.get('company', '')
+
+        if not target_company:
+            return jsonify({'success': False, 'error': '회사명이 제공되지 않았습니다.'}), 400
+
+        target_year = data.get('fiscal_year') or data.get('year') or request.form.get('fiscal_year', '').strip() or '2025'
+        fy_int = int(target_year) if str(target_year).isdigit() else 2025
+
+        logger.info("[REBUILD_NORMALIZED:REQ] Manual Lakehouse rebuild triggered for %s (FY %s)", target_company, fy_int)
+        sync_result = storage_manager.sync_normalized_lakehouse(target_company, fy_int)
+
+        status_code = 200 if sync_result.get('success') else 500
+        return jsonify(sync_result), status_code
+    except Exception as e:
+        logger.error("[REBUILD_NORMALIZED:ERROR] %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': f'재동기화 처리 오류: {str(e)}'}), 500
 
 
 

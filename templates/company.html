@@ -453,6 +453,89 @@
                 tbody.innerHTML = html;
             } catch (err) {
                 console.warn("[RECENT_SUBMISSIONS:LOAD_WARN]", err);
+            } finally {
+                // 사내 MinIO DB 동기화 상태 뱃지 업데이트
+                if (typeof window.loadLakehouseStatus === 'function') {
+                    window.loadLakehouseStatus();
+                }
+            }
+        };
+
+        // 사내 MinIO DB 실시간 동기화 상태 조회 및 뱃지 렌더러
+        window.loadLakehouseStatus = async function() {
+            const badge = document.getElementById('lakehouse-sync-badge');
+            const text = document.getElementById('lakehouse-sync-text');
+            if (!badge || !text) return;
+
+            try {
+                const res = await fetch(`/api/company/normalized-dataset/${encodeURIComponent(currentCompanyName)}?fiscal_year=${encodeURIComponent(currentFiscalYear)}`);
+                if (!res.ok) {
+                    badge.style.background = 'rgba(255, 149, 0, 0.12)';
+                    badge.style.color = '#ff9500';
+                    badge.style.border = '1px solid rgba(255, 149, 0, 0.25)';
+                    badge.querySelector('span').style.background = '#ff9500';
+                    text.innerText = '사내 DB 수집 대기중';
+                    return;
+                }
+
+                const payload = await res.json();
+                if (payload.success && payload.data) {
+                    const integrity = payload.data.integrity || {};
+                    const isBalanced = integrity.is_balanced;
+                    const stmts = payload.data.statements || {};
+                    const totalStmts = (stmts.trial_balance?.length ? 1 : 0) + (stmts.balance_sheet?.length ? 1 : 0) + (stmts.income_statement?.length ? 1 : 0);
+
+                    if (isBalanced && totalStmts >= 2) {
+                        badge.style.background = 'rgba(52, 199, 89, 0.12)';
+                        badge.style.color = '#34c759';
+                        badge.style.border = '1px solid rgba(52, 199, 89, 0.25)';
+                        badge.querySelector('span').style.background = '#34c759';
+                        text.innerText = `사내 DB 동기화 완료 (대차 100점 / ${payload.elapsed_ms}ms)`;
+                    } else {
+                        badge.style.background = 'rgba(255, 149, 0, 0.12)';
+                        badge.style.color = '#ff9500';
+                        badge.style.border = '1px solid rgba(255, 149, 0, 0.25)';
+                        badge.querySelector('span').style.background = '#ff9500';
+                        text.innerText = `사내 DB ${totalStmts}/3장부 수집됨`;
+                    }
+                }
+            } catch (e) {
+                console.warn("[LAKEHOUSE:STATUS_CHECK_ERR]", e);
+            }
+        };
+
+        // 회계사/고객 사내 DB 수동 재동기화 버튼 핸들러
+        window.handleRebuildLakehouse = async function() {
+            const btn = document.getElementById('btn-rebuild-lakehouse');
+            const text = document.getElementById('lakehouse-sync-text');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:12px; height:12px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; display:inline-block; animation:spin 0.6s linear infinite;"></span> <span>동기화중...</span>`;
+            }
+
+            try {
+                const res = await fetch('/api/company/rebuild-normalized', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        company_name: currentCompanyName,
+                        fiscal_year: currentFiscalYear
+                    })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    if (window.loadLakehouseStatus) await window.loadLakehouseStatus();
+                    alert(`✅ [사내 MinIO DB 동기화 완료]\n- 대상 연도: ${result.fiscal_year}년\n- 활성 장부: ${result.active_files_count}개 파일\n- 대차평형: ${result.is_balanced ? '일치 (100점)' : '확인 필요'}`);
+                } else {
+                    alert(`⚠️ 재동기화 알림: ${result.error || result.message}`);
+                }
+            } catch (err) {
+                alert(`❌ 오류: 사내 서버 통신 실패 (${err.message})`);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> <span>DB 재동기화</span>`;
+                }
             }
         };
 
@@ -954,7 +1037,19 @@
                                 <p class="recent-card-subtitle">가장 최근에 접수된 제출 내역 상위 5건을 표시합니다.</p>
                             </div>
                         </div>
-                        <div class="recent-header-right">
+                        <div class="recent-header-right" style="display: flex; align-items: center; gap: 10px;">
+                            <!-- [NEW] 사내 MinIO DB 동기화 상태 뱃지 -->
+                            <div id="lakehouse-sync-badge" class="lakehouse-status-badge" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: rgba(52, 199, 89, 0.12); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.25);">
+                                <span style="width: 7px; height: 7px; border-radius: 50%; background: #34c759; display: inline-block;"></span>
+                                <span id="lakehouse-sync-text">사내 DB 동기화 완료</span>
+                            </div>
+
+                            <!-- [NEW] 사내 DB 수동 재동기화 버튼 -->
+                            <button type="button" id="btn-rebuild-lakehouse" class="btn-lakehouse-rebuild" onclick="handleRebuildLakehouse()" title="사내 MinIO Normalized DB 즉시 재동기화" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--text-primary, #fff); padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                                <span>DB 재동기화</span>
+                            </button>
+
                             <button type="button" class="btn-all-submissions" onclick="openAllSubmissionsModal()">
                                 <span>전체 목록 보기</span>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
