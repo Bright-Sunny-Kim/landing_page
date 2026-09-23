@@ -7,7 +7,6 @@ openpyxl>=3.1.0
 xlrd>=2.0.1
 numpy>=1.24.0
 scikit-learn>=1.2.0
-sentence-transformers>=2.2.0
 openai>=1.0.0
 OpenDartReader>=0.2.1
 boto3>=1.28.0
