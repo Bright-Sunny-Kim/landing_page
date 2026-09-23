@@ -60,9 +60,9 @@ else:
 # Boto3 MinIO 초기화
 from botocore.config import Config
 
-minio_endpoint = os.getenv("MINIO_ENDPOINT", "http://100.74.25.71:9000")
-minio_access_key = os.getenv("MINIO_ACCESS_KEY", "")
-minio_secret_key = os.getenv("MINIO_SECRET_KEY", "")
+minio_endpoint = os.getenv("MINIO_ENDPOINT", "https://s3.hyean-dskim.com").strip()
+minio_access_key = os.getenv("MINIO_ACCESS_KEY", "").strip()
+minio_secret_key = os.getenv("MINIO_SECRET_KEY", "").strip()
 
 if minio_access_key and minio_secret_key:
     s3_client = boto3.client(
@@ -71,7 +71,7 @@ if minio_access_key and minio_secret_key:
         aws_access_key_id=minio_access_key,
         aws_secret_access_key=minio_secret_key,
         region_name='us-east-1',
-        config=Config(connect_timeout=5, read_timeout=15, retries={'max_attempts': 2})
+        config=Config(connect_timeout=2, read_timeout=3, retries={'max_attempts': 1})
     )
 else:
     logger.warning("MINIO credentials missing in .env")

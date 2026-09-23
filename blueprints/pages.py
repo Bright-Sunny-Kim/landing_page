@@ -113,8 +113,13 @@ def company_page(company_name):
             valid_files = []
             for f in raw_files:
                 file_url_path = f.get('file_url')
-                if not file_url_path or not check_storage_file_exists(file_url_path):
+                if not file_url_path:
                     continue
+                try:
+                    if not check_storage_file_exists(file_url_path):
+                        continue
+                except Exception:
+                    pass
 
                 fn = f.get('file_name', '')
                 ht = f.get('help_text', '')
