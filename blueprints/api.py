@@ -1217,4 +1217,47 @@ def rebuild_normalized_dataset():
         return jsonify({'success': False, 'error': f'재동기화 처리 오류: {str(e)}'}), 500
 
 
+@api_bp.route('/api/company/portal-analytics/<path:company_name>', methods=['GET'])
+@api_bp.route('/api/company/portal-analytics', methods=['GET'])
+def get_portal_analytics(company_name=None):
+    """
+    회사 포털 5대 핵심 회계분석 보고서(벤포드, 거래처 파레토/에이징, 듀퐁, CCC, 비용 Outlier, AJE)를
+    MinIO Lakehouse의 정규화 데이터를 바탕으로 실시간 연산하여 반환하는 API
+    """
+    try:
+        from core.audit_engine import generate_comprehensive_portal_analytics
+        import time
+
+        start_t = time.time()
+        target_company = company_name or request.args.get('company_name', '').strip()
+        if not target_company and 'company' in session:
+            target_company = session.get('company', '')
+
+        if not target_company:
+            logger.warning("[PORTAL_ANALYTICS:WARN] Missing company name in request")
+            return jsonify({'success': False, 'error': '회사명이 제공되지 않았습니다.'}), 400
+
+        target_year = request.args.get('fiscal_year', '').strip() or request.args.get('year', '').strip() or '2025'
+        fy_int = int(target_year) if str(target_year).isdigit() else 2025
+
+        logger.info("[PORTAL_ANALYTICS:REQ] Generating portal analytics for '%s' (FY %s)", target_company, fy_int)
+        analytics_result = generate_comprehensive_portal_analytics(target_company, fy_int)
+
+        elapsed_ms = int((time.time() - start_t) * 1000)
+        analytics_result['elapsed_ms'] = elapsed_ms
+
+        if analytics_result.get('success'):
+            logger.info("[PORTAL_ANALYTICS:SUCCESS] Generated analytics for %s in %dms (Health Score: %s)",
+                        target_company, elapsed_ms, analytics_result.get('health_score', {}).get('score'))
+            return jsonify(analytics_result), 200
+        else:
+            logger.error("[PORTAL_ANALYTICS:FAIL] Failed to generate analytics: %s", analytics_result.get('error'))
+            return jsonify(analytics_result), 404
+
+    except Exception as e:
+        logger.error("[PORTAL_ANALYTICS:ERROR] Critical error generating portal analytics: %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': f'분석 보고서 생성 오류: {str(e)}'}), 500
+
+
+
 

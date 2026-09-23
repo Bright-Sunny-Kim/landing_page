@@ -866,9 +866,9 @@
             'balance_sheet': 'balance_sheet',
             'income_statement': 'income_statement',
             'trial_balance': 'trial_balance',
-            'journal_entries': 'journal_entries_sample',
-            'subledger': 'subledger_sample',
-            'account_ledger': 'account_ledger_sample'
+            'journal_entries': 'journal_entries',
+            'subledger': 'subledger',
+            'account_ledger': 'account_ledger'
         };
 
         const targetKey = keyMap[dataType] || dataType;
@@ -1073,7 +1073,154 @@
             return;
         }
 
-        // 4. 일반 원장/전표 범용 렌더러
+        // 4. 분개장 (Journal Entries) 특화 렌더러
+        if (dataType === 'journal_entries') {
+            thead.innerHTML = `
+                <tr style="background: rgba(15,23,42,0.85); border-bottom: 2px solid rgba(99,102,241,0.4);">
+                    <th style="padding: 10px 12px; text-align: center; color: #f8fafc; font-weight: 700; width: 10%;">전표일자</th>
+                    <th style="padding: 10px 10px; text-align: center; color: #94a3b8; font-weight: 600; width: 7%;">전표번호</th>
+                    <th style="padding: 10px 10px; text-align: center; color: #cbd5e1; font-weight: 600; width: 7%;">구분</th>
+                    <th style="padding: 10px 10px; text-align: center; color: #a5b4fc; font-weight: 600; width: 7%;">Code</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #f8fafc; font-weight: 700; width: 16%;">계정과목</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #38bdf8; font-weight: 700; width: 12%;">차변</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #38bdf8; font-weight: 700; width: 12%;">대변</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #cbd5e1; font-weight: 600; width: 15%;">거래처</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #94a3b8; font-weight: 400; width: 14%;">적요</th>
+                </tr>
+            `;
+
+            const fmt = (v) => (v === null || v === undefined || isNaN(v) || v === 0) ? '0' : Math.round(v).toLocaleString();
+
+            records.slice(0, 300).forEach(r => {
+                const tr = document.createElement('tr');
+                tr.style.cssText = 'border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s;';
+                tr.onmouseenter = () => tr.style.background = 'rgba(99,102,241,0.08)';
+                tr.onmouseleave = () => tr.style.background = 'transparent';
+
+                const dateVal = r['전표일자'] || r.Date || r.date || '-';
+                const voucherVal = r['전표번호'] !== undefined ? r['전표번호'] : (r.VoucherNo || r.voucher_no || '-');
+                const typeVal = r['구분'] || r.Type || r.entry_type || '-';
+                const codeVal = r.Code !== undefined ? r.Code : (r.AccountCode || r.account_code || '-');
+                const accVal = r['계정과목'] || r.AccountName || r.account_name || '-';
+                const debitVal = r['차변'] !== undefined ? r['차변'] : (r.Debit || r.debit || 0);
+                const creditVal = r['대변'] !== undefined ? r['대변'] : (r.Credit || r.credit || 0);
+                const custVal = r['거래처'] || r.Customer || r.customer || '-';
+                const descVal = r['적요'] || r.Description || r.description || '-';
+
+                tr.innerHTML = `
+                    <td style="padding: 6px 12px; text-align: center; color: #94a3b8; font-size: 0.82rem;">${dateVal}</td>
+                    <td style="padding: 6px 10px; text-align: center; color: #cbd5e1; font-size: 0.82rem; font-weight: 600;">${voucherVal}</td>
+                    <td style="padding: 6px 10px; text-align: center; color: ${typeVal === '차변' ? '#38bdf8' : (typeVal === '대변' ? '#f87171' : '#a78bfa')}; font-size: 0.82rem; font-weight: 600;">${typeVal}</td>
+                    <td style="padding: 6px 10px; text-align: center; color: #a5b4fc; font-size: 0.82rem; font-family: monospace;">${codeVal}</td>
+                    <td style="padding: 6px 14px; text-align: left; color: #f8fafc; font-weight: 600;">${accVal}</td>
+                    <td style="padding: 6px 12px; text-align: right; color: ${debitVal > 0 ? '#38bdf8' : '#64748b'}; font-family: monospace; font-size: 0.85rem;">${fmt(debitVal)}</td>
+                    <td style="padding: 6px 12px; text-align: right; color: ${creditVal > 0 ? '#38bdf8' : '#64748b'}; font-family: monospace; font-size: 0.85rem;">${fmt(creditVal)}</td>
+                    <td style="padding: 6px 14px; text-align: left; color: #cbd5e1; font-size: 0.85rem;">${custVal}</td>
+                    <td style="padding: 6px 14px; text-align: left; color: #94a3b8; font-size: 0.82rem;">${descVal}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            return;
+        }
+
+        // 5. 거래처원장 (Subledger) 특화 렌더러
+        if (dataType === 'subledger') {
+            thead.innerHTML = `
+                <tr style="background: rgba(15,23,42,0.85); border-bottom: 2px solid rgba(99,102,241,0.4);">
+                    <th style="padding: 10px 10px; text-align: center; color: #a5b4fc; font-weight: 600; width: 8%;">거래처코드</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #f8fafc; font-weight: 700; width: 18%;">거래처명</th>
+                    <th style="padding: 10px 10px; text-align: center; color: #94a3b8; font-weight: 600; width: 7%;">코드</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #cbd5e1; font-weight: 700; width: 17%;">계정과목명</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #94a3b8; font-weight: 600; width: 12%;">전기(월)이월</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #38bdf8; font-weight: 700; width: 13%;">차변</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #38bdf8; font-weight: 700; width: 13%;">대변</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #34d399; font-weight: 700; width: 12%;">잔액</th>
+                </tr>
+            `;
+
+            const fmt = (v) => (v === null || v === undefined || isNaN(v) || v === 0) ? '0' : Math.round(v).toLocaleString();
+
+            records.slice(0, 300).forEach(r => {
+                const tr = document.createElement('tr');
+                tr.style.cssText = 'border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s;';
+                tr.onmouseenter = () => tr.style.background = 'rgba(99,102,241,0.08)';
+                tr.onmouseleave = () => tr.style.background = 'transparent';
+
+                const custCode = r['거래처코드'] !== undefined ? r['거래처코드'] : (r.CustCode || r.cust_code || '-');
+                const custName = r['거래처명'] || r.CustName || r.cust_name || '-';
+                const accCode = r['코드'] !== undefined ? r['코드'] : (r.AccountCode || r.account_code || '-');
+                const accName = r['계정과목명'] || r['계정과목'] || r.AccountName || r.account_name || '-';
+                const priorVal = r['전기(월)이월'] !== undefined ? r['전기(월)이월'] : (r.PriorBalance || r.prior_balance || 0);
+                const debitVal = r['차변'] !== undefined ? r['차변'] : (r.Debit || r.debit || 0);
+                const creditVal = r['대변'] !== undefined ? r['대변'] : (r.Credit || r.credit || 0);
+                const balVal = r['잔액'] !== undefined ? r['잔액'] : (r.EndBalance || r.end_balance || 0);
+
+                tr.innerHTML = `
+                    <td style="padding: 6px 10px; text-align: center; color: #a5b4fc; font-family: monospace; font-size: 0.82rem;">${custCode}</td>
+                    <td style="padding: 6px 14px; text-align: left; color: #f8fafc; font-weight: 600;">${custName}</td>
+                    <td style="padding: 6px 10px; text-align: center; color: #94a3b8; font-family: monospace; font-size: 0.82rem;">${accCode}</td>
+                    <td style="padding: 6px 14px; text-align: left; color: #cbd5e1;">${accName}</td>
+                    <td style="padding: 6px 12px; text-align: right; color: #94a3b8; font-family: monospace; font-size: 0.85rem;">${fmt(priorVal)}</td>
+                    <td style="padding: 6px 12px; text-align: right; color: ${debitVal > 0 ? '#38bdf8' : '#64748b'}; font-family: monospace; font-size: 0.85rem;">${fmt(debitVal)}</td>
+                    <td style="padding: 6px 12px; text-align: right; color: ${creditVal > 0 ? '#38bdf8' : '#64748b'}; font-family: monospace; font-size: 0.85rem;">${fmt(creditVal)}</td>
+                    <td style="padding: 6px 14px; text-align: right; color: #34d399; font-weight: 700; font-family: monospace; font-size: 0.85rem;">${fmt(balVal)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            return;
+        }
+
+        // 6. 계정별원장 (General Ledger / Account Ledger) 특화 렌더러
+        if (dataType === 'account_ledger') {
+            thead.innerHTML = `
+                <tr style="background: rgba(15,23,42,0.85); border-bottom: 2px solid rgba(99,102,241,0.4);">
+                    <th style="padding: 10px 10px; text-align: center; color: #a5b4fc; font-weight: 600; width: 7%;">과목코드</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #f8fafc; font-weight: 700; width: 15%;">계정과목</th>
+                    <th style="padding: 10px 12px; text-align: center; color: #94a3b8; font-weight: 600; width: 10%;">날짜</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #cbd5e1; font-weight: 600; width: 17%;">적요란</th>
+                    <th style="padding: 10px 10px; text-align: center; color: #94a3b8; font-weight: 600; width: 7%;">코드</th>
+                    <th style="padding: 10px 14px; text-align: left; color: #cbd5e1; font-weight: 600; width: 14%;">거래처</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #38bdf8; font-weight: 700; width: 10%;">차변</th>
+                    <th style="padding: 10px 12px; text-align: right; color: #38bdf8; font-weight: 700; width: 10%;">대변</th>
+                    <th style="padding: 10px 14px; text-align: right; color: #34d399; font-weight: 700; width: 10%;">잔액</th>
+                </tr>
+            `;
+
+            const fmt = (v) => (v === null || v === undefined || isNaN(v) || v === 0) ? '0' : Math.round(v).toLocaleString();
+
+            records.slice(0, 300).forEach(r => {
+                const tr = document.createElement('tr');
+                tr.style.cssText = 'border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s;';
+                tr.onmouseenter = () => tr.style.background = 'rgba(99,102,241,0.08)';
+                tr.onmouseleave = () => tr.style.background = 'transparent';
+
+                const accCode = r['계정과목코드'] !== undefined ? r['계정과목코드'] : (r.AccountCode || r.account_code || '-');
+                const accName = r['계정과목'] || r.AccountName || r.account_name || '-';
+                const dateVal = r['날짜'] || r.Date || r.date || '-';
+                const descVal = r['적요란'] || r['적요'] || r.Description || r.description || '-';
+                const custCode = r['코드'] !== undefined ? r['코드'] : (r.Code || r.code || '-');
+                const custVal = r['거래처'] || r.Customer || r.customer || '-';
+                const debitVal = r['차변'] !== undefined ? r['차변'] : (r.Debit || r.debit || 0);
+                const creditVal = r['대변'] !== undefined ? r['대변'] : (r.Credit || r.credit || 0);
+                const balVal = r['잔액'] !== undefined ? r['잔액'] : (r.Balance || r.balance || 0);
+
+                tr.innerHTML = `
+                    <td style="padding: 6px 10px; text-align: center; color: #a5b4fc; font-family: monospace; font-size: 0.82rem;">${accCode}</td>
+                    <td style="padding: 6px 14px; text-align: left; color: #f8fafc; font-weight: 600;">${accName}</td>
+                    <td style="padding: 6px 12px; text-align: center; color: #94a3b8; font-size: 0.82rem;">${dateVal}</td>
+                    <td style="padding: 6px 14px; text-align: left; color: #cbd5e1; font-size: 0.85rem;">${descVal}</td>
+                    <td style="padding: 6px 10px; text-align: center; color: #94a3b8; font-family: monospace; font-size: 0.82rem;">${custCode}</td>
+                    <td style="padding: 6px 14px; text-align: left; color: #cbd5e1; font-size: 0.85rem;">${custVal}</td>
+                    <td style="padding: 6px 12px; text-align: right; color: ${debitVal > 0 ? '#38bdf8' : '#64748b'}; font-family: monospace; font-size: 0.85rem;">${fmt(debitVal)}</td>
+                    <td style="padding: 6px 12px; text-align: right; color: ${creditVal > 0 ? '#38bdf8' : '#64748b'}; font-family: monospace; font-size: 0.85rem;">${fmt(creditVal)}</td>
+                    <td style="padding: 6px 14px; text-align: right; color: #34d399; font-weight: 700; font-family: monospace; font-size: 0.85rem;">${fmt(balVal)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            return;
+        }
+
+        // 7. 일반 원장/전표 범용 폴백 렌더러
         const headers = Object.keys(records[0] || {});
         const trHead = document.createElement('tr');
         trHead.style.background = 'rgba(15,23,42,0.85)';
@@ -1355,6 +1502,9 @@
             const curBs = curSt.balance_sheet || [];
             const curIs = curSt.income_statement || [];
             const curTb = curSt.trial_balance || [];
+            const curJe = curSt.journal_entries || [];
+            const curSl = curSt.subledger || [];
+            const curGl = curSt.account_ledger || [];
 
             // 2. 전기 데이터 객체 구성
             const priSt = (priorDataObj && priorDataObj.statements) || {};
@@ -1363,8 +1513,12 @@
             const priBs = priSt.balance_sheet || [];
             const priIs = priSt.income_statement || [];
             const priTb = priSt.trial_balance || [];
+            const priJe = priSt.journal_entries || [];
+            const priSl = priSt.subledger || [];
+            const priGl = priSt.account_ledger || [];
 
-            const totalAccts = curBs.length + curIs.length + curTb.length + priBs.length + priIs.length + priTb.length;
+            const totalAccts = curBs.length + curIs.length + curTb.length + curJe.length + curSl.length + curGl.length +
+                               priBs.length + priIs.length + priTb.length + priJe.length + priSl.length + priGl.length;
 
             const ingestionHealth = {
                 integrity_score: (curItg.is_balanced !== false && (priItg.is_balanced !== false)) ? 100 : 85,
@@ -1390,20 +1544,20 @@
                         is_balanced: curItg.is_balanced !== false
                     },
                     journal_entries: {
-                        status: curAf.je ? 'ready' : 'missing',
-                        count: curAf.je ? '전표수집완료' : 0,
+                        status: (curJe.length > 0 || curAf.je) ? 'ready' : 'missing',
+                        count: curJe.length > 0 ? `${curJe.length.toLocaleString()}건` : (curAf.je ? '전표수집완료' : 0),
                         filename: curAf.je ? curAf.je.filename : '',
                         is_balanced: true
                     },
                     subledger: {
-                        status: curAf.sl ? 'ready' : 'missing',
-                        count: curAf.sl ? '원장수집완료' : 0,
+                        status: (curSl.length > 0 || curAf.sl) ? 'ready' : 'missing',
+                        count: curSl.length > 0 ? `${curSl.length.toLocaleString()}건` : (curAf.sl ? '원장수집완료' : 0),
                         filename: curAf.sl ? curAf.sl.filename : '',
                         is_balanced: true
                     },
                     account_ledger: {
-                        status: curAf.gl ? 'ready' : 'missing',
-                        count: curAf.gl ? '총계정원장완료' : 0,
+                        status: (curGl.length > 0 || curAf.gl) ? 'ready' : 'missing',
+                        count: curGl.length > 0 ? `${curGl.length.toLocaleString()}건` : (curAf.gl ? '총계정원장완료' : 0),
                         filename: curAf.gl ? curAf.gl.filename : '',
                         is_balanced: true
                     }
@@ -1428,20 +1582,20 @@
                         is_balanced: priItg.is_balanced !== false
                     },
                     journal_entries: {
-                        status: priAf.je ? 'ready' : 'missing',
-                        count: priAf.je ? '전표수집완료' : 0,
+                        status: (priJe.length > 0 || priAf.je) ? 'ready' : 'missing',
+                        count: priJe.length > 0 ? `${priJe.length.toLocaleString()}건` : (priAf.je ? '전표수집완료' : 0),
                         filename: priAf.je ? priAf.je.filename : '',
                         is_balanced: true
                     },
                     subledger: {
-                        status: priAf.sl ? 'ready' : 'missing',
-                        count: priAf.sl ? '원장수집완료' : 0,
+                        status: (priSl.length > 0 || priAf.sl) ? 'ready' : 'missing',
+                        count: priSl.length > 0 ? `${priSl.length.toLocaleString()}건` : (priAf.sl ? '원장수집완료' : 0),
                         filename: priAf.sl ? priAf.sl.filename : '',
                         is_balanced: true
                     },
                     account_ledger: {
-                        status: priAf.gl ? 'ready' : 'missing',
-                        count: priAf.gl ? '총계정원장완료' : 0,
+                        status: (priGl.length > 0 || priAf.gl) ? 'ready' : 'missing',
+                        count: priGl.length > 0 ? `${priGl.length.toLocaleString()}건` : (priAf.gl ? '총계정원장완료' : 0),
                         filename: priAf.gl ? priAf.gl.filename : '',
                         is_balanced: true
                     }
@@ -1456,9 +1610,9 @@
                     balance_sheet: curBs.length > 0 ? curBs : priBs,
                     income_statement: curIs.length > 0 ? curIs : priIs,
                     trial_balance: curTb.length > 0 ? curTb : priTb,
-                    journal_entries_sample: [],
-                    subledger_sample: [],
-                    account_ledger_sample: []
+                    journal_entries: curJe.length > 0 ? curJe : priJe,
+                    subledger: curSl.length > 0 ? curSl : priSl,
+                    account_ledger: curGl.length > 0 ? curGl : priGl
                 }
             };
 

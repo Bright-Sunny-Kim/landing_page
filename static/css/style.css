@@ -7125,13 +7125,275 @@ body.audit-portal-body {
         gap: 8px;
     }
 
-    .btn-social {
-        padding: 10px;
-        font-size: 0.84rem;
-    }
-
     .oauth-modal-card {
         padding: 1.5rem 1.25rem;
         margin: 1rem;
     }
 }
+
+/* ==============================================================================
+   [NEW] 회사 포털 및 마스터 대시보드 전폭(Full-Width) 100% 레이아웃 확장 스타일
+   ============================================================================== */
+.master-container,
+.company-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 100vh;
+    padding: 24px 32px !important;
+    box-sizing: border-box !important;
+    gap: 28px !important;
+}
+
+.master-main-content,
+#partner-main-content {
+    flex: 1 1 0% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+.master-card,
+.dashboard-card,
+#partner-analysis-view,
+#partner-home-view,
+#partner-external-view,
+#partner-consulting-view,
+#partner-billing-view,
+#partner-settings-view {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 32px 36px !important;
+    box-sizing: border-box !important;
+    border-radius: 20px !important;
+}
+
+#partner-analysis-view .glass-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#pa-dashboard-container {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+@media (max-width: 1200px) {
+    .master-container,
+    .company-container {
+        padding: 16px 20px !important;
+        gap: 20px !important;
+    }
+    
+    .master-card,
+    .dashboard-card,
+    #partner-analysis-view {
+        padding: 24px 20px !important;
+    }
+}
+
+/* ==========================================================================
+   📊 분석보고서 (#partner-analysis-view) 모바일/태블릿 반응형 전용 스타일
+   ========================================================================== */
+
+.pa-top-summary-grid,
+.pa-two-col-grid,
+.pa-kpi-grid,
+.pa-ccc-subgrid {
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.pa-chart-box {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.pa-chart-canvas-wrapper {
+    position: relative !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.pa-table-responsive-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+}
+
+/* 1024px 이하: 태블릿 및 가로 모드 */
+@media (max-width: 1024px) {
+    .pa-top-summary-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .pa-kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .pa-two-col-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+}
+
+/* 768px 이하: 모바일 화면 */
+@media (max-width: 768px) {
+    .master-container,
+    .company-container {
+        padding: 12px 10px !important;
+        gap: 14px !important;
+    }
+
+    .master-card,
+    .dashboard-card,
+    #partner-analysis-view {
+        padding: 16px 14px !important;
+        border-radius: 14px !important;
+    }
+
+    .pa-dashboard-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 14px !important;
+        padding-bottom: 16px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .pa-header-title {
+        font-size: 1.25rem !important;
+    }
+
+    .pa-header-controls {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        gap: 8px !important;
+    }
+
+    .pa-header-controls .btn-submit,
+    .pa-header-controls .btn-table-action {
+        font-size: 0.8rem !important;
+        padding: 6px 10px !important;
+    }
+
+    #pa-dashboard-container {
+        gap: 16px !important;
+    }
+
+    .pa-top-summary-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .pa-health-score-card {
+        padding: 16px !important;
+    }
+
+    #pa-health-score {
+        font-size: 2.3rem !important;
+    }
+
+    .pa-kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .pa-kpi-card {
+        padding: 12px 10px !important;
+    }
+
+    .pa-kpi-card div:first-child {
+        font-size: 0.72rem !important;
+    }
+
+    .pa-kpi-card div:nth-child(2) {
+        font-size: 1.15rem !important;
+        margin: 4px 0 !important;
+    }
+
+    .pa-kpi-card div:nth-child(3) {
+        font-size: 0.7rem !important;
+    }
+
+    .pa-two-col-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .pa-chart-canvas-wrapper {
+        height: 175px !important;
+    }
+
+    .pa-ccc-subgrid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important;
+    }
+
+    .pa-ccc-subgrid div {
+        padding: 8px 4px !important;
+    }
+
+    .pa-ccc-subgrid div div:first-child {
+        font-size: 0.68rem !important;
+    }
+
+    .pa-ccc-subgrid div div:last-child {
+        font-size: 0.95rem !important;
+    }
+}
+
+/* 480px 이하: 소형 스마트폰 화면 */
+@media (max-width: 480px) {
+    .master-container,
+    .company-container {
+        padding: 8px 6px !important;
+    }
+
+    .master-card,
+    .dashboard-card,
+    #partner-analysis-view {
+        padding: 14px 10px !important;
+        border-radius: 12px !important;
+    }
+
+    .pa-header-title {
+        font-size: 1.12rem !important;
+    }
+
+    .pa-kpi-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+    }
+
+    .pa-kpi-card {
+        padding: 10px 8px !important;
+    }
+
+    .pa-kpi-card div:first-child {
+        font-size: 0.68rem !important;
+    }
+
+    .pa-kpi-card div:nth-child(2) {
+        font-size: 1.05rem !important;
+    }
+
+    .pa-kpi-card div:nth-child(3) {
+        font-size: 0.66rem !important;
+    }
+
+    .pa-chart-canvas-wrapper {
+        height: 160px !important;
+    }
+
+    .pa-ccc-subgrid div div:first-child {
+        font-size: 0.62rem !important;
+    }
+
+    .pa-ccc-subgrid div div:last-child {
+        font-size: 0.88rem !important;
+    }
+}
+

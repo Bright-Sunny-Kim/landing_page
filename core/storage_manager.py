@@ -865,6 +865,51 @@ class HybridStorageManager:
                     logger.warning("[STORAGE:SYNC_IS_ERR] Failed to parse I/S (%s): %s", is_info["filename"], ise)
                     parsed_errors["is"] = str(ise)
 
+            # 2-4. 분개장 (Journal Entries)
+            if "je" in selected_files:
+                je_info = selected_files["je"]
+                try:
+                    from core.ledger_converter import parse_journal_entries
+                    s3_obj = self.s3_client.get_object(Bucket=bucket_name, Key=je_info["key"])
+                    je_bytes = s3_obj["Body"].read()
+                    je_df = pd.read_excel(io.BytesIO(je_bytes), header=None, dtype=str) if je_info["filename"].endswith(('.xlsx', '.xls')) else pd.read_csv(io.BytesIO(je_bytes), header=None, dtype=str)
+                    je_records = parse_journal_entries(je_df)
+                    parsed_store["journal_entries"] = je_records
+                    logger.info("[STORAGE:SYNC_PARSED] 분개장 parsed successfully: %d entries", len(je_records))
+                except Exception as jee:
+                    logger.warning("[STORAGE:SYNC_JE_ERR] Failed to parse 분개장 (%s): %s", je_info["filename"], jee)
+                    parsed_errors["journal_entries"] = str(jee)
+
+            # 2-5. 거래처원장 (Subledger)
+            if "sl" in selected_files:
+                sl_info = selected_files["sl"]
+                try:
+                    from core.ledger_converter import parse_subledger_entries
+                    s3_obj = self.s3_client.get_object(Bucket=bucket_name, Key=sl_info["key"])
+                    sl_bytes = s3_obj["Body"].read()
+                    sl_df = pd.read_excel(io.BytesIO(sl_bytes), header=None, dtype=str) if sl_info["filename"].endswith(('.xlsx', '.xls')) else pd.read_csv(io.BytesIO(sl_bytes), header=None, dtype=str)
+                    sl_records = parse_subledger_entries(sl_df)
+                    parsed_store["subledger"] = sl_records
+                    logger.info("[STORAGE:SYNC_PARSED] 거래처원장 parsed successfully: %d records", len(sl_records))
+                except Exception as sle:
+                    logger.warning("[STORAGE:SYNC_SL_ERR] Failed to parse 거래처원장 (%s): %s", sl_info["filename"], sle)
+                    parsed_errors["subledger"] = str(sle)
+
+            # 2-6. 계정별원장 (General Ledger / Account Ledger)
+            if "gl" in selected_files:
+                gl_info = selected_files["gl"]
+                try:
+                    from core.ledger_converter import parse_general_ledger_entries
+                    s3_obj = self.s3_client.get_object(Bucket=bucket_name, Key=gl_info["key"])
+                    gl_bytes = s3_obj["Body"].read()
+                    gl_df = pd.read_excel(io.BytesIO(gl_bytes), header=None, dtype=str) if gl_info["filename"].endswith(('.xlsx', '.xls')) else pd.read_csv(io.BytesIO(gl_bytes), header=None, dtype=str)
+                    gl_records = parse_general_ledger_entries(gl_df, default_year=str(fy))
+                    parsed_store["account_ledger"] = gl_records
+                    logger.info("[STORAGE:SYNC_PARSED] 계정별원장 parsed successfully: %d records", len(gl_records))
+                except Exception as gle:
+                    logger.warning("[STORAGE:SYNC_GL_ERR] Failed to parse 계정별원장 (%s): %s", gl_info["filename"], gle)
+                    parsed_errors["account_ledger"] = str(gle)
+
             # 3. 대차평형 및 수치 대사 무결성 검증
             balance_check_res = check_balance(parsed_store.get("bs")) if "bs" in parsed_store else {}
             reconciliation_list = []
@@ -887,11 +932,15 @@ class HybridStorageManager:
                         return None
                 return val
 
-            def _df_to_records(df):
-                if df is None or not hasattr(df, "to_dict"):
+            def _df_to_records(df_or_records):
+                if df_or_records is None:
                     return []
-                records = df.replace({np.nan: None}).to_dict(orient="records")
-                return _clean_for_json(records)
+                if isinstance(df_or_records, list):
+                    return _clean_for_json(df_or_records)
+                if hasattr(df_or_records, "to_dict"):
+                    records = df_or_records.replace({np.nan: None}).to_dict(orient="records")
+                    return _clean_for_json(records)
+                return []
 
             # 4. 표준 data.json 생성
             standard_data_json = {
@@ -909,7 +958,10 @@ class HybridStorageManager:
                 "statements": {
                     "trial_balance": _df_to_records(parsed_store.get("tb")),
                     "balance_sheet": _df_to_records(parsed_store.get("bs")),
-                    "income_statement": _df_to_records(parsed_store.get("is"))
+                    "income_statement": _df_to_records(parsed_store.get("is")),
+                    "journal_entries": _df_to_records(parsed_store.get("journal_entries")),
+                    "subledger": _df_to_records(parsed_store.get("subledger")),
+                    "account_ledger": _df_to_records(parsed_store.get("account_ledger"))
                 },
                 "reconciliation": _clean_for_json(reconciliation_list),
                 "active_source_files": selected_files
@@ -926,14 +978,17 @@ class HybridStorageManager:
                     "trial_balance": "tb" in parsed_store,
                     "balance_sheet": "bs" in parsed_store,
                     "income_statement": "is" in parsed_store,
-                    "journal_entries": "je" in selected_files,
-                    "account_ledger": "gl" in selected_files,
-                    "subledger": "sl" in selected_files
+                    "journal_entries": "journal_entries" in parsed_store or "je" in selected_files,
+                    "account_ledger": "account_ledger" in parsed_store or "gl" in selected_files,
+                    "subledger": "subledger" in parsed_store or "sl" in selected_files
                 },
                 "account_counts": {
                     "trial_balance": len(parsed_store.get("tb", [])),
                     "balance_sheet": len(parsed_store.get("bs", [])),
-                    "income_statement": len(parsed_store.get("is", []))
+                    "income_statement": len(parsed_store.get("is", [])),
+                    "journal_entries": len(parsed_store.get("journal_entries", [])),
+                    "subledger": len(parsed_store.get("subledger", [])),
+                    "account_ledger": len(parsed_store.get("account_ledger", []))
                 },
                 "is_balanced": balance_check_res.get("Balanced", False),
                 "is_complete": bool("tb" in parsed_store and "bs" in parsed_store and "is" in parsed_store),

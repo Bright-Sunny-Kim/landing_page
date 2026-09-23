@@ -656,8 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 // [Step 6] 파트너사 관리 > 업무 요청 관리 모듈 로직
 // ==========================================
-let allMasterRequestsCache = [];
-let currentRequestStatusFilter = '';
+var allMasterRequestsCache = window.allMasterRequestsCache || [];
+var currentRequestStatusFilter = window.currentRequestStatusFilter || '';
 
 window.loadMasterRequests = async function() {
     const tbody = document.getElementById('master-requests-tbody');

@@ -19,9 +19,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Style CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260922-cpa-v9') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='20260923-responsive-v2') }}">
     <!-- html2pdf for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Chart.js for Interactive Financial Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- [NEW] 자료제출 팝오버: 선택 기반 즉시 업로드 및 제출 완료 실시간 동기화 스크립트 -->
     <script>
@@ -1398,93 +1400,340 @@
             </div> <!-- end sub-tab-contents -->
         </div>
 
-        <!-- 📊 분석보고서 전용 독립 뷰 -->
-        <div class="glass-card dashboard-card master-card" id="partner-analysis-view" style="display: none;">
-            <header class="dashboard-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
-                <div class="status-badge" style="background: rgba(99, 102, 241, 0.2); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.4);">
-                    <span class="pulse-dot" style="background: #a78bfa;"></span>
-                    <span>AI Audit Analytics</span>
+        <!-- 📊 6대 표준장부 기반 경영진 정밀 회계분석 보고서 전용 뷰 -->
+        <div class="glass-card dashboard-card master-card" id="partner-analysis-view" style="display: none; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important;">
+            <!-- 분석보고서 헤더 -->
+            <header class="dashboard-header pa-dashboard-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 20px; margin-bottom: 24px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;">
+                        <div class="status-badge" style="background: rgba(99, 102, 241, 0.2); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.4);">
+                            <span class="pulse-dot" style="background: #a78bfa;"></span>
+                            <span>AI Audit & Financial Analytics</span>
+                        </div>
+                        <span id="pa-lakehouse-badge" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.76rem; font-weight: 600; background: rgba(52, 199, 89, 0.12); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.25);">
+                            <span style="width: 6px; height: 6px; border-radius: 50%; background: #34c759;"></span>
+                            <span id="pa-lakehouse-text">사내 MinIO 6대 장부 동기화 완료</span>
+                        </span>
+                    </div>
+                    <h1 class="pa-header-title" style="margin: 0; font-size: 1.55rem; color: #f8fafc; font-weight: 700;">📊 <span class="company-highlight">{{ company_name }}</span> 경영진 정밀 회계분석 보고서</h1>
+                    <p style="margin: 6px 0 0 0; color: var(--text-secondary); font-size: 0.88rem;">6대 표준 회계장부(재무제표, 분개장, 거래처원장, 계정별원장) 전수 분석을 통해 도출된 감사인 수준의 경영 진단 보고서입니다.</p>
                 </div>
-                <h1 id="dashboard-heading">📊 AI 재무 분석보고서</h1>
-                <p class="checklist-desc" style="color: var(--text-secondary); margin-top: 10px; font-size: 0.95rem;">제출하신 재무제표(시산표/재무상태표/손익계산서)를 바탕으로 AI가 계정 변동성, 감사 위험 및 감사 조서 초안을 분석합니다.</p>
+
+                <!-- 헤더 우측 컨트롤 버튼 & 연도 선택 -->
+                <div class="pa-header-controls" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); padding: 5px 12px; border-radius: 10px;">
+                        <span style="font-size: 0.78rem; color: #a5b4fc; font-weight: 600;">분석연도:</span>
+                        <select id="pa-fiscal-year-select" onchange="if(window.loadCompanyPortalAnalytics) window.loadCompanyPortalAnalytics(this.value);" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 6px; color: #60a5fa; font-size: 0.88rem; font-weight: 700; padding: 3px 10px; cursor: pointer; outline: none;">
+                            <option value="2025" selected>2025년</option>
+                            <option value="2024">2024년</option>
+                            <option value="2023">2023년</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-table-action" onclick="if(window.loadCompanyPortalAnalytics) window.loadCompanyPortalAnalytics();" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0; padding: 6px 14px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                        <span>새로고침</span>
+                    </button>
+                    <button type="button" class="btn-submit" onclick="if(window.exportPortalReportPDF) window.exportPortalReportPDF();" style="width: auto; padding: 6px 16px; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        <span>PDF 보고서 출력</span>
+                    </button>
+                </div>
             </header>
 
-            <div id="ca-status" style="padding: 2rem; text-align: center; color: var(--text-secondary); background: rgba(20,20,20,0.3); border-radius: 12px;">
-                분석 준비 중...
+            <!-- 로딩 상태 표시 -->
+            <div id="pa-loading-spinner" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #a5b4fc;">
+                <div class="spinner-border" style="width: 40px; height: 40px; border: 3px solid rgba(99,102,241,0.2); border-top-color: #818cf8; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px;"></div>
+                <div style="font-size: 1.05rem; font-weight: 600;">6대 장부 정밀 분석 데이터를 연산하고 있습니다...</div>
+                <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 5px;">(분개장 JET, 벤포드 분포, 거래처 파레토, 듀퐁 분해, 비용 Outlier 등)</div>
             </div>
 
-            <div id="ca-report-body" style="display: none;">
-                <div class="info-grid" style="margin-top: 1rem; margin-bottom: 2rem; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2);">
-                    <div class="info-item">
-                        <h3>추정 자산총계</h3>
-                        <p id="ca-assets" style="color: var(--text-primary); font-family: 'Outfit', sans-serif;">-</p>
+            <!-- 분석 대시보드 본문 컨테이너 -->
+            <div id="pa-dashboard-container" style="display: none; flex-direction: column; gap: 24px;">
+
+                <!-- 0. 경영진 종합 건강 스코어 & 핵심 재무 KPI 요약 그리드 -->
+                <div class="pa-top-summary-grid" style="display: grid; grid-template-columns: 280px 1fr; gap: 16px;">
+                    <!-- 건강 점수 카드 -->
+                    <div class="glass-card pa-health-score-card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.85)); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Executive Health Score</span>
+                                <h3 style="margin: 4px 0 0 0; font-size: 1.15rem; color: #f8fafc; font-weight: 700;">종합 회계 건전성</h3>
+                            </div>
+                            <span id="pa-health-grade" style="background: rgba(99, 102, 241, 0.25); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); padding: 4px 10px; border-radius: 8px; font-size: 1.1rem; font-weight: 800; font-family: 'Outfit', sans-serif;">AA</span>
+                        </div>
+                        <div style="margin: 15px 0; display: flex; align-items: baseline; gap: 6px;">
+                            <span id="pa-health-score" style="font-size: 3rem; font-weight: 900; color: #60a5fa; font-family: 'Outfit', sans-serif; line-height: 1;">80</span>
+                            <span style="color: #94a3b8; font-size: 1.1rem; font-weight: 600;">/ 100점</span>
+                        </div>
+                        <div id="pa-health-deductions" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.76rem; color: #cbd5e1;">
+                            <span style="color: #94a3b8;">주요 진단 의견:</span>
+                            <div id="pa-health-deductions-list" style="display: flex; flex-direction: column; gap: 2px;"></div>
+                        </div>
                     </div>
-                    <div class="info-item">
-                        <h3>추정 매출액</h3>
-                        <p id="ca-sales" style="color: var(--text-primary); font-family: 'Outfit', sans-serif;">-</p>
-                    </div>
-                    <div class="info-item" style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1.5rem;">
-                        <h3>수행중요성금액</h3>
-                        <p id="ca-materiality" style="color: #ef4444; font-family: 'Outfit', sans-serif; font-weight: 700;">-</p>
+
+                    <!-- 핵심 재무 KPI 카드 4종 그리드 -->
+                    <div class="pa-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                        <!-- KPI 1: 매출액 -->
+                        <div class="glass-card pa-kpi-card" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">매출액 (Revenue)</div>
+                            <div id="pa-kpi-revenue" style="font-size: 1.35rem; font-weight: 800; color: #f8fafc; font-family: 'Outfit', sans-serif; margin: 8px 0 4px 0;">-</div>
+                            <div id="pa-kpi-revenue-diff" style="font-size: 0.75rem; color: #34c759;">전년 대비 -</div>
+                        </div>
+                        <!-- KPI 2: 당기순이익 & 순이익률 -->
+                        <div class="glass-card pa-kpi-card" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">당기순이익 (Net Income)</div>
+                            <div id="pa-kpi-net-income" style="font-size: 1.35rem; font-weight: 800; color: #38bdf8; font-family: 'Outfit', sans-serif; margin: 8px 0 4px 0;">-</div>
+                            <div id="pa-kpi-margin" style="font-size: 0.75rem; color: #94a3b8;">순이익률 -%</div>
+                        </div>
+                        <!-- KPI 3: ROE (자기자본이익률) -->
+                        <div class="glass-card pa-kpi-card" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">자기자본이익률 (ROE)</div>
+                            <div id="pa-kpi-roe" style="font-size: 1.35rem; font-weight: 800; color: #a78bfa; font-family: 'Outfit', sans-serif; margin: 8px 0 4px 0;">-</div>
+                            <div id="pa-kpi-roe-driver" style="font-size: 0.75rem; color: #a5b4fc;">듀퐁 드라이버: -</div>
+                        </div>
+                        <!-- KPI 4: 현금전환주기 (CCC) -->
+                        <div class="glass-card pa-kpi-card" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 600;">현금전환주기 (CCC)</div>
+                            <div id="pa-kpi-ccc" style="font-size: 1.35rem; font-weight: 800; color: #34c759; font-family: 'Outfit', sans-serif; margin: 8px 0 4px 0;">-</div>
+                            <div id="pa-kpi-ccc-eval" style="font-size: 0.75rem; color: #34c759;">회수 속도 우수</div>
+                        </div>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
-                    <div class="glass-card" style="background: rgba(20,20,20,0.45); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.15);">
-                        <h3 style="color: #f87171; margin-bottom: 1.2rem; font-size: 1.1rem; font-weight: 600;">🚨 식별된 감사 위험</h3>
-                        <div id="ca-risks-container" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                <!-- 1. [분석 1 & 2] 듀퐁 3단계 분석 & 현금전환주기 (CCC) -->
+                <div class="pa-two-col-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px;">
+                    <!-- 좌측: 듀퐁 3단계 분해 카드 -->
+                    <div class="glass-card" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 14px; padding: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.15rem;">📐</span>
+                                <h3 style="margin: 0; font-size: 1.05rem; color: #f8fafc; font-weight: 700;">듀퐁 3단계 ROE 분해 분석</h3>
+                            </div>
+                            <span id="pa-dupont-badge" class="table-chip written" style="font-size: 0.75rem;">순이익률 견인</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 16px 0;">자기자본이익률(ROE)을 수익성(마진), 효율성(회전율), 안정성(레버리지)으로 분해하여 변동 원인을 규명합니다.</p>
+                        
+                        <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
+                                <span style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">1. 순이익률 (Net Margin)</span>
+                                <span id="pa-dupont-margin" style="font-size: 1rem; font-weight: 800; color: #38bdf8; font-family: 'Outfit', sans-serif;">-%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
+                                <span style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">2. 총자산회전율 (Asset Turnover)</span>
+                                <span id="pa-dupont-turnover" style="font-size: 1rem; font-weight: 800; color: #34c759; font-family: 'Outfit', sans-serif;">-회</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">
+                                <span style="font-size: 0.85rem; color: #cbd5e1; font-weight: 600;">3. 재무 레버리지 (Equity Multiplier)</span>
+                                <span id="pa-dupont-leverage" style="font-size: 1rem; font-weight: 800; color: #fbbf24; font-family: 'Outfit', sans-serif;">-배</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px;">
+                                <span style="font-size: 0.92rem; color: #f8fafc; font-weight: 700;">결과: 자기자본이익률 (ROE)</span>
+                                <span id="pa-dupont-roe-final" style="font-size: 1.15rem; font-weight: 900; color: #a78bfa; font-family: 'Outfit', sans-serif;">-%</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="glass-card" style="background: rgba(20,20,20,0.45); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.2);">
-                        <h3 style="color: #a78bfa; margin-bottom: 1.2rem; font-size: 1.1rem; font-weight: 600;">📖 관련 회계기준 (K-GAAP)</h3>
-                        <div id="ca-standards-container" style="display: flex; flex-direction: column; gap: 1rem; max-height: 350px; overflow-y: auto; padding-right: 0.3rem;"></div>
+
+                    <!-- 우측: 운전자본 및 현금전환주기(CCC) 카드 -->
+                    <div class="glass-card" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(52, 199, 89, 0.2); border-radius: 14px; padding: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.15rem;">⏱️</span>
+                                <h3 style="margin: 0; font-size: 1.05rem; color: #f8fafc; font-weight: 700;">현금전환주기 (CCC) & 운전자본</h3>
+                            </div>
+                            <span id="pa-ccc-badge" class="table-chip pfile" style="font-size: 0.75rem;">회수 양호</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin: 0 0 16px 0;">원재료 매입부터 판매 및 대금 회수까지 현금이 묶여 있는 일수를 진단합니다.</p>
+
+                        <div class="pa-ccc-subgrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; text-align: center;">
+                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 6px;">
+                                <div style="font-size: 0.72rem; color: #94a3b8;">매출채권 회수(DSO)</div>
+                                <div id="pa-ccc-dso" style="font-size: 1.05rem; font-weight: 800; color: #38bdf8; font-family: 'Outfit', sans-serif; margin-top: 4px;">-일</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 6px;">
+                                <div style="font-size: 0.72rem; color: #94a3b8;">재고 회전(DIO)</div>
+                                <div id="pa-ccc-dio" style="font-size: 1.05rem; font-weight: 800; color: #fbbf24; font-family: 'Outfit', sans-serif; margin-top: 4px;">-일</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 6px;">
+                                <div style="font-size: 0.72rem; color: #94a3b8;">매입 결제(DPO)</div>
+                                <div id="pa-ccc-dpo" style="font-size: 1.05rem; font-weight: 800; color: #f87171; font-family: 'Outfit', sans-serif; margin-top: 4px;">-일</div>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(52, 199, 89, 0.08); border: 1px solid rgba(52, 199, 89, 0.2); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.82rem; color: #cbd5e1;">순운전자본 (유동자산 - 유동부채):</span>
+                            <span id="pa-ccc-nwc" style="font-size: 0.95rem; font-weight: 800; color: #34c759; font-family: 'Outfit', sans-serif;">-원</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="glass-card" style="background: rgba(20,20,20,0.3); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 2.5rem;">
-                    <h3 style="color: var(--text-primary); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">📊 계정 변동성 분석 (전기 대비 이상 항목)</h3>
-                    <div class="table-container">
-                        <table class="partners-table" style="font-size: 0.9rem;">
+                <!-- 2. [분석 3] 분개장 JET 이상 전표 & 벤포드의 법칙 -->
+                <div class="glass-card" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 14px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.15rem;">🔍</span>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.05rem; color: #f8fafc; font-weight: 700;">분개장 JET 이상 전표 탐지 & 벤포드의 법칙 (ISA 240)</h3>
+                                <span style="font-size: 0.78rem; color: #94a3b8;">분개장 전표 수치의 인위적 조작 및 비정상 거래 패턴을 전수 스캔합니다.</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span id="pa-benford-badge" class="table-chip written" style="font-size: 0.75rem;">적합도: 양호</span>
+                            <span id="pa-jet-total-count" style="font-size: 0.78rem; color: #a5b4fc; font-weight: 600;">총 0건 전표 전수검사</span>
+                        </div>
+                    </div>
+
+                    <div class="pa-two-col-grid pa-benford-jet-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 15px;">
+                        <!-- 벤포드 차트 컨테이너 -->
+                        <div class="pa-chart-box" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">📊 1차 자릿수(1~9) 출현 빈도 vs 이론치</span>
+                                <span id="pa-benford-mad" style="font-size: 0.72rem; color: #94a3b8;">MAD: -</span>
+                            </div>
+                            <div class="pa-chart-canvas-wrapper" style="position: relative; height: 200px; width: 100%;">
+                                <canvas id="pa-benford-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- JET 이상 전표 유형 통계 및 요약 -->
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 0.82rem; color: #f87171; font-weight: 600;">🚨 주말/공휴일 기표 전표</div>
+                                    <div style="font-size: 0.72rem; color: #94a3b8;">통상 근무일 외 비정상 기표 내역</div>
+                                </div>
+                                <span id="pa-jet-weekend-cnt" style="font-size: 1.1rem; font-weight: 800; color: #f87171; font-family: 'Outfit', sans-serif;">0건</span>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 0.82rem; color: #fbbf24; font-weight: 600;">💰 라운드 넘버(Round Sum) 거액 전표</div>
+                                    <div style="font-size: 0.72rem; color: #94a3b8;">끝자리 000,000 인위적 금액 추정치</div>
+                                </div>
+                                <span id="pa-jet-round-cnt" style="font-size: 1.1rem; font-weight: 800; color: #fbbf24; font-family: 'Outfit', sans-serif;">0건</span>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 0.82rem; color: #a78bfa; font-weight: 600;">📅 결산 직전(12월 말) 집중 대체 전표</div>
+                                    <div style="font-size: 0.72rem; color: #94a3b8;">기말 집중 결산 수정 분개</div>
+                                </div>
+                                <span id="pa-jet-year-end-cnt" style="font-size: 1.1rem; font-weight: 800; color: #a78bfa; font-family: 'Outfit', sans-serif;">0건</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. [분석 4] 거래처 집중도 (Pareto 80/20) & 채권 연령/대손 리스크 -->
+                <div class="glass-card" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 14px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.15rem;">👥</span>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.05rem; color: #f8fafc; font-weight: 700;">거래처 집중도(Pareto 80/20) & 매출채권 회수 리스크</h3>
+                                <span style="font-size: 0.78rem; color: #94a3b8;">거래처원장 전수 분석을 통해 매출 편중 리스크와 장기 미회수 부실 채권을 분류합니다.</span>
+                            </div>
+                        </div>
+                        <span id="pa-hhi-badge" class="table-chip pfile" style="font-size: 0.75rem;">HHI 지수: - (다변화 우수)</span>
+                    </div>
+
+                    <div class="pa-two-col-grid pa-pareto-grid" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 16px;">
+                        <!-- 파레토 차트 -->
+                        <div class="pa-chart-box" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">📈 상위 20% 거래처 누적 점유율 곡선</span>
+                                <span id="pa-pareto-top20-pct" style="font-size: 0.78rem; color: #60a5fa; font-weight: 700;">상위 20% 점유율: -%</span>
+                            </div>
+                            <div class="pa-chart-canvas-wrapper" style="position: relative; height: 210px; width: 100%;">
+                                <canvas id="pa-pareto-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- 고위험 / 장기 연체 채권 거래처 테이블 -->
+                        <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; display: flex; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                                <span style="font-size: 0.82rem; color: #f87171; font-weight: 700;">⚠️ 대손충당금 설정 검토 대상 (Top 5)</span>
+                                <span id="pa-total-est-allowance" style="font-size: 0.75rem; color: #fca5a5;">예상 충당금: -원</span>
+                            </div>
+                            <div class="pa-table-responsive-wrapper" style="overflow-x: auto; max-height: 200px;">
+                                <table class="recent-submissions-table" style="font-size: 0.78rem; width: 100%; min-width: 320px;">
+                                    <thead>
+                                        <tr>
+                                            <th>거래처명</th>
+                                            <th style="text-align: right;">기말 잔액</th>
+                                            <th>위험 등급</th>
+                                            <th>진단 사유</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pa-high-risk-customers-tbody">
+                                        <tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">분석된 고위험 거래처가 없습니다.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. [분석 5] 비용 Outlier & 고위험 지출 패턴 -->
+                <div class="glass-card" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 14px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.15rem;">📉</span>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.05rem; color: #f8fafc; font-weight: 700;">판관비/원가 세부 급증(Outlier) 및 지출 패턴</h3>
+                                <span style="font-size: 0.78rem; color: #94a3b8;">계정별원장 기반 전년 대비 급증 계정과 고위험 경비(접대비, 여비교통비, 수수료) 지출을 점검합니다.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pa-two-col-grid pa-expense-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <!-- 전년 대비 급증 계정 리스트 -->
+                        <div style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px;">
+                            <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600; display: block; margin-bottom: 8px;">🔥 전년 대비 급증 계정 Top 5 (Outlier)</span>
+                            <div id="pa-expense-outliers-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+                        </div>
+
+                        <!-- 핵심 비용 월별 지출 트렌드 차트 -->
+                        <div class="pa-chart-box" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px;">
+                            <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600; display: block; margin-bottom: 8px;">📅 주요 경비 월별 발생 추이 (1월~12월)</span>
+                            <div class="pa-chart-canvas-wrapper" style="position: relative; height: 180px; width: 100%;">
+                                <canvas id="pa-expense-trend-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. [분석 6] 차기 결산 수정분개 (AJE) 권고사항 -->
+                <div class="glass-card" style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.15rem;">📋</span>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.05rem; color: #fbbf24; font-weight: 700;">감사인 차기 결산 수정분개 (AJE) 사전 권고사항</h3>
+                                <span style="font-size: 0.78rem; color: #94a3b8;">결산 확정 전 회계법인이 사전 검토하여 제안하는 필수 결산 보정 분개 리스트입니다.</span>
+                            </div>
+                        </div>
+                        <span class="table-chip" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.75rem;">사전 리스크 예방</span>
+                    </div>
+
+                    <div class="pa-table-responsive-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                        <table class="recent-submissions-table" style="font-size: 0.82rem; width: 100%; min-width: 620px;">
                             <thead>
                                 <tr>
-                                    <th>계정과목</th>
-                                    <th style="text-align: right;">전기 잔액</th>
-                                    <th style="text-align: right;">당기 잔액</th>
-                                    <th style="text-align: right;">변동액</th>
-                                    <th style="text-align: right;">변동률</th>
+                                    <th style="width: 10%;">ID</th>
+                                    <th style="width: 25%;">권고 과제명</th>
+                                    <th style="width: 12%;">우선순위</th>
+                                    <th style="width: 28%;">추천 차/대변 분개</th>
+                                    <th style="width: 25%;">기대 효과</th>
                                 </tr>
                             </thead>
-                            <tbody id="ca-variance-table-body"></tbody>
+                            <tbody id="pa-aje-tbody">
+                                <tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">권고 수정분개 항목을 로드하는 중입니다...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
 
-                <div class="glass-card" id="ca-reconciliation-section" style="display: none; background: rgba(20,20,20,0.3); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 2.5rem;">
-                    <h3 style="color: var(--text-primary); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">🧮 시산표 ↔ 재무상태표 대사</h3>
-                    <div id="ca-balance-check" style="margin-bottom: 1.2rem;"></div>
-                    <div class="table-container">
-                        <table class="partners-table" style="font-size: 0.9rem;">
-                            <thead>
-                                <tr>
-                                    <th>계정과목</th>
-                                    <th style="text-align: right;">재무제표 금액</th>
-                                    <th style="text-align: right;">시산표 잔액</th>
-                                    <th>상태</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ca-reconciliation-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="glass-card" style="background: rgba(15,15,15,0.6); padding: 2rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.7rem;">
-                        <h3 style="color: var(--text-primary); font-size: 1.25rem; font-weight: 600; margin: 0;">📝 감사 조서 초안</h3>
-                        <button type="button" id="ca-btn-download-wp" class="btn-download" style="background: #10b981; border: none; cursor: pointer; padding: 0.5rem 1rem; font-weight: 600;">📥 (.md) 다운로드</button>
-                    </div>
-                    <div id="ca-working-paper-content" style="background: rgba(5,5,5,0.75); color: #e2e8f0; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.95rem; line-height: 1.65; padding: 2rem; border-radius: 10px; overflow-x: auto; white-space: pre-wrap; max-height: 600px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05);"></div>
-                </div>
             </div>
         </div>
+
 
             <!-- 담당 회계사 1:1 자문 상담 뷰 (고객사 시점) -->
             <div class="glass-card dashboard-card master-card" id="partner-consulting-view" style="display: none;">
@@ -1581,144 +1830,497 @@
         };
     </script>
 
-    <!-- 분석보고서 탭: 업로드 자료 자동 분석 -->
+    <!-- [NEW] 회사 포털 5대 정밀 회계분석 인터랙티브 차트 및 데이터 바인딩 스크립트 -->
     <script>
-        (function () {
-            const clientCompanyName = "{{ company_name }}";
-            let analysisLoaded = false;
-            let generatedWorkingPaperMd = "";
+        (function() {
+            let benfordChartInstance = null;
+            let paretoChartInstance = null;
+            let expenseTrendChartInstance = null;
+            let lastAnalyticsPayload = null;
 
-            window.loadCompanyAnalysisReport = async function () {
-                if (analysisLoaded) return; // 이미 로드했으면 탭 재클릭 시 재요청하지 않음
-                const statusEl = document.getElementById('ca-status');
-                const bodyEl = document.getElementById('ca-report-body');
-                if (!statusEl || !bodyEl) return;
+            // 숫자 포맷팅 헬퍼 (천단위 콤마 및 억/만원 단위)
+            function formatWon(val) {
+                if (val == null || isNaN(val)) return '0원';
+                const num = Number(val);
+                if (Math.abs(num) >= 100000000) {
+                    const eok = (num / 100000000).toFixed(1);
+                    return `${Number(eok).toLocaleString()}억원 (${num.toLocaleString()}원)`;
+                } else if (Math.abs(num) >= 10000) {
+                    const man = (num / 10000).toFixed(0);
+                    return `${Number(man).toLocaleString()}만원 (${num.toLocaleString()}원)`;
+                }
+                return `${num.toLocaleString()}원`;
+            }
 
-                statusEl.style.display = 'block';
-                bodyEl.style.display = 'none';
-                statusEl.innerText = '⏳ 업로드하신 자료를 분석하는 중입니다...';
+            function formatShortWon(val) {
+                if (val == null || isNaN(val)) return '0원';
+                const num = Number(val);
+                if (Math.abs(num) >= 100000000) {
+                    return `${(num / 100000000).toFixed(1)}억원`;
+                } else if (Math.abs(num) >= 10000) {
+                    return `${(num / 10000).toFixed(0)}만원`;
+                }
+                return `${num.toLocaleString()}원`;
+            }
+
+            // 5대 분석 데이터 비동기 로드 함수
+            window.loadCompanyPortalAnalytics = async function(customYear) {
+                const yearSelect = document.getElementById('pa-fiscal-year-select');
+                const targetYear = customYear || (yearSelect ? yearSelect.value : currentFiscalYear) || '2025';
+                
+                if (yearSelect && yearSelect.value !== targetYear) {
+                    yearSelect.value = targetYear;
+                }
+
+                const spinner = document.getElementById('pa-loading-spinner');
+                const container = document.getElementById('pa-dashboard-container');
+                const lakehouseText = document.getElementById('pa-lakehouse-text');
+
+                if (spinner) spinner.style.display = 'flex';
+                if (container) container.style.display = 'none';
 
                 try {
-                    const response = await fetch(`/company/audit-analysis/${encodeURIComponent(clientCompanyName)}`);
-                    const result = await response.json();
+                    const res = await fetch(`/api/company/portal-analytics/${encodeURIComponent(currentCompanyName)}?fiscal_year=${encodeURIComponent(targetYear)}`);
+                    const payload = await res.json();
 
-                    if (!result.success) {
-                        statusEl.innerText = result.error || '아직 분석할 자료가 없습니다. 서면제출자료 탭에서 합계잔액시산표(또는 재무상태표/손익계산서)를 업로드해 주세요.';
-                        return;
+                    if (!payload.success) {
+                        throw new Error(payload.error || '분석 데이터를 가져오지 못했습니다.');
                     }
 
-                    analysisLoaded = true;
-                    statusEl.style.display = 'none';
-                    bodyEl.style.display = 'block';
+                    lastAnalyticsPayload = payload;
+                    const data = payload.analytics || {};
 
-                    document.getElementById('ca-assets').innerText = result.total_assets.toLocaleString() + ' 원';
-                    document.getElementById('ca-sales').innerText = result.total_sales.toLocaleString() + ' 원';
-                    document.getElementById('ca-materiality').innerText = result.performance_materiality.toLocaleString() + ' 원';
-
-                    const risksContainer = document.getElementById('ca-risks-container');
-                    risksContainer.innerHTML = '';
-                    (result.risk_signals || []).forEach(sig => {
-                        const card = document.createElement('div');
-                        card.style.cssText = 'background:rgba(239,68,68,0.08); border-left:4px solid #ef4444; padding:1rem; border-radius:0 8px 8px 0;';
-                        card.innerHTML = `
-                            <h4 style="color:#f87171; font-weight:600; margin-bottom:0.3rem;">[위험] ${sig.Category}</h4>
-                            <p style="font-size:0.9rem; color:#f3f4f6; margin-bottom:0.5rem; line-height:1.45;">${sig.Description}</p>
-                            <span style="font-size:0.8rem; background:rgba(255,255,255,0.08); padding:0.2rem 0.5rem; border-radius:4px; color:#d1d5db;">대상: ${sig.TargetAccount}</span>
-                        `;
-                        risksContainer.appendChild(card);
-                    });
-
-                    const standardsContainer = document.getElementById('ca-standards-container');
-                    standardsContainer.innerHTML = '';
-                    (result.matched_standards || []).forEach(std => {
-                        const card = document.createElement('div');
-                        card.style.cssText = 'background:rgba(99,102,241,0.08); border-left:4px solid #6366f1; padding:1rem; border-radius:0 8px 8px 0; margin-bottom:0.5rem;';
-                        card.innerHTML = `
-                            <h4 style="color:#a78bfa; font-weight:600; margin-bottom:0.3rem;">${std.standard_no} ${std.paragraph_no}</h4>
-                            <h5 style="color:#c084fc; font-size:0.85rem; margin-bottom:0.4rem; font-weight:500;">${std.title}</h5>
-                            <p style="font-size:0.82rem; color:#d1d5db; line-height:1.45; font-style:italic;">"${std.content}"</p>
-                        `;
-                        standardsContainer.appendChild(card);
-                    });
-
-                    const tableBody = document.getElementById('ca-variance-table-body');
-                    tableBody.innerHTML = '';
-                    if (result.outliers && result.outliers.length > 0) {
-                        result.outliers.forEach(row => {
-                            const tr = document.createElement('tr');
-                            const valSign = row.Variance >= 0 ? '+' : '';
-                            const valColor = row.Variance >= 0 ? '#f87171' : '#60a5fa';
-                            tr.innerHTML = `
-                                <td style="font-weight:500; color:#fff;">${row.Account}</td>
-                                <td style="text-align:right;">${row.Prior.toLocaleString()}</td>
-                                <td style="text-align:right;">${row.Current.toLocaleString()}</td>
-                                <td style="text-align:right; color:${valColor}; font-weight:500;">${valSign}${row.Variance.toLocaleString()}</td>
-                                <td style="text-align:right; color:${valColor}; font-weight:500;">${valSign}${row.VariancePct.toFixed(1)}%</td>
-                            `;
-                            tableBody.appendChild(tr);
-                        });
-                    } else {
-                        tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-secondary);">중요성금액을 초과하는 이상 항목이 감지되지 않았습니다.</td></tr>';
+                    if (lakehouseText) {
+                        lakehouseText.innerText = `사내 DB ${payload.fiscal_year}년 (${payload.elapsed_ms || 0}ms)`;
                     }
 
-                    const reconSection = document.getElementById('ca-reconciliation-section');
-                    const std = result.standard_statements;
-                    if (std && std.balance_check) {
-                        reconSection.style.display = 'block';
-                        const bc = std.balance_check;
-                        const balanceCheckEl = document.getElementById('ca-balance-check');
-                        balanceCheckEl.innerHTML = bc.Balanced
-                            ? `<span style="color:#4ade80; font-weight:600; font-size:0.85rem; background:rgba(74,222,128,0.1); padding:0.3rem 0.7rem; border-radius:6px;">✅ 대차평형 일치</span>`
-                            : `<span style="color:#f87171; font-weight:600; font-size:0.85rem; background:rgba(239,68,68,0.1); padding:0.3rem 0.7rem; border-radius:6px;">⚠️ 대차평형 불일치 (차이 ${(bc.Diff || 0).toLocaleString()} 원)</span>`;
+                    // 0. 건강 점수 & 핵심 KPI 바인딩
+                    const health = payload.health_score || {};
+                    const scoreEl = document.getElementById('pa-health-score');
+                    const gradeEl = document.getElementById('pa-health-grade');
+                    const deductionsListEl = document.getElementById('pa-health-deductions-list');
 
-                        const reconBody = document.getElementById('ca-reconciliation-table-body');
-                        reconBody.innerHTML = '';
-                        const reconRows = std.bs_reconciliation || [];
-                        if (reconRows.length > 0) {
-                            reconRows.forEach(r => {
-                                const tr = document.createElement('tr');
-                                const statusColor = r.Matched ? '#4ade80' : '#f87171';
-                                const statusLabel = r.Matched ? '✅ 일치' : `⚠️ ${r.Reason || '불일치'}`;
-                                tr.innerHTML = `
-                                    <td style="font-weight:500; color:#fff;">${r.Account}</td>
-                                    <td style="text-align:right;">${r.StatementAmount != null ? r.StatementAmount.toLocaleString() : '-'}</td>
-                                    <td style="text-align:right;">${r.TBAmount != null ? Math.abs(r.TBAmount).toLocaleString() : '-'}</td>
-                                    <td><span style="color:${statusColor}; font-weight:600; font-size:0.8rem;">${statusLabel}</span></td>
-                                `;
-                                reconBody.appendChild(tr);
-                            });
+                    if (scoreEl) scoreEl.innerText = health.score ?? 80;
+                    if (gradeEl) {
+                        gradeEl.innerText = health.grade || 'AA';
+                        if (health.score >= 90) gradeEl.style.color = '#34c759';
+                        else if (health.score >= 80) gradeEl.style.color = '#60a5fa';
+                        else gradeEl.style.color = '#fbbf24';
+                    }
+                    if (deductionsListEl) {
+                        deductionsListEl.innerHTML = (health.deductions && health.deductions.length > 0)
+                            ? health.deductions.map(d => `<span style="color: #fca5a5;">• ${d}</span>`).join('')
+                            : '<span style="color: #4ade80;">• 주요 감사 결격 사유 없음 (우수)</span>';
+                    }
+
+                    // KPI 요약
+                    const dupont = data.dupont || {};
+                    const ccc = data.ccc || {};
+                    const currDup = dupont.current || {};
+                    const varDup = dupont.variance || {};
+
+                    const kpiRev = document.getElementById('pa-kpi-revenue');
+                    const kpiRevDiff = document.getElementById('pa-kpi-revenue-diff');
+                    const kpiNi = document.getElementById('pa-kpi-net-income');
+                    const kpiMargin = document.getElementById('pa-kpi-margin');
+                    const kpiRoe = document.getElementById('pa-kpi-roe');
+                    const kpiRoeDriver = document.getElementById('pa-kpi-roe-driver');
+                    const kpiCcc = document.getElementById('pa-kpi-ccc');
+                    const kpiCccEval = document.getElementById('pa-kpi-ccc-eval');
+
+                    if (kpiRev) kpiRev.innerText = formatShortWon(currDup.revenue);
+                    if (kpiRevDiff) {
+                        const priorRev = dupont.prior?.revenue || 0;
+                        if (priorRev > 0) {
+                            const diffP = ((currDup.revenue - priorRev) / priorRev * 100).toFixed(1);
+                            kpiRevDiff.innerText = `전년 대비 ${diffP >= 0 ? '+' : ''}${diffP}%`;
+                            kpiRevDiff.style.color = diffP >= 0 ? '#34c759' : '#f87171';
+                        } else {
+                            kpiRevDiff.innerText = '전기 기준';
                         }
-                    } else {
-                        reconSection.style.display = 'none';
                     }
 
-                    generatedWorkingPaperMd = result.working_paper_md || '';
-                    document.getElementById('ca-working-paper-content').innerText = generatedWorkingPaperMd;
+                    if (kpiNi) kpiNi.innerText = formatShortWon(currDup.net_income);
+                    if (kpiMargin) kpiMargin.innerText = `순이익률 ${currDup.net_margin ?? 0}%`;
+
+                    if (kpiRoe) kpiRoe.innerText = `${currDup.roe ?? 0}%`;
+                    if (kpiRoeDriver) kpiRoeDriver.innerText = `주요인: ${varDup.primary_driver || '자료 기준'}`;
+
+                    if (kpiCcc) kpiCcc.innerText = `${ccc.ccc_days ?? 0}일`;
+                    if (kpiCccEval) kpiCccEval.innerText = ccc.assessment || '적정 수준';
+
+                    // 1. 듀퐁 3단계 분해
+                    const dupMargin = document.getElementById('pa-dupont-margin');
+                    const dupTurnover = document.getElementById('pa-dupont-turnover');
+                    const dupLeverage = document.getElementById('pa-dupont-leverage');
+                    const dupRoeFinal = document.getElementById('pa-dupont-roe-final');
+                    const dupBadge = document.getElementById('pa-dupont-badge');
+
+                    if (dupMargin) dupMargin.innerText = `${currDup.net_margin ?? 0}%`;
+                    if (dupTurnover) dupTurnover.innerText = `${currDup.asset_turnover ?? 0}회`;
+                    if (dupLeverage) dupLeverage.innerText = `${currDup.equity_multiplier ?? 1}배`;
+                    if (dupRoeFinal) dupRoeFinal.innerText = `${currDup.roe ?? 0}%`;
+                    if (dupBadge) dupBadge.innerText = varDup.primary_driver || '수익성 분석';
+
+                    // 2. 현금전환주기 (CCC)
+                    const cccDso = document.getElementById('pa-ccc-dso');
+                    const cccDio = document.getElementById('pa-ccc-dio');
+                    const cccDpo = document.getElementById('pa-ccc-dpo');
+                    const cccNwc = document.getElementById('pa-ccc-nwc');
+                    const cccBadge = document.getElementById('pa-ccc-badge');
+
+                    if (cccDso) cccDso.innerText = `${ccc.dso_days ?? 0}일`;
+                    if (cccDio) cccDio.innerText = `${ccc.dio_days ?? 0}일`;
+                    if (cccDpo) cccDpo.innerText = `${ccc.dpo_days ?? 0}일`;
+                    if (cccNwc) cccNwc.innerText = formatWon(ccc.net_working_capital);
+                    if (cccBadge) cccBadge.innerText = ccc.assessment || '정상';
+
+                    // 3. 분개장 JET & 벤포드 법칙
+                    const jet = data.jet || {};
+                    const benford = data.benford || {};
+
+                    const jetTotalCnt = document.getElementById('pa-jet-total-count');
+                    const benfordBadge = document.getElementById('pa-benford-badge');
+                    const benfordMad = document.getElementById('pa-benford-mad');
+                    const jetWeekend = document.getElementById('pa-jet-weekend-cnt');
+                    const jetRound = document.getElementById('pa-jet-round-cnt');
+                    const jetYearEnd = document.getElementById('pa-jet-year-end-cnt');
+
+                    if (jetTotalCnt) jetTotalCnt.innerText = `총 ${(benford.valid_count || payload.record_counts?.journal_entries || 0).toLocaleString()}건 전표 전수검사`;
+                    if (benfordBadge) benfordBadge.innerText = `적합도: ${benford.conformity || '양호'}`;
+                    if (benfordMad) benfordMad.innerText = `MAD: ${benford.mad ?? '-'} (카이제곱: ${benford.chi_square ?? '-'})`;
+
+                    const anomalies = jet.anomalies || {};
+                    if (jetWeekend) jetWeekend.innerText = `${anomalies.weekend_count || 0}건`;
+                    if (jetRound) jetRound.innerText = `${anomalies.round_number_count || 0}건`;
+                    if (jetYearEnd) jetYearEnd.innerText = `${anomalies.year_end_count || 0}건`;
+
+                    renderBenfordChart(benford.digits || []);
+
+                    // 4. 거래처 집중도 파레토 & 리스크
+                    const cust = data.customer || {};
+                    const pareto = cust.pareto || {};
+                    const aging = cust.aging_schedule || {};
+
+                    const hhiBadge = document.getElementById('pa-hhi-badge');
+                    const paretoTop20 = document.getElementById('pa-pareto-top20-pct');
+                    const totalEstAllow = document.getElementById('pa-total-est-allowance');
+                    const riskTbody = document.getElementById('pa-high-risk-customers-tbody');
+
+                    if (hhiBadge) hhiBadge.innerText = `HHI 지수: ${pareto.hhi_index ?? '-'} (${pareto.concentration_risk || '보통'})`;
+                    if (paretoTop20) paretoTop20.innerText = `상위 20% 점유율: ${pareto.top_20_share_pct ?? 0}%`;
+                    if (totalEstAllow) totalEstAllow.innerText = `예상 충당금: ${formatShortWon(aging.total_estimated_allowance)}`;
+
+                    if (riskTbody) {
+                        const riskCusts = aging.high_risk_customers || [];
+                        if (riskCusts.length > 0) {
+                            riskTbody.innerHTML = riskCusts.map(rc => `
+                                <tr>
+                                    <td style="font-weight: 600; color: #f8fafc;">${rc.name}</td>
+                                    <td style="text-align: right; color: #fbbf24; font-family: 'Outfit', sans-serif;">${Number(rc.balance).toLocaleString()}원</td>
+                                    <td><span class="status-tag danger" style="padding: 2px 6px; font-size: 0.72rem;">${rc.risk_tag}</span></td>
+                                    <td style="color: #cbd5e1; font-size: 0.75rem;">${rc.risk_reason}</td>
+                                </tr>
+                            `).join('');
+                        } else {
+                            riskTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">특이 고위험 부실 채권이 발견되지 않았습니다.</td></tr>';
+                        }
+                    }
+
+                    renderParetoChart(pareto.top_customers || []);
+
+                    // 5. 비용 Outlier & 지출 패턴
+                    const expense = data.expense || {};
+                    const outliersList = document.getElementById('pa-expense-outliers-list');
+                    if (outliersList) {
+                        const outRanking = expense.outliers_ranking || [];
+                        if (outRanking.length > 0) {
+                            outliersList.innerHTML = outRanking.slice(0, 5).map(o => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 6px 10px; border-radius: 6px;">
+                                    <span style="color: #f8fafc; font-size: 0.8rem; font-weight: 600;">${o.account}</span>
+                                    <div style="text-align: right;">
+                                        <span style="color: #f87171; font-weight: 700; font-size: 0.8rem; font-family: 'Outfit', sans-serif;">+${formatShortWon(o.diff_amount)}</span>
+                                        <span style="color: #fca5a5; font-size: 0.72rem; margin-left: 4px;">(+${o.diff_pct}%)</span>
+                                    </div>
+                                </div>
+                            `).join('');
+                        } else {
+                            outliersList.innerHTML = '<div style="color: #94a3b8; font-size: 0.8rem; padding: 10px; text-align: center;">전년 대비 유의미한 급증 비용 계정이 없습니다.</div>';
+                        }
+                    }
+
+                    renderExpenseTrendChart(expense.focus_patterns || []);
+
+                    // 6. 차기 결산 AJE 권고사항
+                    const ajeList = data.aje || [];
+                    const ajeTbody = document.getElementById('pa-aje-tbody');
+                    if (ajeTbody) {
+                        if (ajeList.length > 0) {
+                            ajeTbody.innerHTML = ajeList.map(a => {
+                                const prop = a.proposed_entry || {};
+                                const priColor = a.priority === 'CRITICAL' ? '#ef4444' : (a.priority === 'HIGH' ? '#f59e0b' : '#60a5fa');
+                                return `
+                                    <tr>
+                                        <td style="font-weight: 700; color: #a5b4fc; font-family: 'Outfit', sans-serif;">${a.id}</td>
+                                        <td>
+                                            <div style="font-weight: 600; color: #f8fafc;">${a.title}</div>
+                                            <div style="font-size: 0.73rem; color: #94a3b8; margin-top: 2px;">${a.reason}</div>
+                                        </td>
+                                        <td><span style="background: rgba(255,255,255,0.06); color: ${priColor}; border: 1px solid ${priColor}; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;">${a.priority}</span></td>
+                                        <td style="font-size: 0.75rem; color: #cbd5e1;">
+                                            <div>(차) <strong>${prop.debit_account || '-'}</strong> ${Number(prop.debit_amount || 0).toLocaleString()}원</div>
+                                            <div style="margin-top: 2px;">(대) <strong>${prop.credit_account || '-'}</strong> ${Number(prop.credit_amount || 0).toLocaleString()}원</div>
+                                        </td>
+                                        <td style="font-size: 0.75rem; color: #34c759;">${a.impact || '-'}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            ajeTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">특이 수정분개 권고 항목이 없습니다.</td></tr>';
+                        }
+                    }
+
+                    if (container) container.style.display = 'flex';
+
                 } catch (err) {
-                    statusEl.innerText = '분석 결과를 불러오는 중 오류가 발생했습니다.';
-                    console.error(err);
+                    console.error("[PORTAL_ANALYTICS:FETCH_ERROR]", err);
+                    alert(`분석보고서 로드 오류: ${err.message}`);
+                } finally {
+                    if (spinner) spinner.style.display = 'none';
                 }
             };
 
-            const downloadBtn = document.getElementById('ca-btn-download-wp');
-            if (downloadBtn) {
-                downloadBtn.addEventListener('click', () => {
-                    if (!generatedWorkingPaperMd) {
-                        alert('다운로드할 감사 조서 초안이 없습니다.');
-                        return;
+            // 벤포드 차트 렌더러 (Chart.js)
+            function renderBenfordChart(digitsData) {
+                const canvas = document.getElementById('pa-benford-chart');
+                if (!canvas || typeof Chart === 'undefined') return;
+
+                if (benfordChartInstance) {
+                    benfordChartInstance.destroy();
+                    benfordChartInstance = null;
+                }
+
+                const labels = (digitsData.length > 0) ? digitsData.map(d => `${d.digit}`) : ['1','2','3','4','5','6','7','8','9'];
+                const obsRatios = (digitsData.length > 0) ? digitsData.map(d => d.observed_ratio) : [30, 18, 12, 9, 8, 7, 6, 5, 5];
+                const expRatios = (digitsData.length > 0) ? digitsData.map(d => d.expected_ratio) : [30.1, 17.6, 12.5, 9.7, 7.9, 6.7, 5.8, 5.1, 4.6];
+
+                benfordChartInstance = new Chart(canvas, {
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: '실제 관측 빈도(%)',
+                                data: obsRatios,
+                                backgroundColor: 'rgba(99, 102, 241, 0.65)',
+                                borderColor: '#818cf8',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                order: 2
+                            },
+                            {
+                                type: 'line',
+                                label: '벤포드 이론치(%)',
+                                data: expRatios,
+                                borderColor: '#f59e0b',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2.5,
+                                pointBackgroundColor: '#f59e0b',
+                                pointRadius: 4,
+                                tension: 0.3,
+                                order: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: { color: '#cbd5e1', boxWidth: 12, font: { size: 10 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}%`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#94a3b8', font: { size: 10 } },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            },
+                            y: {
+                                ticks: { color: '#94a3b8', font: { size: 9 }, callback: (v) => `${v}%` },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            }
+                        }
                     }
-                    const blob = new Blob([generatedWorkingPaperMd], { type: 'text/markdown;charset=utf-8;' });
-                    const link = document.createElement('a');
-                    const url = URL.createObjectURL(blob);
-                    const dateStr = new Date().toISOString().slice(0, 10);
-                    link.setAttribute('href', url);
-                    link.setAttribute('download', `분석보고서_${clientCompanyName}_${dateStr}.md`);
-                    link.style.visibility = 'hidden';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
                 });
             }
+
+            // 거래처 파레토 차트 렌더러 (Chart.js)
+            function renderParetoChart(topCustomers) {
+                const canvas = document.getElementById('pa-pareto-chart');
+                if (!canvas || typeof Chart === 'undefined') return;
+
+                if (paretoChartInstance) {
+                    paretoChartInstance.destroy();
+                    paretoChartInstance = null;
+                }
+
+                const labels = (topCustomers.length > 0) ? topCustomers.map(c => c.name.length > 6 ? c.name.slice(0,6)+'..' : c.name) : ['거래처A', '거래처B', '거래처C', '기타'];
+                const amounts = (topCustomers.length > 0) ? topCustomers.map(c => Math.round(c.debit / 1000000)) : [50, 30, 15, 5];
+                const cumShares = (topCustomers.length > 0) ? topCustomers.map(c => c.cumulative_share_pct) : [50, 80, 95, 100];
+
+                paretoChartInstance = new Chart(canvas, {
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: '거래액(백만원)',
+                                data: amounts,
+                                backgroundColor: 'rgba(56, 189, 248, 0.5)',
+                                borderColor: '#38bdf8',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                yAxisID: 'yBar',
+                                order: 2
+                            },
+                            {
+                                type: 'line',
+                                label: '누적 점유율(%)',
+                                data: cumShares,
+                                borderColor: '#ec4899',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                pointBackgroundColor: '#ec4899',
+                                pointRadius: 3,
+                                tension: 0.2,
+                                yAxisID: 'yLine',
+                                order: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: { color: '#cbd5e1', boxWidth: 12, font: { size: 10 } }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 30 },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            },
+                            yBar: {
+                                type: 'linear',
+                                position: 'left',
+                                ticks: { color: '#94a3b8', font: { size: 9 } },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            },
+                            yLine: {
+                                type: 'linear',
+                                position: 'right',
+                                min: 0,
+                                max: 100,
+                                ticks: { color: '#f472b6', font: { size: 9 }, callback: (v) => `${v}%` },
+                                grid: { drawOnChartArea: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 주요 비용 월별 추이 차트 렌더러 (Chart.js)
+            function renderExpenseTrendChart(focusPatterns) {
+                const canvas = document.getElementById('pa-expense-trend-chart');
+                if (!canvas || typeof Chart === 'undefined') return;
+
+                if (expenseTrendChartInstance) {
+                    expenseTrendChartInstance.destroy();
+                    expenseTrendChartInstance = null;
+                }
+
+                const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+                const colors = ['#38bdf8', '#fbbf24', '#34c759', '#a78bfa', '#f87171'];
+
+                const datasets = (focusPatterns.length > 0)
+                    ? focusPatterns.slice(0, 3).map((fp, idx) => ({
+                        label: fp.account_name,
+                        data: (fp.monthly_distribution || []).map(v => Math.round(v / 10000)), // 만원 단위
+                        borderColor: colors[idx % colors.length],
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        tension: 0.3
+                    }))
+                    : [{
+                        label: '지급수수료',
+                        data: [100, 120, 90, 110, 130, 150, 140, 160, 180, 200, 210, 250],
+                        borderColor: '#38bdf8',
+                        borderWidth: 2,
+                        tension: 0.3
+                    }];
+
+                expenseTrendChartInstance = new Chart(canvas, {
+                    type: 'line',
+                    data: {
+                        labels: months,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: { color: '#cbd5e1', boxWidth: 10, font: { size: 10 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toLocaleString()}만원`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#94a3b8', font: { size: 9 } },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            },
+                            y: {
+                                ticks: { color: '#94a3b8', font: { size: 9 }, callback: (v) => `${v}만` },
+                                grid: { color: 'rgba(255,255,255,0.04)' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // PDF 보고서 출력 기능 (html2pdf)
+            window.exportPortalReportPDF = function() {
+                const element = document.getElementById('partner-analysis-view');
+                if (!element) return;
+
+                const opt = {
+                    margin: [10, 10, 10, 10],
+                    filename: `회계분석보고서_${currentCompanyName}_${new Date().toISOString().slice(0,10)}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0f172a' },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(element).save();
+            };
+
         })();
     </script>
 
@@ -1811,13 +2413,12 @@
         </div>
     </div>
 
-    <!-- Script JS -->
-    <script src="/static/js/main.js"></script>
-
     <script>
         
         function updateDocumentList() {
-            const industry = document.getElementById('industry_select').value;
+            const industrySelect = document.getElementById('industry_select');
+            if (!industrySelect) return;
+            const industry = industrySelect.value;
             const rows = document.querySelectorAll('.doc-row');
             
             rows.forEach(row => {
@@ -1835,9 +2436,9 @@
         });
         
         function toggleUploadBox(fieldId, status) {
-
             const box = document.getElementById('box_' + fieldId);
             const input = document.getElementById(fieldId);
+            if (!box || !input) return;
             if (status === '제출') {
                 box.style.opacity = '1';
                 box.style.pointerEvents = 'auto';
@@ -1847,12 +2448,12 @@
                 box.style.pointerEvents = 'none';
                 input.disabled = true;
                 input.value = '';
+            }
+        }
+
         // ==========================================
         // [고객사 포털] 담당 회계사 1:1 자문 상담 로직
         // ==========================================
-        const currentCompanyName = document.querySelector('.company-highlight')?.innerText?.trim() || 
-                                   document.querySelector('.master-profile-name')?.innerText?.trim() || 'TestCompany';
-
         window.loadClientCompanyChat = async function() {
             const timeline = document.getElementById('client-chat-timeline');
             if (!timeline) return;
@@ -1949,16 +2550,25 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // 메뉴 클릭 시 partner-consulting-view 전환 지원
+        // 사이드바 메뉴 클릭 시 뷰 전환 범용 핸들러
         document.addEventListener('click', (e) => {
-            const consultingMenu = e.target.closest('.master-menu-item[data-menu="partner-consulting"]');
-            if (consultingMenu) {
+            const menuItem = e.target.closest('.master-menu-item[data-menu]');
+            if (!menuItem) return;
+
+            const menuName = menuItem.getAttribute('data-menu');
+            const targetViewId = `${menuName}-view`;
+            const targetView = document.getElementById(targetViewId);
+
+            if (targetView) {
+                e.preventDefault();
                 document.querySelectorAll('.master-card').forEach(c => c.style.display = 'none');
                 document.querySelectorAll('.master-menu-item').forEach(m => m.classList.remove('active'));
-                consultingMenu.classList.add('active');
-                const v = document.getElementById('partner-consulting-view');
-                if (v) v.style.display = 'block';
-                if (typeof window.loadClientCompanyChat === 'function') {
+                menuItem.classList.add('active');
+                targetView.style.display = 'block';
+
+                if (menuName === 'partner-analysis' && typeof window.loadCompanyPortalAnalytics === 'function') {
+                    window.loadCompanyPortalAnalytics();
+                } else if (menuName === 'partner-consulting' && typeof window.loadClientCompanyChat === 'function') {
                     window.loadClientCompanyChat();
                 }
             }

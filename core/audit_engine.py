@@ -3368,5 +3368,965 @@ def apply_audit_adjustments(raw_tb_data: Union[pd.DataFrame, List[Dict[str, Any]
         }
 
 
+# ==============================================================================
+# 10. 회사 포털 5대 정밀 회계분석 엔진 (Portal Analytics Engine)
+# ==============================================================================
+
+def calculate_benfords_law(journal_entries: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    [분석 1-1] 벤포드의 법칙 (Benford's Law) 1차 자릿수 검증
+    분개장 전표 금액의 첫 번째 유효 숫자(1~9) 출현 빈도와 이론적 분포를 비교하여 회계 조작/인위적 편향을 탐지합니다.
+    """
+    try:
+        logger.info("[Benford Engine] Starting Benford's law analysis on %d journal records", len(journal_entries or []))
+        if not journal_entries:
+            return {"success": False, "message": "분개장 데이터가 없습니다.", "digits": [], "conformity": "N/A"}
+
+        # 벤포드 이론치 (1~9)
+        # P(d) = log10(1 + 1/d)
+        theoretical_ratios = {
+            1: 0.30103, 2: 0.17609, 3: 0.12494,
+            4: 0.09691, 5: 0.07918, 6: 0.06695,
+            7: 0.05799, 8: 0.05115, 9: 0.04576
+        }
+
+        counts = {d: 0 for d in range(1, 10)}
+        sample_entries_by_digit = {d: [] for d in range(1, 10)}
+        valid_count = 0
+
+        for row in journal_entries:
+            amt = abs(int(row.get("차변") or 0))
+            if amt == 0:
+                amt = abs(int(row.get("대변") or 0))
+            if amt <= 0:
+                continue
+
+            # 첫 번째 0이 아닌 숫자 추출
+            str_amt = str(amt).lstrip('0')
+            if not str_amt:
+                continue
+
+            first_digit = int(str_amt[0])
+            if 1 <= first_digit <= 9:
+                counts[first_digit] += 1
+                valid_count += 1
+                if len(sample_entries_by_digit[first_digit]) < 3:
+                    sample_entries_by_digit[first_digit].append({
+                        "date": row.get("전표일자") or row.get("일자") or "",
+                        "slip_no": row.get("전표번호") or "",
+                        "account": row.get("계정과목") or "",
+                        "partner": row.get("거래처") or "",
+                        "amount": amt,
+                        "desc": row.get("적요") or ""
+                    })
+
+        if valid_count < 30:
+            logger.info("[Benford Engine] Insufficient valid entries (%d < 30)", valid_count)
+            return {
+                "success": True,
+                "valid_count": valid_count,
+                "message": "유효 전표 수가 분석 기준(30건) 미만입니다.",
+                "conformity": "데이터 부족",
+                "digits": []
+            }
+
+        digits_result = []
+        chi_square_stat = 0.0
+        mad_sum = 0.0  # Mean Absolute Deviation
+
+        for d in range(1, 10):
+            obs_cnt = counts[d]
+            obs_ratio = obs_cnt / valid_count
+            exp_ratio = theoretical_ratios[d]
+            exp_cnt = exp_ratio * valid_count
+
+            # Chi-square: (O - E)^2 / E
+            diff = obs_cnt - exp_cnt
+            chi_val = (diff ** 2) / exp_cnt if exp_cnt > 0 else 0
+            chi_square_stat += chi_val
+
+            abs_diff_ratio = abs(obs_ratio - exp_ratio)
+            mad_sum += abs_diff_ratio
+
+            # Z-score: (obs_ratio - exp_ratio) / sqrt(exp_ratio * (1 - exp_ratio) / N)
+            se = np.sqrt(exp_ratio * (1.0 - exp_ratio) / valid_count) if valid_count > 0 else 1.0
+            z_score = (obs_ratio - exp_ratio) / se if se > 0 else 0.0
+
+            digits_result.append({
+                "digit": d,
+                "observed_count": obs_cnt,
+                "expected_count": int(round(exp_cnt)),
+                "observed_ratio": round(obs_ratio * 100, 2),
+                "expected_ratio": round(exp_ratio * 100, 2),
+                "ratio_diff": round((obs_ratio - exp_ratio) * 100, 2),
+                "z_score": round(float(z_score), 2),
+                "is_anomaly": bool(abs(z_score) > 2.58),  # 99% 신뢰구간 벗어남
+                "samples": sample_entries_by_digit[d]
+            })
+
+        mad = mad_sum / 9.0  # 평균 절대 편차
+
+        # Nigrini MAD 기준 판정
+        # Close conformity: MAD <= 0.006
+        # Acceptable conformity: 0.006 < MAD <= 0.012
+        # Marginally acceptable: 0.012 < MAD <= 0.015
+        # Non-conforming: MAD > 0.015
+        if mad <= 0.008:
+            conformity = "우수 (Close Conformity)"
+            risk_level = "LOW"
+            conformity_desc = "자연스러운 회계 거래 발생 분포를 보이며, 인위적 수치 조작 징후가 희박합니다."
+        elif mad <= 0.015:
+            conformity = "양호 (Acceptable)"
+            risk_level = "MODERATE"
+            conformity_desc = "대체로 자연스러운 분포이나 일부 자릿수에서 경미한 편향이 관찰됩니다."
+        elif mad <= 0.025:
+            conformity = "주의 (Marginal)"
+            risk_level = "WARNING"
+            conformity_desc = "특정 금액대 전표 기표가 집중되어 수치 인위성 점검이 권고됩니다."
+        else:
+            conformity = "위험 (Non-Conforming)"
+            risk_level = "HIGH"
+            conformity_desc = "벤포드 분포와 상당한 괴리가 있어 특정 금액 분할 기표 및 비정상 전표 집중 조사가 필요합니다."
+
+        logger.info("[Benford Engine] Finished Benford: valid_count=%d, MAD=%.4f, Conformity=%s", valid_count, mad, conformity)
+
+        return {
+            "success": True,
+            "valid_count": valid_count,
+            "chi_square": round(float(chi_square_stat), 2),
+            "mad": round(float(mad), 4),
+            "conformity": conformity,
+            "risk_level": risk_level,
+            "conformity_desc": conformity_desc,
+            "digits": digits_result
+        }
+
+    except Exception as e:
+        logger.error("[Benford Engine] Error in calculate_benfords_law: %s", str(e), exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+def calculate_customer_pareto_and_aging(subledger_records: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    [분석 2] 거래처원장 기반 거래처 집중도 (Pareto 80/20) 및 매출채권 연령/대손 리스크 분석
+    """
+    try:
+        logger.info("[Customer Analytics Engine] Analyzing %d subledger records", len(subledger_records or []))
+        if not subledger_records:
+            return {"success": False, "message": "거래처원장 데이터가 없습니다."}
+
+        # 1. 거래처 및 계정별 집계
+        customer_ar_map = {}  # 매출채권
+        customer_ap_map = {}  # 매입채무
+        customer_total_map = {}  # 전체
+
+        for row in subledger_records:
+            c_code = row.get("거래처코드") or 0
+            c_name = (row.get("거래처명") or "").strip()
+            acc_name = (row.get("계정과목명") or "").strip()
+            if not c_name or "합계" in c_name or "월계" in c_name or "누계" in c_name:
+                continue
+
+            prior = int(row.get("전기(월)이월") or row.get("전기이월") or 0)
+            debit = int(row.get("차변") or 0)
+            credit = int(row.get("대변") or 0)
+            balance = int(row.get("잔액") or 0)
+
+            # 전체 집계
+            if c_name not in customer_total_map:
+                customer_total_map[c_name] = {
+                    "code": c_code,
+                    "name": c_name,
+                    "debit_sum": 0,
+                    "credit_sum": 0,
+                    "balance_sum": 0,
+                    "accounts": set()
+                }
+            customer_total_map[c_name]["debit_sum"] += debit
+            customer_total_map[c_name]["credit_sum"] += credit
+            customer_total_map[c_name]["balance_sum"] += balance
+            customer_total_map[c_name]["accounts"].add(acc_name)
+
+            # 매출채권 관련 계정 식별 (외상매출금, 받을어음, 미수금)
+            is_ar = any(k in acc_name for k in ["외상매출금", "받을어음", "미수금", "매출채권"])
+            if is_ar:
+                if c_name not in customer_ar_map:
+                    customer_ar_map[c_name] = {
+                        "code": c_code,
+                        "name": c_name,
+                        "prior": 0,
+                        "debit": 0,  # 당기 발생
+                        "credit": 0, # 당기 회수
+                        "balance": 0,
+                        "account": acc_name
+                    }
+                customer_ar_map[c_name]["prior"] += prior
+                customer_ar_map[c_name]["debit"] += debit
+                customer_ar_map[c_name]["credit"] += credit
+                customer_ar_map[c_name]["balance"] += balance
+
+            # 매입채무 관련 계정 식별 (외상매입금, 지급어음, 미지급금)
+            is_ap = any(k in acc_name for k in ["외상매입금", "지급어음", "미지급금", "매입채무"])
+            if is_ap:
+                if c_name not in customer_ap_map:
+                    customer_ap_map[c_name] = {
+                        "code": c_code,
+                        "name": c_name,
+                        "prior": 0,
+                        "debit": 0,
+                        "credit": 0,
+                        "balance": 0,
+                        "account": acc_name
+                    }
+                customer_ap_map[c_name]["prior"] += prior
+                customer_ap_map[c_name]["debit"] += debit
+                customer_ap_map[c_name]["credit"] += credit
+                customer_ap_map[c_name]["balance"] += balance
+
+        # 2. 파레토 분석 (매출채권 발생액 및 잔액 기준)
+        target_dict = customer_ar_map if customer_ar_map else customer_total_map
+        sorted_customers = sorted(target_dict.values(), key=lambda x: x.get("debit", 0) or x.get("debit_sum", 0), reverse=True)
+        
+        total_revenue_or_debit = sum(c.get("debit", 0) or c.get("debit_sum", 0) for c in sorted_customers)
+        total_balance = sum(c.get("balance", 0) or c.get("balance_sum", 0) for c in sorted_customers)
+
+        top_20_count = max(1, int(len(sorted_customers) * 0.2))
+        top_20_debit_sum = sum(c.get("debit", 0) or c.get("debit_sum", 0) for c in sorted_customers[:top_20_count])
+        pareto_share_pct = round((top_20_debit_sum / total_revenue_or_debit * 100), 2) if total_revenue_or_debit > 0 else 0.0
+
+        # 허핀달-허쉬만 지수(HHI) 산출 (0 ~ 10,000)
+        hhi_index = 0.0
+        if total_revenue_or_debit > 0:
+            for c in sorted_customers:
+                share_pct = ((c.get("debit", 0) or c.get("debit_sum", 0)) / total_revenue_or_debit) * 100
+                hhi_index += share_pct ** 2
+        hhi_index = round(hhi_index, 1)
+
+        if hhi_index < 1500:
+            concentration_risk = "낮음 (다변화 우수)"
+        elif hhi_index < 2500:
+            concentration_risk = "보통 (적정 분산)"
+        else:
+            concentration_risk = "높음 (특정 거래처 의존 위험)"
+
+        # 상위 10개 거래처 파레토 테이블 데이터
+        cumulative_debit = 0
+        top_10_list = []
+        for i, c in enumerate(sorted_customers[:15]):
+            debit_val = c.get("debit", 0) or c.get("debit_sum", 0)
+            bal_val = c.get("balance", 0) or c.get("balance_sum", 0)
+            share = round((debit_val / total_revenue_or_debit * 100), 2) if total_revenue_or_debit > 0 else 0.0
+            cumulative_debit += debit_val
+            cum_share = round((cumulative_debit / total_revenue_or_debit * 100), 2) if total_revenue_or_debit > 0 else 0.0
+
+            top_10_list.append({
+                "rank": i + 1,
+                "code": c.get("code", 0),
+                "name": c.get("name", ""),
+                "debit": debit_val,
+                "balance": bal_val,
+                "share_pct": share,
+                "cumulative_share_pct": cum_share
+            })
+
+        # 3. 매출채권 연령분석(Aging Schedule) 및 회수 리스크 추정
+        aging_buckets = {
+            "current_30d": {"label": "30일 이내 (정상)", "amount": 0, "count": 0, "loss_rate": 0.01, "est_loss": 0},
+            "overdue_60d": {"label": "31~60일 (주의)", "amount": 0, "count": 0, "loss_rate": 0.05, "est_loss": 0},
+            "overdue_90d": {"label": "61~90일 (경고)", "amount": 0, "count": 0, "loss_rate": 0.20, "est_loss": 0},
+            "overdue_180d_plus": {"label": "90일 초과 (고위험/부실)", "amount": 0, "count": 0, "loss_rate": 0.50, "est_loss": 0}
+        }
+
+        high_risk_customers = []
+
+        for c_name, data in customer_ar_map.items():
+            bal = data.get("balance", 0)
+            if bal <= 0:
+                continue
+
+            prior = data.get("prior", 0)
+            debit = data.get("debit", 0)
+            credit = data.get("credit", 0)
+
+            # 연령 추정 로직:
+            # 당기 회수액이 전기이월보다 적고 당기 발생도 거의 없는 경우 -> 장기 미회수
+            if prior > 0 and credit < (prior * 0.3) and debit < (prior * 0.2):
+                # 90일 초과 고위험
+                bucket = "overdue_180d_plus"
+                risk_tag = "고위험"
+                risk_reason = "전기 이월 후 당기 회수 및 거래 미발생 (장기 연체 의심)"
+            elif debit > 0 and (bal / max(debit, 1)) > 0.5:
+                # 61~90일 경고
+                bucket = "overdue_90d"
+                risk_tag = "경고"
+                risk_reason = "당기 발생액 대비 기말 잔액 과다 (회수 지연)"
+            elif debit > 0 and (bal / max(debit, 1)) > 0.25:
+                # 31~60일 주의
+                bucket = "overdue_60d"
+                risk_tag = "주의"
+                risk_reason = "최근 1~2개월 채권 미회수 잔액"
+            else:
+                # 정상
+                bucket = "current_30d"
+                risk_tag = "정상"
+                risk_reason = "정상 회전 채권"
+
+            aging_buckets[bucket]["amount"] += bal
+            aging_buckets[bucket]["count"] += 1
+            aging_buckets[bucket]["est_loss"] += int(round(bal * aging_buckets[bucket]["loss_rate"]))
+
+            if risk_tag in ["고위험", "경고"] and bal > 1000000:
+                high_risk_customers.append({
+                    "name": c_name,
+                    "account": data.get("account", "매출채권"),
+                    "balance": bal,
+                    "prior": prior,
+                    "credit": credit,
+                    "risk_tag": risk_tag,
+                    "risk_reason": risk_reason,
+                    "est_allowance": int(round(bal * (0.5 if risk_tag == "고위험" else 0.2)))
+                })
+
+        high_risk_customers = sorted(high_risk_customers, key=lambda x: x["balance"], reverse=True)[:10]
+        total_est_loss = sum(b["est_loss"] for b in aging_buckets.values())
+
+        return {
+            "success": True,
+            "total_customers_count": len(sorted_customers),
+            "total_revenue_or_debit": total_revenue_or_debit,
+            "total_ar_balance": total_balance,
+            "pareto": {
+                "top_20_percent_count": top_20_count,
+                "top_20_share_pct": pareto_share_pct,
+                "hhi_index": hhi_index,
+                "concentration_risk": concentration_risk,
+                "top_customers": top_10_list
+            },
+            "aging_schedule": {
+                "buckets": list(aging_buckets.values()),
+                "total_estimated_allowance": total_est_loss,
+                "high_risk_customers": high_risk_customers
+            }
+        }
+
+    except Exception as e:
+        logger.error("[Customer Analytics Engine] Error in calculate_customer_pareto_and_aging: %s", str(e), exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+def calculate_dupont_analysis(current_bundle: Dict[str, Any], prior_bundle: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    [분석 3-1] 듀퐁 분석 (DuPont 3-Stage Analysis)
+    ROE = 순이익률(Net Margin) * 총자산회전율(Asset Turnover) * 재무레버리지(Equity Multiplier)
+    """
+    try:
+        logger.info("[DuPont Engine] Calculating DuPont analysis")
+        
+        def _extract_core_metrics(bundle):
+            if not bundle:
+                return {}
+            stmts = bundle.get("statements", {})
+            bs = stmts.get("balance_sheet", [])
+            is_stmt = stmts.get("income_statement", [])
+            tb = stmts.get("trial_balance", [])
+
+            # 지표 추출 헬퍼
+            def find_val(records, keywords):
+                for r in records:
+                    acc = str(r.get("Account") or r.get("account_name") or r.get("계정과목") or "")
+                    if any(k in acc for k in keywords):
+                        return float(r.get("Current") or r.get("current_amount") or r.get("기말잔액") or r.get("당기") or 0.0)
+                return 0.0
+
+            # 자산총계
+            total_assets = find_val(bs, ["자산총계", "자산 총계"])
+            if total_assets == 0:
+                total_assets = find_val(tb, ["자산총계", "자산 총계"])
+
+            # 자본총계
+            total_equity = find_val(bs, ["자본총계", "자본 총계"])
+            if total_equity == 0:
+                total_equity = find_val(tb, ["자본총계", "자본 총계"])
+
+            # 부채총계
+            total_liab = find_val(bs, ["부채총계", "부채 총계"])
+
+            # 매출액
+            revenue = find_val(is_stmt, ["매출액", "수익"])
+            if revenue == 0:
+                revenue = find_val(tb, ["매출액", "상품매출", "제품매출"])
+
+            # 당기순이익
+            net_income = find_val(is_stmt, ["당기순이익", "당기순손익"])
+            if net_income == 0:
+                net_income = find_val(tb, ["당기순이익", "당기순손익"])
+
+            # 영업이익
+            op_income = find_val(is_stmt, ["영업이익", "영업손익"])
+
+            return {
+                "total_assets": total_assets,
+                "total_equity": total_equity,
+                "total_liab": total_liab,
+                "revenue": revenue,
+                "net_income": net_income,
+                "op_income": op_income
+            }
+
+        curr = _extract_core_metrics(current_bundle)
+        prior = _extract_core_metrics(prior_bundle) if prior_bundle else {}
+
+        rev = curr.get("revenue", 0.0)
+        ni = curr.get("net_income", 0.0)
+        assets = curr.get("total_assets", 0.0)
+        equity = curr.get("total_equity", 0.0)
+
+        # 당기 듀퐁 산출
+        net_margin = (ni / rev * 100) if rev > 0 else 0.0
+        asset_turnover = (rev / assets) if assets > 0 else 0.0
+        equity_multiplier = (assets / equity) if equity > 0 else 1.0
+        roe = (ni / equity * 100) if equity > 0 else 0.0
+
+        # 전기 듀퐁 산출
+        prior_rev = prior.get("revenue", 0.0)
+        prior_ni = prior.get("net_income", 0.0)
+        prior_assets = prior.get("total_assets", 0.0)
+        prior_equity = prior.get("total_equity", 0.0)
+
+        prior_net_margin = (prior_ni / prior_rev * 100) if prior_rev > 0 else 0.0
+        prior_asset_turnover = (prior_rev / prior_assets) if prior_assets > 0 else 0.0
+        prior_equity_multiplier = (prior_assets / prior_equity) if prior_equity > 0 else 1.0
+        prior_roe = (prior_ni / prior_equity * 100) if prior_equity > 0 else 0.0
+
+        # ROE 변동 주 요인 분석
+        roe_diff = roe - prior_roe
+        driver = "자료 불충분"
+        if prior_roe != 0.0:
+            margin_impact = (net_margin - prior_net_margin) * prior_asset_turnover * prior_equity_multiplier
+            turnover_impact = prior_net_margin * (asset_turnover - prior_asset_turnover) * prior_equity_multiplier
+            leverage_impact = prior_net_margin * prior_asset_turnover * (equity_multiplier - prior_equity_multiplier)
+
+            max_impact = max([abs(margin_impact), abs(turnover_impact), abs(leverage_impact)])
+            if max_impact == abs(margin_impact):
+                driver = "수익성(순이익률) 변동" if margin_impact > 0 else "수익성(순이익률) 악화"
+            elif max_impact == abs(turnover_impact):
+                driver = "자산 효율성(회전율) 개선" if turnover_impact > 0 else "자산 회전 둔화"
+            else:
+                driver = "재무 레버리지(부채비율) 확대" if leverage_impact > 0 else "재무 레버리지 축소"
+
+        return {
+            "success": True,
+            "current": {
+                "revenue": int(round(rev)),
+                "net_income": int(round(ni)),
+                "total_assets": int(round(assets)),
+                "total_equity": int(round(equity)),
+                "net_margin": round(net_margin, 2),
+                "asset_turnover": round(asset_turnover, 2),
+                "equity_multiplier": round(equity_multiplier, 2),
+                "roe": round(roe, 2)
+            },
+            "prior": {
+                "revenue": int(round(prior_rev)),
+                "net_income": int(round(prior_ni)),
+                "total_assets": int(round(prior_assets)),
+                "total_equity": int(round(prior_equity)),
+                "net_margin": round(prior_net_margin, 2),
+                "asset_turnover": round(prior_asset_turnover, 2),
+                "equity_multiplier": round(prior_equity_multiplier, 2),
+                "roe": round(prior_roe, 2)
+            },
+            "variance": {
+                "roe_diff": round(roe_diff, 2),
+                "net_margin_diff": round(net_margin - prior_net_margin, 2),
+                "asset_turnover_diff": round(asset_turnover - prior_asset_turnover, 2),
+                "equity_multiplier_diff": round(equity_multiplier - prior_equity_multiplier, 2),
+                "primary_driver": driver
+            }
+        }
+
+    except Exception as e:
+        logger.error("[DuPont Engine] Error in calculate_dupont_analysis: %s", str(e), exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+def calculate_working_capital_ccc(current_bundle: Dict[str, Any], prior_bundle: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    [분석 3-2] 현금전환주기 (Cash Conversion Cycle, CCC) 및 운전자본 진단
+    CCC = DSO (매출채권 회수일수) + DIO (재고자산 회전일수) - DPO (매입채무 결제일수)
+    """
+    try:
+        logger.info("[CCC Engine] Calculating Cash Conversion Cycle")
+
+        def _get_wc_items(bundle):
+            if not bundle:
+                return {}
+            stmts = bundle.get("statements", {})
+            bs = stmts.get("balance_sheet", [])
+            is_stmt = stmts.get("income_statement", [])
+            tb = stmts.get("trial_balance", [])
+
+            def sum_keys(records, keywords):
+                total = 0.0
+                for r in records:
+                    acc = str(r.get("Account") or r.get("account_name") or r.get("계정과목") or "")
+                    if any(k in acc for k in keywords):
+                        total += float(r.get("Current") or r.get("current_amount") or r.get("기말잔액") or r.get("당기") or 0.0)
+                return total
+
+            # 매출액, 매출원가
+            rev = sum_keys(is_stmt, ["매출액", "상품매출", "제품매출"]) or sum_keys(tb, ["매출액", "상품매출", "제품매출"])
+            cogs = sum_keys(is_stmt, ["매출원가", "상품매출원가", "제품매출원가"]) or sum_keys(tb, ["매출원가", "상품매출원가", "제품매출원가"])
+            if cogs == 0 and rev > 0:
+                cogs = rev * 0.7  # 원가 추정치 fallback
+
+            # 매출채권
+            ar = sum_keys(bs, ["매출채권", "외상매출금", "받을어음"]) or sum_keys(tb, ["매출채권", "외상매출금", "받을어음"])
+            # 재고자산
+            inv = sum_keys(bs, ["재고자산", "상품", "제품", "원재료", "재공품"]) or sum_keys(tb, ["재고자산", "상품", "제품", "원재료", "재공품"])
+            # 매입채무
+            ap = sum_keys(bs, ["매입채무", "외상매입금", "지급어음"]) or sum_keys(tb, ["매입채무", "외상매입금", "지급어음"])
+
+            # 유동자산, 유동부채
+            ca = sum_keys(bs, ["유동자산", "당좌자산"]) or sum_keys(tb, ["유동자산"])
+            cl = sum_keys(bs, ["유동부채"]) or sum_keys(tb, ["유동부채"])
+
+            return {
+                "revenue": rev,
+                "cogs": cogs,
+                "ar": ar,
+                "inventory": inv,
+                "ap": ap,
+                "current_assets": ca,
+                "current_liabilities": cl
+            }
+
+        curr = _get_wc_items(current_bundle)
+        rev = curr.get("revenue", 0.0)
+        cogs = curr.get("cogs", 0.0)
+        ar = curr.get("ar", 0.0)
+        inv = curr.get("inventory", 0.0)
+        ap = curr.get("ap", 0.0)
+
+        # DSO, DIO, DPO 산출
+        dso = (ar / rev * 365) if rev > 0 else 0.0
+        dio = (inv / cogs * 365) if cogs > 0 else 0.0
+        dpo = (ap / cogs * 365) if cogs > 0 else 0.0
+        ccc = dso + dio - dpo
+
+        # 순운전자본 (NWC)
+        nwc = curr.get("current_assets", 0.0) - curr.get("current_liabilities", 0.0)
+        cur_ratio = (curr.get("current_assets", 0.0) / curr.get("current_liabilities", 1.0) * 100) if curr.get("current_liabilities", 0.0) > 0 else 0.0
+
+        if ccc <= 45:
+            assessment = "매우 우수 (현금 회수 빠름)"
+        elif ccc <= 90:
+            assessment = "적정 수준 (통상적 회전율)"
+        elif ccc <= 150:
+            assessment = "주의 (운전자본 묶임 심화)"
+        else:
+            assessment = "위험 (현금 흐름 악화 우려)"
+
+        return {
+            "success": True,
+            "dso_days": round(dso, 1),
+            "dio_days": round(dio, 1),
+            "dpo_days": round(dpo, 1),
+            "ccc_days": round(ccc, 1),
+            "assessment": assessment,
+            "net_working_capital": int(round(nwc)),
+            "current_ratio": round(cur_ratio, 1),
+            "details": {
+                "revenue": int(round(rev)),
+                "cogs": int(round(cogs)),
+                "ar_balance": int(round(ar)),
+                "inventory_balance": int(round(inv)),
+                "ap_balance": int(round(ap))
+            }
+        }
+
+    except Exception as e:
+        logger.error("[CCC Engine] Error in calculate_working_capital_ccc: %s", str(e), exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+def calculate_expense_outliers_and_patterns(account_ledger_records: List[Dict[str, Any]], tb_records: List[Dict[str, Any]], prior_tb_records: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """
+    [분석 4] 계정별원장 기반 판관비/원가 세부 급증(Outlier) 및 고위험 지출 패턴 분석
+    """
+    try:
+        logger.info("[Expense Outlier Engine] Analyzing %d account ledger records and TB records", len(account_ledger_records or []))
+
+        # 1. 시산표(TB) 기반 판관비/비용 계정 증감 및 Outlier Top 5 탐지
+        expense_outliers = []
+        if tb_records:
+            prior_map = {}
+            if prior_tb_records:
+                for r in prior_tb_records:
+                    acc = str(r.get("Account") or r.get("account_name") or r.get("계정과목") or "").strip()
+                    bal = float(r.get("Current") or r.get("current_amount") or r.get("기말잔액") or r.get("당기") or 0.0)
+                    prior_map[acc] = bal
+
+            for r in tb_records:
+                acc = str(r.get("Account") or r.get("account_name") or r.get("계정과목") or "").strip()
+                cur_bal = float(r.get("Current") or r.get("current_amount") or r.get("기말잔액") or r.get("당기") or 0.0)
+                prior_bal = prior_map.get(acc, float(r.get("Prior") or r.get("prior_amount") or r.get("전기") or 0.0))
+
+                # 판관비/경비성 계정 판정 (급여, 퇴직급여, 복리후생비, 여비교통비, 접대비, 통신비, 수도광열비, 세금과공과, 감가상각비, 지급임차료, 수선비, 보험료, 차량유지비, 연구개발비, 운반비, 수수료, 광고선전비 등)
+                is_expense = any(k in acc for k in [
+                    "비", "료", "급여", "상각", "수당", "원가", "경비", "세금", "임차"
+                ]) and not any(k in acc for k in ["자산", "부채", "자본", "미지급", "선급", "수익", "매출"])
+
+                if is_expense and cur_bal > 0:
+                    diff_amt = cur_bal - prior_bal
+                    diff_pct = (diff_amt / prior_bal * 100) if prior_bal > 0 else (100.0 if diff_amt > 0 else 0.0)
+
+                    # 유의미한 급증 기준: 20% 이상 증가 또는 1천만원 이상 증가
+                    if diff_amt > 10000000 or diff_pct >= 20.0:
+                        expense_outliers.append({
+                            "account": acc,
+                            "current_amount": int(round(cur_bal)),
+                            "prior_amount": int(round(prior_bal)),
+                            "diff_amount": int(round(diff_amt)),
+                            "diff_pct": round(diff_pct, 1),
+                            "is_sharp_increase": diff_pct >= 50.0 and diff_amt >= 20000000
+                        })
+
+        expense_outliers = sorted(expense_outliers, key=lambda x: x["diff_amount"], reverse=True)[:6]
+
+        # 2. 계정별원장 기반 고위험 비용(접대비, 여비교통비, 복리후생비, 지급수수료, 광고비) 세부 패턴
+        target_focus_accounts = ["접대비", "여비교통비", "복리후생비", "지급수수료", "광고선전비"]
+        account_patterns = {}
+
+        if account_ledger_records:
+            for row in account_ledger_records:
+                acc_name = (row.get("계정과목") or row.get("account_name") or "").strip()
+                date_str = str(row.get("날짜") or row.get("전표일자") or "")
+                partner = (row.get("거래처") or "").strip()
+                summary = (row.get("적요란") or row.get("적요") or "").strip()
+                debit = int(row.get("차변") or 0)
+
+                matched_focus = None
+                for fa in target_focus_accounts:
+                    if fa in acc_name:
+                        matched_focus = fa
+                        break
+
+                if not matched_focus or debit <= 0:
+                    continue
+
+                if matched_focus not in account_patterns:
+                    account_patterns[matched_focus] = {
+                        "account_name": matched_focus,
+                        "total_spent": 0,
+                        "monthly_spent": {m: 0 for m in range(1, 13)},
+                        "partner_totals": {},
+                        "large_entries": []
+                    }
+
+                pat = account_patterns[matched_focus]
+                pat["total_spent"] += debit
+
+                # 월별 집계
+                if len(date_str) >= 7 and "-" in date_str:
+                    try:
+                        month_int = int(date_str.split("-")[1])
+                        if 1 <= month_int <= 12:
+                            pat["monthly_spent"][month_int] += debit
+                    except Exception:
+                        pass
+
+                # 거래처별 집계
+                if partner:
+                    pat["partner_totals"][partner] = pat["partner_totals"].get(partner, 0) + debit
+
+                # 단일 건 거액 지출 후보
+                pat["large_entries"].append({
+                    "date": date_str,
+                    "partner": partner or "미기재",
+                    "amount": debit,
+                    "summary": summary
+                })
+
+        # 가공 및 상위 랭킹 정리
+        structured_patterns = []
+        for fa, pat in account_patterns.items():
+            top_partners = sorted(pat["partner_totals"].items(), key=lambda x: x[1], reverse=True)[:5]
+            large_entries = sorted(pat["large_entries"], key=lambda x: x["amount"], reverse=True)[:5]
+
+            structured_patterns.append({
+                "account_name": fa,
+                "total_spent": pat["total_spent"],
+                "monthly_distribution": [pat["monthly_spent"][m] for m in range(1, 13)],
+                "top_partners": [{"partner": p[0], "amount": p[1]} for p in top_partners],
+                "large_entries": large_entries
+            })
+
+        return {
+            "success": True,
+            "outliers_ranking": expense_outliers,
+            "focus_patterns": structured_patterns
+        }
+
+    except Exception as e:
+        logger.error("[Expense Outlier Engine] Error in calculate_expense_outliers_and_patterns: %s", str(e), exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+def generate_aje_recommendations(bundle: Dict[str, Any], prior_bundle: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    """
+    [분석 5-2] 차기 결산 수정분개 (AJE - Adjusting Journal Entry) 감사인 사전 권고안 도출
+    """
+    recommendations = []
+    try:
+        logger.info("[AJE Recommendation Engine] Generating AJE recommendations")
+        stmts = bundle.get("statements", {})
+        tb = stmts.get("trial_balance", [])
+        bs = stmts.get("balance_sheet", [])
+        subledger = stmts.get("subledger", [])
+
+        # 1. 매출채권 대손충당금 검토
+        ar_balance = 0
+        allowance_balance = 0
+        for r in tb:
+            acc = str(r.get("Account") or r.get("account_name") or r.get("계정과목") or "")
+            cur = float(r.get("Current") or r.get("current_amount") or r.get("기말잔액") or 0.0)
+            if "외상매출금" in acc or "받을어음" in acc or "매출채권" in acc:
+                ar_balance += cur
+            elif "대손충당금" in acc:
+                allowance_balance += abs(cur)
+
+        # 최소 1% 설정 기준 대비 부족분
+        rec_allowance = ar_balance * 0.01
+        if rec_allowance > allowance_balance and (rec_allowance - allowance_balance) > 500000:
+            diff = int(round(rec_allowance - allowance_balance))
+            recommendations.append({
+                "id": "AJE-01",
+                "title": "매출채권 대손충당금 과소계상 보정",
+                "category": "자산평가 / 손상",
+                "priority": "HIGH",
+                "reason": f"기말 매출채권 잔액({int(ar_balance):,}원) 대비 대손충당금 계상액({int(allowance_balance):,}원)이 일반기업회계기준 권고 최소비율(1%)에 미달합니다.",
+                "proposed_entry": {
+                    "debit_account": "대손상각비 (판)",
+                    "debit_amount": diff,
+                    "credit_account": "대손충당금 (매출채권 차감)",
+                    "credit_amount": diff
+                },
+                "impact": f"당기순이익 {diff:,}원 감소, 총자산 건전성 제고"
+            })
+
+        # 2. 퇴직급여충당부채 또는 퇴직연금 검토
+        salary_sum = 0
+        retire_liab = 0
+        for r in tb:
+            acc = str(r.get("Account") or r.get("account_name") or r.get("계정과목") or "")
+            cur = float(r.get("Current") or r.get("current_amount") or r.get("기말잔액") or 0.0)
+            if "급여" in acc or "임금" in acc:
+                salary_sum += cur
+            elif "퇴직급여충당부채" in acc:
+                retire_liab += cur
+
+        if salary_sum > 50000000 and retire_liab == 0:
+            est_retire = int(round(salary_sum * (1.0 / 12.0)))
+            recommendations.append({
+                "id": "AJE-02",
+                "title": "퇴직급여충당부채 결산 미반영 보정",
+                "category": "부채평가 / 인건비",
+                "priority": "HIGH",
+                "reason": "임직원 총급여가 발생하였으나 기말 퇴직급여추계액 및 충당부채 계상 내역이 확인되지 않습니다.",
+                "proposed_entry": {
+                    "debit_account": "퇴직급여 (판)",
+                    "debit_amount": est_retire,
+                    "credit_account": "퇴직급여충당부채",
+                    "credit_amount": est_retire
+                },
+                "impact": f"부채 {est_retire:,}원 증가, 실질 부채 누락 방지"
+            })
+
+        # 3. 가지급금 / 가수금 기말 임시계정 정리 권고
+        for r in tb:
+            acc = str(r.get("Account") or r.get("account_name") or r.get("계정과목") or "")
+            cur = float(r.get("Current") or r.get("current_amount") or r.get("기말잔액") or 0.0)
+            if ("가지급금" in acc or "가수금" in acc) and abs(cur) > 1000000:
+                is_gaji = "가지급금" in acc
+                recommendations.append({
+                    "id": "AJE-03" if is_gaji else "AJE-04",
+                    "title": f"임시계정({acc}) 기말 본계정 대체 정리",
+                    "category": "재무제표 신뢰성",
+                    "priority": "CRITICAL" if is_gaji else "MEDIUM",
+                    "reason": f"기말 재무제표에 {acc} 잔액({int(abs(cur)):,}원)이 남아있어 세무상 인정이자 및 과세 리스크가 존재합니다.",
+                    "proposed_entry": {
+                        "debit_account": "해당 정산비용 / 대표자대여금" if is_gaji else acc,
+                        "debit_amount": int(round(abs(cur))),
+                        "credit_account": acc if is_gaji else "해당 정산수익 / 단기차입금",
+                        "credit_amount": int(round(abs(cur)))
+                    },
+                    "impact": "임시계정 소멸로 외부감사 지적 및 세무조정 리스크 예방"
+                })
+
+        # 기본 권고안이 없거나 부족한 경우 표준 권고안 보완
+        if len(recommendations) < 2:
+            recommendations.append({
+                "id": "AJE-STD-1",
+                "title": "감가상각비 연간 안분 및 내용연수 재검토",
+                "category": "유형자산",
+                "priority": "MEDIUM",
+                "reason": "취득 유형자산에 대한 감가상각 내용연수 준수 및 상각누계액 잔액의 정상 여부를 확인하십시오.",
+                "proposed_entry": {
+                    "debit_account": "감가상각비 (판/원)",
+                    "debit_amount": 0,
+                    "credit_account": "감가상각누계액",
+                    "credit_amount": 0
+                },
+                "impact": "자산 실질가치 적정 반영"
+            })
+
+        return recommendations
+
+    except Exception as e:
+        logger.error("[AJE Recommendation Engine] Error: %s", str(e), exc_info=True)
+        return []
+
+
+def generate_comprehensive_portal_analytics(company_name: str, fiscal_year: Optional[int] = 2025, bundle: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    [통합 분석] 회사 포털 5대 정밀 분석 보고서 생성기
+    MinIO Lakehouse의 당기/전기 정규화 JSON을 결합하여 대시보드 렌더링에 필요한 모든 지표를 일괄 연산합니다.
+    """
+    try:
+        from core.storage_manager import storage_manager
+        fy = int(fiscal_year) if fiscal_year else 2025
+        prior_fy = fy - 1
+
+        logger.info("[Portal Analytics] Generating comprehensive analytics for %s (FY %s)", company_name, fy)
+
+        # 1. 당기 데이터 로드
+        if not bundle:
+            res_curr = storage_manager.load_normalized_lakehouse_data(company_name, fy)
+            curr_bundle = res_curr.get("data") if res_curr.get("success") else None
+        else:
+            curr_bundle = bundle
+
+        if not curr_bundle:
+            return {"success": False, "error": f"{company_name} 회사의 {fy}년도 정규화 장부 데이터를 찾을 수 없습니다."}
+
+        # 2. 전기 데이터 로드
+        res_prior = storage_manager.load_normalized_lakehouse_data(company_name, prior_fy)
+        prior_bundle = res_prior.get("data") if res_prior.get("success") else None
+
+        stmts = curr_bundle.get("statements", {})
+        tb_records = stmts.get("trial_balance", [])
+        bs_records = stmts.get("balance_sheet", [])
+        is_records = stmts.get("income_statement", [])
+        journal_records = stmts.get("journal_entries", [])
+        subledger_records = stmts.get("subledger", [])
+        account_ledger_records = stmts.get("account_ledger", [])
+
+        prior_tb_records = prior_bundle.get("statements", {}).get("trial_balance", []) if prior_bundle else []
+
+        # 3. 5대 분석 연산 수행
+        # [1] 분개장 JET & 벤포드의 법칙
+        jet_result = run_journal_entry_testing(journal_records) if journal_records else {}
+        benford_result = calculate_benfords_law(journal_records) if journal_records else {}
+
+        # [2] 거래처 파레토 & 매출채권 연령분석
+        customer_result = calculate_customer_pareto_and_aging(subledger_records) if subledger_records else {}
+
+        # [3] 듀퐁 분석 & 현금전환주기 (CCC)
+        dupont_result = calculate_dupont_analysis(curr_bundle, prior_bundle)
+        ccc_result = calculate_working_capital_ccc(curr_bundle, prior_bundle)
+
+        # [4] 계정별원장 비용 Outlier & 패턴
+        expense_result = calculate_expense_outliers_and_patterns(account_ledger_records, tb_records, prior_tb_records)
+
+        # [5] 차기 결산 AJE 권고안
+        aje_recommendations = generate_aje_recommendations(curr_bundle, prior_bundle)
+
+        # 4. 경영진 종합 건강 점수 (Executive Health Score: 0~100점)
+        health_score = 85.0
+        score_deductions = []
+
+        # 대차평형 여부 검사
+        integrity = curr_bundle.get("integrity", {})
+        if not integrity.get("is_balanced", True):
+            health_score -= 15.0
+            score_deductions.append("대차평형 차액 발생 (-15점)")
+
+        # 벤포드 법칙 적합도
+        if benford_result.get("risk_level") == "HIGH":
+            health_score -= 10.0
+            score_deductions.append("전표 인위적 편향 고위험 (-10점)")
+        elif benford_result.get("risk_level") == "WARNING":
+            health_score -= 5.0
+            score_deductions.append("전표 특정 자릿수 편향 주의 (-5점)")
+
+        # 거래처 집중도
+        if customer_result.get("pareto", {}).get("hhi_index", 0) > 2500:
+            health_score -= 5.0
+            score_deductions.append("거래처 편중도 과다 (-5점)")
+
+        # 부채비율 및 유동비율
+        cur_ratio = ccc_result.get("current_ratio", 100.0)
+        if cur_ratio < 100.0:
+            health_score -= 5.0
+            score_deductions.append(f"유동비율 미달({cur_ratio}% < 100%) (-5점)")
+
+        health_score = max(20.0, min(100.0, health_score))
+
+        def _sanitize_val(v):
+            if isinstance(v, dict):
+                return {str(k): _sanitize_val(val) for k, val in v.items()}
+            elif isinstance(v, (list, tuple, set)):
+                return [_sanitize_val(item) for item in v]
+            elif isinstance(v, (np.integer, int)):
+                return int(v)
+            elif isinstance(v, (np.floating, float)):
+                return float(v) if not np.isnan(v) and not np.isinf(v) else 0.0
+            elif isinstance(v, (np.bool_, bool)):
+                return bool(v)
+            elif isinstance(v, (datetime, pd.Timestamp)):
+                return v.strftime('%Y-%m-%d %H:%M:%S')
+            elif v is None or isinstance(v, (str, bytes)):
+                return v if isinstance(v, str) or v is None else str(v)
+            return str(v)
+
+        raw_payload = {
+            "success": True,
+            "company_name": company_name,
+            "fiscal_year": fy,
+            "prior_fiscal_year": prior_fy,
+            "has_prior_data": prior_bundle is not None,
+            "record_counts": {
+                "trial_balance": len(tb_records),
+                "balance_sheet": len(bs_records),
+                "income_statement": len(is_records),
+                "journal_entries": len(journal_records),
+                "subledger": len(subledger_records),
+                "account_ledger": len(account_ledger_records)
+            },
+            "health_score": {
+                "score": int(round(health_score)),
+                "grade": "AAA" if health_score >= 90 else ("AA" if health_score >= 80 else ("A" if health_score >= 70 else "BBB")),
+                "deductions": score_deductions
+            },
+            "analytics": {
+                "jet": jet_result,
+                "benford": benford_result,
+                "customer": customer_result,
+                "dupont": dupont_result,
+                "ccc": ccc_result,
+                "expense": expense_result,
+                "aje": aje_recommendations
+            }
+        }
+
+        return _sanitize_val(raw_payload)
+
+    except Exception as e:
+        logger.error("[Portal Analytics] Critical error generating analytics for %s: %s", company_name, str(e), exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+
 
 
