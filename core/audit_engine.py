@@ -1346,6 +1346,13 @@ def run_journal_entry_testing(journal_entries):
     suspicious_acc_entries = []
     year_end_entries = []
 
+    weekend_cnt = 0
+    round_num_cnt = 0
+    splitting_cnt = 0
+    risk_kw_cnt = 0
+    suspicious_acc_cnt = 0
+    year_end_cnt = 0
+
     for entry in journal_entries:
         date_str = entry.get("Date", "")
         dt = _parse_date_safe(date_str)
@@ -1359,92 +1366,111 @@ def run_journal_entry_testing(journal_entries):
 
         # [1] 주말(토/일) 전표 탐지
         if dt and dt.weekday() in [5, 6]:
-            weekend_entries.append({
-                "date": date_str,
-                "day_name": "토요일" if dt.weekday() == 5 else "일요일",
-                "voucher": voucher,
-                "account": acc_name,
-                "amount": amount,
-                "customer": customer,
-                "desc": desc,
-                "reason": "휴일/주말에 입력된 비경상적 전표"
-            })
+            weekend_cnt += 1
+            if len(weekend_entries) < 50:
+                weekend_entries.append({
+                    "date": date_str,
+                    "day_name": "토요일" if dt.weekday() == 5 else "일요일",
+                    "voucher": voucher,
+                    "account": acc_name,
+                    "amount": amount,
+                    "customer": customer,
+                    "desc": desc,
+                    "reason": "휴일/주말에 입력된 비경상적 전표"
+                })
 
         # [2] 라운드 넘버 분개 (1천만원 이상 딱 떨어지는 금액)
         if amount >= 10000000.0 and amount % 1000000.0 == 0:
-            round_num_entries.append({
-                "date": date_str,
-                "voucher": voucher,
-                "account": acc_name,
-                "amount": amount,
-                "customer": customer,
-                "desc": desc,
-                "reason": f"{amount:,.0f}원 라운드 넘버(정액) 분개"
-            })
+            round_num_cnt += 1
+            if len(round_num_entries) < 50:
+                round_num_entries.append({
+                    "date": date_str,
+                    "voucher": voucher,
+                    "account": acc_name,
+                    "amount": amount,
+                    "customer": customer,
+                    "desc": desc,
+                    "reason": f"{amount:,.0f}원 라운드 넘버(정액) 분개"
+                })
 
         # [3] 1천만원 직하 쪼개기 분개 후보 (9백만 ~ 9.99백만원)
         if 9000000.0 <= amount < 10000000.0:
-            splitting_candidates.append({
-                "date": date_str,
-                "voucher": voucher,
-                "account": acc_name,
-                "amount": amount,
-                "customer": customer,
-                "desc": desc,
-                "reason": "1천만원 내부결재/보고 한도 직하 쪼개기 의심 금액"
-            })
+            splitting_cnt += 1
+            if len(splitting_candidates) < 50:
+                splitting_candidates.append({
+                    "date": date_str,
+                    "voucher": voucher,
+                    "account": acc_name,
+                    "amount": amount,
+                    "customer": customer,
+                    "desc": desc,
+                    "reason": "1천만원 내부결재/보고 한도 직하 쪼개기 의심 금액"
+                })
 
         # [4] 위험 키워드 적요 스캔
         matched_kws = [kw for kw in RISK_KEYWORDS if kw in desc or kw in acc_name]
         if matched_kws:
-            risk_keyword_entries.append({
-                "date": date_str,
-                "voucher": voucher,
-                "account": acc_name,
-                "amount": amount,
-                "customer": customer,
-                "desc": desc,
-                "matched_keywords": matched_kws,
-                "reason": f"위험 감시 키워드 [{', '.join(matched_kws)}] 포함"
-            })
+            risk_kw_cnt += 1
+            if len(risk_keyword_entries) < 50:
+                risk_keyword_entries.append({
+                    "date": date_str,
+                    "voucher": voucher,
+                    "account": acc_name,
+                    "amount": amount,
+                    "customer": customer,
+                    "desc": desc,
+                    "matched_keywords": matched_kws,
+                    "reason": f"위험 감시 키워드 [{', '.join(matched_kws)}] 포함"
+                })
 
         # [5] 고위험 계정 거래 (가지급금, 가수금, 대여금 등)
         if any(sa in acc_name for sa in SUSPICIOUS_ACCOUNTS):
-            suspicious_acc_entries.append({
-                "date": date_str,
-                "voucher": voucher,
-                "account": acc_name,
-                "amount": amount,
-                "customer": customer,
-                "desc": desc,
-                "reason": "가지급금/가수금/대여금 등 세무·감사 중점 검토 계정"
-            })
+            suspicious_acc_cnt += 1
+            if len(suspicious_acc_entries) < 50:
+                suspicious_acc_entries.append({
+                    "date": date_str,
+                    "voucher": voucher,
+                    "account": acc_name,
+                    "amount": amount,
+                    "customer": customer,
+                    "desc": desc,
+                    "reason": "가지급금/가수금/대여금 등 세무·감사 중점 검토 계정"
+                })
 
         # [6] 연말(12/25~12/31) 집중 분개
         if dt and dt.month == 12 and dt.day >= 25 and amount >= 30000000.0:
-            year_end_entries.append({
-                "date": date_str,
-                "voucher": voucher,
-                "account": acc_name,
-                "amount": amount,
-                "customer": customer,
-                "desc": desc,
-                "reason": "연말 결산기 대규모 집중 분개 (수익/비용 왜곡 가능성)"
-            })
+            year_end_cnt += 1
+            if len(year_end_entries) < 50:
+                year_end_entries.append({
+                    "date": date_str,
+                    "voucher": voucher,
+                    "account": acc_name,
+                    "amount": amount,
+                    "customer": customer,
+                    "desc": desc,
+                    "reason": "연말 결산기 대규모 집중 분개 (수익/비용 왜곡 가능성)"
+                })
 
-    total_anomalies = len(weekend_entries) + len(round_num_entries) + len(splitting_candidates) + \
-                      len(risk_keyword_entries) + len(suspicious_acc_entries) + len(year_end_entries)
+    total_anomalies = weekend_cnt + round_num_cnt + splitting_cnt + risk_kw_cnt + suspicious_acc_cnt + year_end_cnt
     
     # 위험도 점수 계산 (0~100점)
-    risk_score = min(100, int((total_anomalies / max(1, len(journal_entries))) * 150) + (len(suspicious_acc_entries) * 10))
+    risk_score = min(100, int((total_anomalies / max(1, len(journal_entries))) * 150) + (suspicious_acc_cnt * 10))
 
     logger.info("[MASTER_ANALYTICS:JET] JET 스캔 완료: 이상치 총 %d건 (주말: %d, 라운드: %d, 키워드: %d, 고위험계정: %d), 위험도=%d점",
-                total_anomalies, len(weekend_entries), len(round_num_entries), len(risk_keyword_entries), len(suspicious_acc_entries), risk_score)
+                total_anomalies, weekend_cnt, round_num_cnt, risk_kw_cnt, suspicious_acc_cnt, risk_score)
 
     return {
         "total_entries": len(journal_entries),
         "anomaly_count": total_anomalies,
         "risk_score": risk_score,
+        "anomalies": {
+            "weekend_count": weekend_cnt,
+            "round_number_count": round_num_cnt,
+            "splitting_count": splitting_cnt,
+            "risk_keyword_count": risk_kw_cnt,
+            "suspicious_account_count": suspicious_acc_cnt,
+            "year_end_count": year_end_cnt
+        },
         "weekend_holiday_entries": weekend_entries,
         "round_number_entries": round_num_entries,
         "splitting_entries": splitting_candidates,
@@ -4190,9 +4216,10 @@ def generate_aje_recommendations(bundle: Dict[str, Any], prior_bundle: Optional[
 
 def generate_comprehensive_portal_analytics(company_name: str, fiscal_year: Optional[int] = 2025, bundle: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
-    [통합 분석] 회사 포털 5대 정밀 분석 보고서 생성기
+    [통합 분석] 회사 포털 5대 정밀 분석 보고서 생성기 (OOM 방지 메모리 최적화 버전)
     MinIO Lakehouse의 당기/전기 정규화 JSON을 결합하여 대시보드 렌더링에 필요한 모든 지표를 일괄 연산합니다.
     """
+    import gc
     try:
         from core.storage_manager import storage_manager
         fy = int(fiscal_year) if fiscal_year else 2025
@@ -4223,6 +4250,15 @@ def generate_comprehensive_portal_analytics(company_name: str, fiscal_year: Opti
         account_ledger_records = stmts.get("account_ledger", [])
 
         prior_tb_records = prior_bundle.get("statements", {}).get("trial_balance", []) if prior_bundle else []
+
+        record_counts = {
+            "trial_balance": len(tb_records),
+            "balance_sheet": len(bs_records),
+            "income_statement": len(is_records),
+            "journal_entries": len(journal_records),
+            "subledger": len(subledger_records),
+            "account_ledger": len(account_ledger_records)
+        }
 
         # 3. 5대 분석 연산 수행
         # [1] 분개장 JET & 벤포드의 법칙
@@ -4273,37 +4309,40 @@ def generate_comprehensive_portal_analytics(company_name: str, fiscal_year: Opti
 
         health_score = max(20.0, min(100.0, health_score))
 
-        def _sanitize_val(v):
-            if isinstance(v, dict):
-                return {str(k): _sanitize_val(val) for k, val in v.items()}
-            elif isinstance(v, (list, tuple, set)):
-                return [_sanitize_val(item) for item in v]
-            elif isinstance(v, (np.integer, int)):
-                return int(v)
-            elif isinstance(v, (np.floating, float)):
-                return float(v) if not np.isnan(v) and not np.isinf(v) else 0.0
-            elif isinstance(v, (np.bool_, bool)):
-                return bool(v)
-            elif isinstance(v, (datetime, pd.Timestamp)):
-                return v.strftime('%Y-%m-%d %H:%M:%S')
-            elif v is None or isinstance(v, (str, bytes)):
-                return v if isinstance(v, str) or v is None else str(v)
-            return str(v)
+        # 메모리 절약을 위한 중간 번들 객체 해제
+        has_prior = prior_bundle is not None
+        del curr_bundle, prior_bundle, stmts, tb_records, bs_records, is_records
+        del journal_records, subledger_records, account_ledger_records, prior_tb_records
+        gc.collect()
+
+        def _clean_for_json(val):
+            """메모리 폭증 없는 가벼운 JSON 직렬화 정제 함수"""
+            if val is None or isinstance(val, (str, int, bool)):
+                return val
+            elif isinstance(val, float):
+                return 0.0 if (np.isnan(val) or np.isinf(val)) else val
+            elif isinstance(val, (np.integer,)):
+                return int(val)
+            elif isinstance(val, (np.floating,)):
+                f = float(val)
+                return 0.0 if (np.isnan(f) or np.isinf(f)) else f
+            elif isinstance(val, (np.bool_,)):
+                return bool(val)
+            elif isinstance(val, (datetime, pd.Timestamp)):
+                return val.strftime('%Y-%m-%d %H:%M:%S')
+            elif isinstance(val, dict):
+                return {k: _clean_for_json(v) for k, v in val.items()}
+            elif isinstance(val, (list, tuple, set)):
+                return [_clean_for_json(item) for item in val]
+            return str(val)
 
         raw_payload = {
             "success": True,
             "company_name": company_name,
             "fiscal_year": fy,
             "prior_fiscal_year": prior_fy,
-            "has_prior_data": prior_bundle is not None,
-            "record_counts": {
-                "trial_balance": len(tb_records),
-                "balance_sheet": len(bs_records),
-                "income_statement": len(is_records),
-                "journal_entries": len(journal_records),
-                "subledger": len(subledger_records),
-                "account_ledger": len(account_ledger_records)
-            },
+            "has_prior_data": has_prior,
+            "record_counts": record_counts,
             "health_score": {
                 "score": int(round(health_score)),
                 "grade": "AAA" if health_score >= 90 else ("AA" if health_score >= 80 else ("A" if health_score >= 70 else "BBB")),
@@ -4320,7 +4359,9 @@ def generate_comprehensive_portal_analytics(company_name: str, fiscal_year: Opti
             }
         }
 
-        return _sanitize_val(raw_payload)
+        cleaned = _clean_for_json(raw_payload)
+        gc.collect()
+        return cleaned
 
     except Exception as e:
         logger.error("[Portal Analytics] Critical error generating analytics for %s: %s", company_name, str(e), exc_info=True)

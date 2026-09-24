@@ -720,6 +720,71 @@ class HybridStorageManager:
                 "error": f"데이터 로드 중 오류가 발생했습니다: {str(e)}"
             }
 
+    def load_portal_analytics_cache(self, company_name: str, fiscal_year: int = 2025):
+        """
+        사내 우분투 MinIO 서버의 {company_name}/{fiscal_year}/Normalized/analytics.json 캐시를
+        0.01초 만에 인메모리로 고속 로드하여 반환합니다.
+        """
+        safe_company = re.sub(r'[\\/:*?"<>|]', "_", company_name).strip()
+        fy = int(fiscal_year) if fiscal_year and str(fiscal_year).isdigit() else 2025
+        bucket_name = "company-uploads"
+        target_key = f"{safe_company}/{fy}/Normalized/analytics.json"
+
+        if not self.s3_client:
+            logger.warning("[STORAGE:CACHE_WARN] MinIO S3 client is not available")
+            return {"success": False, "error": "MinIO S3 클라이언트 미초기화"}
+
+        try:
+            start_t = datetime.datetime.now()
+            resp = self.s3_client.get_object(Bucket=bucket_name, Key=target_key)
+            data_bytes = resp["Body"].read()
+            data_json = json.loads(data_bytes.decode("utf-8"))
+            elapsed_ms = (datetime.datetime.now() - start_t).total_seconds() * 1000
+
+            logger.info("[STORAGE:CACHE_HIT] Portal analytics cache loaded from s3://%s/%s in %.2f ms",
+                        bucket_name, target_key, elapsed_ms)
+            return {
+                "success": True,
+                "company_name": safe_company,
+                "fiscal_year": fy,
+                "elapsed_ms": round(elapsed_ms, 2),
+                "is_cached": True,
+                "data": data_json
+            }
+        except ClientError as ce:
+            logger.debug("[STORAGE:CACHE_MISS] Analytics cache not found: s3://%s/%s (%s)", bucket_name, target_key, ce)
+            return {"success": False, "error": "캐시가 존재하지 않습니다."}
+        except Exception as e:
+            logger.warning("[STORAGE:CACHE_ERROR] Failed to read analytics cache: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def save_portal_analytics_cache(self, company_name: str, fiscal_year: int, analytics_data: dict):
+        """
+        계산 완료된 5대 회계분석 보고서 결과를 {company_name}/{fiscal_year}/Normalized/analytics.json 에 캐싱합니다.
+        """
+        safe_company = re.sub(r'[\\/:*?"<>|]', "_", company_name).strip()
+        fy = int(fiscal_year) if fiscal_year and str(fiscal_year).isdigit() else 2025
+        bucket_name = "company-uploads"
+        target_key = f"{safe_company}/{fy}/Normalized/analytics.json"
+
+        if not self.s3_client or not analytics_data:
+            return False
+
+        try:
+            cache_bytes = json.dumps(analytics_data, ensure_ascii=False, indent=2).encode("utf-8")
+            self.s3_client.put_object(
+                Bucket=bucket_name,
+                Key=target_key,
+                Body=cache_bytes,
+                ContentType="application/json; charset=utf-8"
+            )
+            logger.info("[STORAGE:CACHE_SAVED] Saved analytics cache to s3://%s/%s (%d bytes)",
+                        bucket_name, target_key, len(cache_bytes))
+            return True
+        except Exception as e:
+            logger.warning("[STORAGE:CACHE_SAVE_ERR] Failed to save analytics cache: %s", e)
+            return False
+
     def sync_normalized_lakehouse(self, company_name: str, fiscal_year: int = 2025):
         """
         사내 MinIO 서버의 {company_name}/{fiscal_year}/Temp/ 경로를 스캔하여
@@ -1011,6 +1076,17 @@ class HybridStorageManager:
                 Body=meta_bytes,
                 ContentType="application/json; charset=utf-8"
             )
+
+            # 7. 5대 회계분석 보고서 사전 연산 (Pre-computation 캐싱)
+            try:
+                from core.audit_engine import generate_comprehensive_portal_analytics
+                logger.info("[STORAGE:PRECOMPUTE] Pre-computing analytics.json for %s/%s", safe_company, fy)
+                pre_analytics = generate_comprehensive_portal_analytics(safe_company, fy, bundle=standard_data_json)
+                if pre_analytics.get("success"):
+                    self.save_portal_analytics_cache(safe_company, fy, pre_analytics)
+                    logger.info("[STORAGE:PRECOMPUTE_SUCCESS] Pre-computed and cached analytics.json for %s/%s", safe_company, fy)
+            except Exception as pe:
+                logger.warning("[STORAGE:PRECOMPUTE_WARN] Background pre-computation skipped/failed: %s", pe)
 
             logger.info("[STORAGE:SYNC_COMPLETE] Successfully synced Lakehouse Normalized layer for %s/%s", safe_company, fy)
             return {

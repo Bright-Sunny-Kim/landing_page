@@ -1891,7 +1891,8 @@
                     const data = payload.analytics || {};
 
                     if (lakehouseText) {
-                        lakehouseText.innerText = `사내 DB ${payload.fiscal_year}년 (${payload.elapsed_ms || 0}ms)`;
+                        const cacheTag = payload.is_cached ? '⚡ 초고속 캐시' : '실시간 연산';
+                        lakehouseText.innerText = `사내 DB ${payload.fiscal_year}년 (${cacheTag} ${payload.elapsed_ms || 0}ms)`;
                     }
 
                     // 0. 건강 점수 & 핵심 KPI 바인딩

@@ -1233,11 +1233,13 @@ def rebuild_normalized_dataset():
 def get_portal_analytics(company_name=None):
     """
     회사 포털 5대 핵심 회계분석 보고서(벤포드, 거래처 파레토/에이징, 듀퐁, CCC, 비용 Outlier, AJE)를
-    MinIO Lakehouse의 정규화 데이터를 바탕으로 실시간 연산하여 반환하는 API
+    사전 연산 캐시(analytics.json) 우선 조회 및 On-Demand Fallback으로 초고속 반환하는 API
     """
+    import gc
+    import time
     try:
+        from core.storage_manager import storage_manager
         from core.audit_engine import generate_comprehensive_portal_analytics
-        import time
 
         start_t = time.time()
         target_company = company_name or request.args.get('company_name', '').strip()
@@ -1250,16 +1252,35 @@ def get_portal_analytics(company_name=None):
 
         target_year = request.args.get('fiscal_year', '').strip() or request.args.get('year', '').strip() or '2025'
         fy_int = int(target_year) if str(target_year).isdigit() else 2025
+        force_refresh = request.args.get('refresh', '').lower() in ['1', 'true', 'yes']
 
-        logger.info("[PORTAL_ANALYTICS:REQ] Generating portal analytics for '%s' (FY %s)", target_company, fy_int)
+        # 1. 사전 연산된 analytics.json 캐시 우선 로드 (0.01초 소요, RAM 1MB 미만)
+        if not force_refresh:
+            cache_res = storage_manager.load_portal_analytics_cache(target_company, fy_int)
+            if cache_res.get("success") and cache_res.get("data"):
+                cached_data = cache_res["data"]
+                elapsed_ms = int((time.time() - start_t) * 1000)
+                cached_data['elapsed_ms'] = elapsed_ms
+                cached_data['is_cached'] = True
+                logger.info("[PORTAL_ANALYTICS:CACHE_HIT] Served cached analytics for %s (FY %s) in %dms",
+                            target_company, fy_int, elapsed_ms)
+                return jsonify(cached_data), 200
+
+        # 2. 캐시가 없거나 강제 갱신 요청인 경우: 실시간 연산 (Step 1 메모리 최적화 엔진)
+        logger.info("[PORTAL_ANALYTICS:REQ] Generating on-demand portal analytics for '%s' (FY %s)", target_company, fy_int)
         analytics_result = generate_comprehensive_portal_analytics(target_company, fy_int)
 
         elapsed_ms = int((time.time() - start_t) * 1000)
         analytics_result['elapsed_ms'] = elapsed_ms
+        analytics_result['is_cached'] = False
 
         if analytics_result.get('success'):
             logger.info("[PORTAL_ANALYTICS:SUCCESS] Generated analytics for %s in %dms (Health Score: %s)",
                         target_company, elapsed_ms, analytics_result.get('health_score', {}).get('score'))
+            
+            # 다음 조회를 위해 캐시 자동 저장 (Self-Healing)
+            storage_manager.save_portal_analytics_cache(target_company, fy_int, analytics_result)
+
             return jsonify(analytics_result), 200
         else:
             logger.error("[PORTAL_ANALYTICS:FAIL] Failed to generate analytics: %s", analytics_result.get('error'))
@@ -1268,6 +1289,9 @@ def get_portal_analytics(company_name=None):
     except Exception as e:
         logger.error("[PORTAL_ANALYTICS:ERROR] Critical error generating portal analytics: %s", e, exc_info=True)
         return jsonify({'success': False, 'error': f'분석 보고서 생성 오류: {str(e)}'}), 500
+    finally:
+        gc.collect()
+
 
 
 
