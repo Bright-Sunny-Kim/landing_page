@@ -118,12 +118,15 @@
                     <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="회계법인 혜안" class="logo-img">
                     <span class="logo-text-admin">Admin</span>
                 </div>
-                <div class="master-profile-box">
-                    <div class="master-profile-avatar">M</div>
-                    <div class="master-profile-info">
-                        <span class="master-profile-name">마스터 관리자</span>
-                        <span class="master-profile-role">cpaeastsun@gmail.com</span>
+                <div class="master-profile-box" onclick="openGlobalProfileModal()" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;" title="내 정보 및 관리자 권한 설정">
+                    <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                        <div class="master-profile-avatar">M</div>
+                        <div class="master-profile-info" style="min-width: 0;">
+                            <span class="master-profile-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ session.get('username', '마스터 관리자') }}</span>
+                            <span class="master-profile-role" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ session.get('email', 'cpaeastsun@gmail.com') }}</span>
+                        </div>
                     </div>
+                    <span class="profile-settings-cog" style="font-size: 1.05rem; color: #a5b4fc; padding: 4px; border-radius: 6px; background: rgba(255,255,255,0.06); margin-left: 6px;" title="설정 열기">⚙️</span>
                 </div>
             </div>
             
@@ -1115,6 +1118,9 @@
         });
     </script>
     
+    <!-- 전역 회원정보 & 감사인 권한 설정 모달 -->
+    {% include 'components/profile_modal.html' %}
+
     <!-- 전역 AI 회계기준 어시스턴트 플로팅 팝업 위젯 -->
     {% include 'components/ai_cpa_widget.html' %}
 

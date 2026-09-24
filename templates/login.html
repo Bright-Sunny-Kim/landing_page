@@ -108,15 +108,32 @@
                     
                     <!-- 신규 가입 시에만 열릴 동적 추가 필드 그룹 -->
                     <div class="additional-fields hidden" id="additional-fields">
+                        <!-- 감사인(CPA) 여부 체크 영역 -->
+                        <div class="auditor-check-card">
+                            <label class="remember-container" style="margin-bottom:0;">
+                                <input type="checkbox" id="is_auditor" name="is_auditor" value="on" class="remember-checkbox">
+                                <div class="remember-custom"></div>
+                                <span class="auditor-label-text">🏛️ 공인회계사 / 감사팀 참여자</span>
+                            </label>
+                            <p class="auditor-help-text">감사인 체크 시 AI 감사전용 포털(/audit)로 자동 연결됩니다.</p>
+                            <div class="auditor-extra-fields hidden" id="auditor-extra-fields">
+                                <div class="input-group" style="margin-top:14px; margin-bottom:4px;">
+                                    <input type="text" id="cpa_number" name="cpa_number" autocomplete="off" placeholder=" ">
+                                    <label for="cpa_number">공인회계사 등록번호 (선택)</label>
+                                    <span class="bar"></span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="input-group">
                             <input type="text" id="corporate_number" name="corporate_number" autocomplete="off" placeholder=" ">
-                            <label for="corporate_number">법인등록번호 (000000-0000000)</label>
+                            <label for="corporate_number" id="corporate_number-label">법인등록번호 (000000-0000000)</label>
                             <span class="bar"></span>
                         </div>
                         
                         <div class="input-group">
                             <input type="text" id="company" name="company" autocomplete="off" placeholder=" ">
-                            <label for="company">회사명</label>
+                            <label for="company" id="company-label">회사명</label>
                             <span class="bar"></span>
                         </div>
                         
@@ -195,9 +212,27 @@
                 <!-- 소셜 계정 신규 가입 시 추가 정보를 입력받을 필드 (동적 노출) -->
                 <div class="oauth-additional-fields hidden" id="oauth-additional-fields">
                     <p class="oauth-warn-text">✦ 최초 1회 파트너사 정보 등록이 필요합니다.</p>
+                    
+                    <!-- 소셜 감사인(CPA) 여부 체크 영역 -->
+                    <div class="auditor-check-card">
+                        <label class="remember-container" style="margin-bottom:0;">
+                            <input type="checkbox" id="oauth-is_auditor" name="oauth-is_auditor" value="on" class="remember-checkbox">
+                            <div class="remember-custom"></div>
+                            <span class="auditor-label-text">🏛️ 공인회계사 / 감사팀 참여자</span>
+                        </label>
+                        <p class="auditor-help-text">감사인 체크 시 AI 감사전용 포털(/audit)로 자동 연결됩니다.</p>
+                        <div class="auditor-extra-fields hidden" id="oauth-auditor-extra-fields">
+                            <div class="input-group" style="margin-top:14px; margin-bottom:4px;">
+                                <input type="text" id="oauth-cpa_number" autocomplete="off" placeholder=" ">
+                                <label for="oauth-cpa_number">공인회계사 등록번호 (선택)</label>
+                                <span class="bar"></span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="input-group">
                         <input type="text" id="oauth-corporate_number" autocomplete="off" placeholder=" ">
-                        <label for="oauth-corporate_number">법인등록번호 (000000-0000000)</label>
+                        <label for="oauth-corporate_number" id="oauth-corporate_number-label">법인등록번호 (000000-0000000)</label>
                         <span class="bar"></span>
                     </div>
                     <div class="input-group">

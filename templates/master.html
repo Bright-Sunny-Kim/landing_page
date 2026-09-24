@@ -35,12 +35,15 @@
                     <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="회계법인 혜안" class="logo-img">
                     <span class="logo-text-admin">Admin</span>
                 </div>
-                <div class="master-profile-box">
-                    <div class="master-profile-avatar">M</div>
-                    <div class="master-profile-info">
-                        <span class="master-profile-name">마스터 관리자</span>
-                        <span class="master-profile-role">cpaeastsun@gmail.com</span>
+                <div class="master-profile-box" onclick="openGlobalProfileModal()" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;" title="내 정보 및 관리자 권한 설정">
+                    <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                        <div class="master-profile-avatar">M</div>
+                        <div class="master-profile-info" style="min-width: 0;">
+                            <span class="master-profile-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ session.get('username', '마스터 관리자') }}</span>
+                            <span class="master-profile-role" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ session.get('email', 'cpaeastsun@gmail.com') }}</span>
+                        </div>
                     </div>
+                    <span class="profile-settings-cog" style="font-size: 1.05rem; color: #a5b4fc; padding: 4px; border-radius: 6px; background: rgba(255,255,255,0.06); margin-left: 6px;" title="설정 열기">⚙️</span>
                 </div>
             </div>
             
@@ -490,6 +493,7 @@
                 <div class="sub-tabs-container">
                     <button class="sub-tab-btn active" data-subtab="metrics">📈 시스템 경영 통계</button>
                     <button class="sub-tab-btn" data-subtab="pipeline">⚙️ AI 자동화 파이프라인 관리</button>
+                    <button class="sub-tab-btn" data-subtab="audit-logs" onclick="loadAuditLogs()">🛡️ 회원정보 변경 & 보안 감사 로그</button>
                 </div>
 
                 <!-- 서브 탭 1: 시스템 경영 통계 -->
@@ -740,6 +744,44 @@
                             </div>
                         </div>
 
+                    </div>
+                </div>
+
+                <!-- 서브 탭 3: 회원정보 변경 & 보안 감사 로그 -->
+                <div class="sub-tab-content" id="subtab-audit-logs-view" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div>
+                            <h3 style="font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin: 0 0 4px 0; display: flex; align-items: center; gap: 8px;">
+                                <span>🛡️</span> 회원정보 및 권한 변경 감사 로그
+                                <span id="audit-logs-count" class="status-badge" style="background: rgba(99,102,241,0.2); color: #a5b4fc; font-size: 0.76rem; padding: 2px 8px;">0건</span>
+                            </h3>
+                            <p style="font-size: 0.82rem; color: #94a3b8; margin: 0;">포털 회원의 역할(Role) 승격, 회사명, 비밀번호 등 중요 정보의 변경 이력을 실시간 모니터링합니다.</p>
+                        </div>
+                        <button type="button" onclick="loadAuditLogs()" class="btn-subtab" style="display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); border-radius: 8px; color: #c7d2fe; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+                            <span>🔄 새로고침</span>
+                        </button>
+                    </div>
+
+                    <div style="overflow-x: auto; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+                        <table class="master-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                            <thead>
+                                <tr style="background: rgba(0,0,0,0.35); border-bottom: 1px solid rgba(255,255,255,0.1); color: #94a3b8; font-size: 0.82rem;">
+                                    <th style="padding: 12px 14px; white-space: nowrap;">변경 일시</th>
+                                    <th style="padding: 12px 14px;">대상 계정</th>
+                                    <th style="padding: 12px 14px;">수정자</th>
+                                    <th style="padding: 12px 14px;">유형</th>
+                                    <th style="padding: 12px 14px;">변경 내역 (Before ➔ After)</th>
+                                    <th style="padding: 12px 14px;">접속 IP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-logs-table-body">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 28px; color: #94a3b8;">
+                                        ⏳ 상단 [새로고침]을 누르거나 탭을 클릭하여 최신 변경 이력을 조회하세요.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1502,6 +1544,9 @@
         </div>
     </div>
     
+    <!-- 전역 회원정보 & 감사인 권한 설정 모달 -->
+    {% include 'components/profile_modal.html' %}
+
     <!-- 전역 AI 회계기준 어시스턴트 플로팅 팝업 위젯 -->
     {% include 'components/ai_cpa_widget.html' %}
 

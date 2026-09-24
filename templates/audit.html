@@ -33,14 +33,19 @@
     <div id="audit-sidebar-overlay" class="audit-sidebar-overlay"></div>
 
     <!-- 모바일 전용 상단 네비바 -->
-    <header class="audit-mobile-header">
+    <header class="audit-mobile-header" style="display: flex; justify-content: space-between; align-items: center;">
         <div class="logo">
             <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="회계법인 혜안" class="logo-img">
             <span class="logo-cpa-badge">CPA Audit</span>
         </div>
-        <button type="button" id="btn-toggle-sidebar" class="mobile-menu-toggle" aria-label="메뉴 열기">
-            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" onclick="openGlobalProfileModal()" class="mobile-menu-toggle" aria-label="설정 열기" style="font-size: 1.1rem;" title="내 정보 및 권한 설정">
+                ⚙️
+            </button>
+            <button type="button" id="btn-toggle-sidebar" class="mobile-menu-toggle" aria-label="메뉴 열기">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+        </div>
     </header>
 
     <div class="audit-container" id="audit-app-container">
@@ -51,12 +56,15 @@
                     <img src="{{ url_for('static', filename='images/logo_light.png') }}" alt="회계법인 혜안" class="logo-img">
                     <span class="logo-cpa-badge">CPA Audit</span>
                 </div>
-                <div class="master-profile-box audit-cpa-profile">
-                    <div class="master-profile-avatar">CPA</div>
-                    <div class="master-profile-info">
-                        <span class="master-profile-name">{{ username }}</span>
-                        <span class="master-profile-role">{{ user_email }}</span>
+                <div class="master-profile-box audit-cpa-profile" onclick="openGlobalProfileModal()" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;" title="내 정보 및 감사인(is_auditor) 권한 설정">
+                    <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                        <div class="master-profile-avatar">CPA</div>
+                        <div class="master-profile-info" style="min-width: 0;">
+                            <span class="master-profile-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ username }}</span>
+                            <span class="master-profile-role" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ user_email }}</span>
+                        </div>
                     </div>
+                    <span class="profile-settings-cog" style="font-size: 1.05rem; color: #93c5fd; padding: 4px; border-radius: 6px; background: rgba(255,255,255,0.06); margin-left: 6px;" title="설정 열기">⚙️</span>
                 </div>
             </div>
 
@@ -694,6 +702,9 @@
             </form>
         </div>
     </div>
+
+    <!-- 전역 회원정보 & 감사인 권한 설정 모달 -->
+    {% include 'components/profile_modal.html' %}
 
     <!-- 전역 AI 회계기준 어시스턴트 플로팅 팝업 위젯 -->
     {% include 'components/ai_cpa_widget.html' %}

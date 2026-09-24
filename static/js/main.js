@@ -21,9 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 추가 필드 요소들
     const corporateNumberInput = document.getElementById('corporate_number');
+    const corporateNumberLabel = document.getElementById('corporate_number-label');
     const companyInput = document.getElementById('company');
+    const companyLabel = document.getElementById('company-label');
     const usernameInput = document.getElementById('username');
     const taskInput = document.getElementById('task_type');
+    const isAuditorCheckbox = document.getElementById('is_auditor');
+    const auditorExtraFields = document.getElementById('auditor-extra-fields');
+    const cpaNumberInput = document.getElementById('cpa_number');
 
     let isExistingUser = false; // DB 등록 여부 플래그
     let isEmailChecking = false;
@@ -39,6 +44,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const regex = /^\d{6}-\d{7}$/;
         return regex.test(num);
     };
+
+    // 감사인 체크박스 이벤트 리스너
+    if (isAuditorCheckbox) {
+        isAuditorCheckbox.addEventListener('change', () => {
+            if (isAuditorCheckbox.checked) {
+                if (auditorExtraFields) auditorExtraFields.classList.remove('hidden');
+                if (taskInput) taskInput.value = '회계감사';
+                if (corporateNumberLabel) corporateNumberLabel.textContent = '소속 법인등록번호 (000000-0000000)';
+                if (companyLabel) companyLabel.textContent = '소속 회계법인 / 사무소명';
+                if (companyInput && !companyInput.value) {
+                    companyInput.value = '회계법인 혜안';
+                }
+                if (corporateNumberInput && !corporateNumberInput.value) {
+                    corporateNumberInput.value = '110111-0000000';
+                }
+            } else {
+                if (auditorExtraFields) auditorExtraFields.classList.add('hidden');
+                if (corporateNumberLabel) corporateNumberLabel.textContent = '법인등록번호 (000000-0000000)';
+                if (companyLabel) companyLabel.textContent = '회사명';
+                if (cpaNumberInput) cpaNumberInput.value = '';
+            }
+        });
+    }
 
     if (emailInput && emailStatusMsg && additionalFields && passwordGroup && submitBtn) {
         
@@ -104,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         submitBtn.querySelector('span').textContent = '로그인';
                     } else {
                         isExistingUser = false;
-                        emailStatusMsg.textContent = '✦ 신규 파트너사 등록이 필요합니다. 상세 정보를 입력해 주세요.';
+                        emailStatusMsg.textContent = '✦ 신규 파트너사 / 감사인 등록이 필요합니다. 상세 정보를 입력해 주세요.';
                         emailStatusMsg.className = 'email-status-msg info';
                         passwordLabel.textContent = '비밀번호 설정';
                         
@@ -171,16 +199,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 신규 사용자인데 추가 정보가 입력되지 않은 경우 방지
             if (!isExistingUser) {
-                const corpNum = corporateNumberInput.value.trim();
-                if (!corpNum || !companyInput.value.trim() || !usernameInput.value.trim() || !taskInput.value) {
-                    e.preventDefault();
-                    alert('신규 파트너사 등록을 위해 모든 항목을 입력해 주세요.');
-                    return;
-                }
-                if (!validateCorporateNumber(corpNum)) {
-                    e.preventDefault();
-                    alert('법인등록번호는 000000-0000000 형식으로 입력해야 합니다.');
-                    return;
+                const isAuditor = isAuditorCheckbox && isAuditorCheckbox.checked;
+                let corpNum = corporateNumberInput.value.trim();
+                let comp = companyInput.value.trim();
+                const uName = usernameInput.value.trim();
+                let task = taskInput.value;
+
+                if (isAuditor) {
+                    if (!comp) comp = '회계법인 혜안';
+                    if (!task) task = '회계감사';
+                    if (!corpNum) corpNum = '110111-0000000';
+                    companyInput.value = comp;
+                    taskInput.value = task;
+                    corporateNumberInput.value = corpNum;
+
+                    if (!uName) {
+                        e.preventDefault();
+                        alert('회계사(담당자) 이름을 입력해 주세요.');
+                        return;
+                    }
+                    if (!validateCorporateNumber(corpNum)) {
+                        e.preventDefault();
+                        alert('소속 법인등록번호는 000000-0000000 형식으로 입력해야 합니다.');
+                        return;
+                    }
+                } else {
+                    if (!corpNum || !comp || !uName || !task) {
+                        e.preventDefault();
+                        alert('신규 파트너사 등록을 위해 모든 항목을 입력해 주세요.');
+                        return;
+                    }
+                    if (!validateCorporateNumber(corpNum)) {
+                        e.preventDefault();
+                        alert('법인등록번호는 000000-0000000 형식으로 입력해야 합니다.');
+                        return;
+                    }
                 }
             }
 
@@ -211,11 +264,35 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 소셜 입력 필드들
     const oauthCorporateNumber = document.getElementById('oauth-corporate_number');
+    const oauthCorporateNumberLabel = document.getElementById('oauth-corporate_number-label');
     const oauthCompany = document.getElementById('oauth-company');
+    const oauthCompanyLabel = document.getElementById('oauth-company-label');
     const oauthUsername = document.getElementById('oauth-username');
     const oauthTask = document.getElementById('oauth-task_type');
+    const oauthIsAuditorCheckbox = document.getElementById('oauth-is_auditor');
+    const oauthAuditorExtraFields = document.getElementById('oauth-auditor-extra-fields');
+    const oauthCpaNumberInput = document.getElementById('oauth-cpa_number');
     
     let currentProvider = ''; // 'google' or 'naver'
+    
+    // 소셜 감사인 체크박스 이벤트 리스너
+    if (oauthIsAuditorCheckbox) {
+        oauthIsAuditorCheckbox.addEventListener('change', () => {
+            if (oauthIsAuditorCheckbox.checked) {
+                if (oauthAuditorExtraFields) oauthAuditorExtraFields.classList.remove('hidden');
+                if (oauthTask) oauthTask.value = '회계감사';
+                if (oauthCorporateNumberLabel) oauthCorporateNumberLabel.textContent = '소속 법인등록번호 (000000-0000000)';
+                if (oauthCompanyLabel) oauthCompanyLabel.textContent = '소속 회계법인 / 사무소명';
+                if (oauthCompany && !oauthCompany.value) oauthCompany.value = '회계법인 혜안';
+                if (oauthCorporateNumber && !oauthCorporateNumber.value) oauthCorporateNumber.value = '110111-0000000';
+            } else {
+                if (oauthAuditorExtraFields) oauthAuditorExtraFields.classList.add('hidden');
+                if (oauthCorporateNumberLabel) oauthCorporateNumberLabel.textContent = '법인등록번호 (000000-0000000)';
+                if (oauthCompanyLabel) oauthCompanyLabel.textContent = '회사명';
+                if (oauthCpaNumberInput) oauthCpaNumberInput.value = '';
+            }
+        });
+    }
     
     const openOauthModal = (provider) => {
         if (!oauthModal) return;
@@ -225,6 +302,9 @@ document.addEventListener('DOMContentLoaded', () => {
         oauthCompany.value = '';
         oauthUsername.value = '';
         oauthTask.value = '';
+        if (oauthIsAuditorCheckbox) oauthIsAuditorCheckbox.checked = false;
+        if (oauthAuditorExtraFields) oauthAuditorExtraFields.classList.add('hidden');
+        if (oauthCpaNumberInput) oauthCpaNumberInput.value = '';
         oauthAdditionalFields.classList.remove('show');
         
         // 필드 필수 해제
@@ -281,25 +361,42 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             if (isNeedRegister) {
-                const corpNum = oauthCorporateNumber ? oauthCorporateNumber.value.trim() : '';
-                const company = oauthCompany.value.trim();
+                const isAuditor = oauthIsAuditorCheckbox ? oauthIsAuditorCheckbox.checked : false;
+                let corpNum = oauthCorporateNumber ? oauthCorporateNumber.value.trim() : '';
+                let company = oauthCompany.value.trim();
                 const username = oauthUsername.value.trim();
-                const task = oauthTask.value;
+                let task = oauthTask.value;
+                const cpaNumber = oauthCpaNumberInput ? oauthCpaNumberInput.value.trim() : '';
                 
-                if (!corpNum || !company || !username || !task) {
-                    alert('신규 소셜 파트너사 등록을 위해 모든 항목을 입력해 주세요.');
-                    return;
-                }
-                
-                if (!validateCorporateNumber(corpNum)) {
-                    alert('법인등록번호는 000000-0000000 형식으로 입력해야 합니다.');
-                    return;
+                if (isAuditor) {
+                    if (!company) company = '회계법인 혜안';
+                    if (!task) task = '회계감사';
+                    if (!corpNum) corpNum = '110111-0000000';
+                    if (!username) {
+                        alert('회계사(담당자) 이름을 입력해 주세요.');
+                        return;
+                    }
+                    if (!validateCorporateNumber(corpNum)) {
+                        alert('소속 법인등록번호는 000000-0000000 형식이어야 합니다.');
+                        return;
+                    }
+                } else {
+                    if (!corpNum || !company || !username || !task) {
+                        alert('신규 소셜 파트너사 등록을 위해 모든 항목을 입력해 주세요.');
+                        return;
+                    }
+                    if (!validateCorporateNumber(corpNum)) {
+                        alert('법인등록번호는 000000-0000000 형식으로 입력해야 합니다.');
+                        return;
+                    }
                 }
                 
                 requestData.corporate_number = corpNum;
                 requestData.company = company;
                 requestData.username = username;
                 requestData.task_type = task;
+                requestData.is_auditor = isAuditor;
+                requestData.cpa_number = cpaNumber;
             }
             
             btnOauthSubmit.disabled = true;
@@ -1108,25 +1205,93 @@ document.addEventListener('DOMContentLoaded', () => {
     const subTabBtns = document.querySelectorAll('.sub-tab-btn');
     const metricsView = document.getElementById('subtab-metrics-view');
     const pipelineView = document.getElementById('subtab-pipeline-view');
+    const auditLogsView = document.getElementById('subtab-audit-logs-view');
 
-    if (subTabBtns.length > 0 && metricsView && pipelineView) {
+    if (subTabBtns.length > 0) {
         subTabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 subTabBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
 
                 const subtab = btn.getAttribute('data-subtab');
-                if (subtab === 'metrics') {
-                    metricsView.style.display = 'block';
-                    pipelineView.style.display = 'none';
-                } else {
-                    metricsView.style.display = 'none';
-                    pipelineView.style.display = 'block';
+                if (metricsView) metricsView.style.display = (subtab === 'metrics') ? 'block' : 'none';
+                if (pipelineView) pipelineView.style.display = (subtab === 'pipeline') ? 'block' : 'none';
+                if (auditLogsView) {
+                    auditLogsView.style.display = (subtab === 'audit-logs') ? 'block' : 'none';
+                    if (subtab === 'audit-logs' && typeof window.loadAuditLogs === 'function') {
+                        window.loadAuditLogs();
+                    }
                 }
             });
         });
     }
 });
+
+// 실시간 회원정보 및 권한 변경 감사 로그 로드 함수
+window.loadAuditLogs = async function() {
+    const tableBody = document.getElementById('audit-logs-table-body');
+    const countBadge = document.getElementById('audit-logs-count');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 28px; color: #94a3b8;">⏳ 변경 이력 로그를 불러오는 중입니다...</td></tr>`;
+
+    try {
+        console.log('[AUDIT_LOGS] GET /api/master/audit-logs 요청');
+        const res = await fetch('/api/master/audit-logs');
+        const data = await res.json();
+        if (data.success && data.logs) {
+            const logs = data.logs;
+            if (countBadge) countBadge.textContent = `${logs.length}건`;
+
+            if (logs.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 32px; color: #94a3b8;">📝 아직 기록된 회원정보 변경 이력이 없습니다.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = logs.map(log => {
+                const dateStr = log.created_at ? new Date(log.created_at).toLocaleString('ko-KR') : '-';
+                const typeBadge = log.change_type === 'ROLE_CHANGE'
+                    ? '<span class="status-badge" style="background: rgba(59,130,246,0.2); color: #93c5fd; border-color: rgba(59,130,246,0.4); font-size: 0.76rem; padding: 2px 8px;">🏛️ 권한 변경</span>'
+                    : '<span class="status-badge" style="background: rgba(168,85,247,0.2); color: #d8b4fe; border-color: rgba(168,85,247,0.4); font-size: 0.76rem; padding: 2px 8px;">👤 정보 수정</span>';
+
+                const before = log.before_data || {};
+                const after = log.after_data || {};
+                const diffKeys = Object.keys(after);
+                let diffHtml = '';
+                if (diffKeys.length > 0) {
+                    diffHtml = diffKeys.map(k => {
+                        const bVal = before[k] !== undefined ? String(before[k]) : 'None';
+                        const aVal = String(after[k]);
+                        return `<div style="font-size: 0.82rem; margin-bottom: 3px;">
+                            <strong style="color: #cbd5e1;">${k}:</strong> 
+                            <span style="color: #f87171; text-decoration: line-through;">${bVal}</span> 
+                            <span style="color: #94a3b8;">➔</span> 
+                            <span style="color: #34d399; font-weight: 600;">${aVal}</span>
+                        </div>`;
+                    }).join('');
+                } else {
+                    diffHtml = '<span style="color: #94a3b8;">-</span>';
+                }
+
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                        <td style="padding: 12px 14px; font-size: 0.82rem; color: #94a3b8; white-space: nowrap;">${dateStr}</td>
+                        <td style="padding: 12px 14px; font-weight: 600; color: #f8fafc;">${log.user_email || '-'}</td>
+                        <td style="padding: 12px 14px; font-size: 0.82rem; color: #cbd5e1;">${log.changed_by || '-'}</td>
+                        <td style="padding: 12px 14px; white-space: nowrap;">${typeBadge}</td>
+                        <td style="padding: 12px 14px;">${diffHtml}</td>
+                        <td style="padding: 12px 14px; font-size: 0.8rem; color: #94a3b8; font-family: monospace;">${log.ip_address || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #f87171;">❌ ${data.error || '이력 조회 실패'}</td></tr>`;
+        }
+    } catch (err) {
+        console.error('Audit logs fetch error:', err);
+        tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #f87171;">❌ 서버 통신 오류가 발생했습니다.</td></tr>`;
+    }
+};
 
 // Accordion Toggle for Pipeline Cards
 window.toggleNodeDetails = (stepId) => {
@@ -1207,12 +1372,199 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.loadCompanyAnalysisReport();
                     } else if (menu === 'partner-external' && typeof window.loadInquiryStatus === 'function') {
                         window.loadInquiryStatus();
+                    } else if (menu === 'partner-settings' && typeof window.loadUserProfileData === 'function') {
+                        window.loadUserProfileData();
                     }
                 }
             });
         });
     }
+
+    // 프로필 내 감사인 체크박스 이벤트 리스너
+    const profileIsAuditor = document.getElementById('profile-is_auditor');
+    const profileAuditorExtra = document.getElementById('profile-auditor-extra-fields');
+    if (profileIsAuditor) {
+        profileIsAuditor.addEventListener('change', () => {
+            if (profileIsAuditor.checked) {
+                if (profileAuditorExtra) profileAuditorExtra.classList.remove('hidden');
+                const taskEl = document.getElementById('profile-task_type');
+                if (taskEl) taskEl.value = '회계감사';
+            } else {
+                if (profileAuditorExtra) profileAuditorExtra.classList.add('hidden');
+            }
+        });
+    }
 });
+
+// ==========================================
+// [User Profile & is_auditor Management]
+// ==========================================
+window.loadUserProfileData = async function() {
+    try {
+        console.log('[PROFILE] GET /api/user/profile 요청 전송');
+        const res = await fetch('/api/user/profile');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && data.profile) {
+            const p = data.profile;
+            
+            // 페이지 내 모든 프로필 폼(모달 및 인페이지 폼)에 데이터 일괄 동기화
+            const profileForms = document.querySelectorAll('#global-profile-form, #partner-profile-form, .profile-form');
+            profileForms.forEach(form => {
+                const emailEl = form.querySelector('#profile-email, [name="email"]');
+                const usernameEl = form.querySelector('#profile-username, [name="username"]');
+                const companyEl = form.querySelector('#profile-company, [name="company"]');
+                const corpNumEl = form.querySelector('#profile-corporate_number, [name="corporate_number"]');
+                const taskTypeEl = form.querySelector('#profile-task_type, [name="task_type"]');
+                const isAuditorEl = form.querySelector('#profile-is_auditor, [name="is_auditor"]');
+                const cpaNumEl = form.querySelector('#profile-cpa_number, [name="cpa_number"]');
+                const auditorExtra = form.querySelector('.auditor-extra-fields, #profile-auditor-extra-fields');
+
+                if (emailEl) emailEl.value = p.email || '';
+                if (usernameEl) usernameEl.value = p.username || '';
+                if (companyEl) companyEl.value = p.company || '';
+                if (corpNumEl) corpNumEl.value = p.corporate_number || '';
+                if (taskTypeEl && p.task_type) taskTypeEl.value = p.task_type;
+                if (isAuditorEl) {
+                    isAuditorEl.checked = !!p.is_auditor;
+                    if (auditorExtra) {
+                        if (isAuditorEl.checked) auditorExtra.classList.remove('hidden');
+                        else auditorExtra.classList.add('hidden');
+                    }
+                }
+                if (cpaNumEl) cpaNumEl.value = p.cpa_number || '';
+            });
+            console.log('[PROFILE] 프로필 데이터 UI 동기화 완료:', p);
+        }
+    } catch (err) {
+        console.error('[ERROR] 프로필 로딩 실패:', err);
+    }
+};
+
+window.handleProfileUpdate = async function(e) {
+    if (e) e.preventDefault();
+    
+    // 사용자가 실제 작성하고 제출한 현재 폼 요소를 타겟팅 (모달 또는 인페이지 폼)
+    const form = e ? (e.target.closest('form') || e.target) : (document.querySelector('#global-profile-modal form') || document.querySelector('#global-profile-form'));
+    if (!form) return;
+    
+    const saveBtn = form.querySelector('button[type="submit"]') || document.getElementById('btn-save-profile');
+    
+    const username = form.querySelector('#profile-username, [name="username"]')?.value.trim() || '';
+    const company = form.querySelector('#profile-company, [name="company"]')?.value.trim() || '';
+    const corporateNumber = form.querySelector('#profile-corporate_number, [name="corporate_number"]')?.value.trim() || '';
+    const taskType = form.querySelector('#profile-task_type, [name="task_type"]')?.value || '';
+    const isAuditor = form.querySelector('#profile-is_auditor, [name="is_auditor"]')?.checked || false;
+    const cpaNumber = form.querySelector('#profile-cpa_number, [name="cpa_number"]')?.value.trim() || '';
+    const password = form.querySelector('#profile-password, [name="password"]')?.value.trim() || '';
+    const passwordConfirm = form.querySelector('#profile-password-confirm, [name="password_confirm"]')?.value.trim() || '';
+
+    if (!username || !company) {
+        showProfileAlert('이름과 회사명을 입력해 주세요.', 'error', form);
+        return;
+    }
+
+    if (password && password !== passwordConfirm) {
+        showProfileAlert('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.', 'error', form);
+        return;
+    }
+
+    if (corporateNumber && !isAuditor) {
+        const regex = /^\d{6}-\d{7}$/;
+        if (!regex.test(corporateNumber)) {
+            showProfileAlert('법인등록번호는 000000-0000000 형식이어야 합니다.', 'error', form);
+            return;
+        }
+    }
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        const btnSpan = saveBtn.querySelector('span');
+        if (btnSpan) btnSpan.textContent = '저장 중...';
+    }
+
+    try {
+        console.log('[PROFILE] POST /api/user/profile 요청 전송', { isAuditor, username, company });
+        const res = await fetch('/api/user/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: username,
+                company: company,
+                corporate_number: corporateNumber,
+                task_type: taskType,
+                is_auditor: isAuditor,
+                cpa_number: cpaNumber,
+                password: password
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+            showProfileAlert('✓ 회원 정보가 성공적으로 저장되었습니다.', 'success', form);
+            if (saveBtn) {
+                const btnSpan = saveBtn.querySelector('span');
+                if (btnSpan) btnSpan.textContent = '저장 완료!';
+            }
+            
+            const pwdInput = form.querySelector('#profile-password, [name="password"]');
+            const pwdConfirmInput = form.querySelector('#profile-password-confirm, [name="password_confirm"]');
+            if (pwdInput) pwdInput.value = '';
+            if (pwdConfirmInput) pwdConfirmInput.value = '';
+
+            // 화면 동기화 및 페이지 이동 처리
+            if (data.redirect) {
+                showProfileAlert('✓ 저장 완료! 화면을 전환합니다...', 'success', form);
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 400);
+            } else {
+                showProfileAlert('✓ 회원 정보가 변경되었습니다. 화면을 갱신합니다...', 'success', form);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        } else {
+            showProfileAlert(data.error || '회원정보 저장 중 오류가 발생했습니다.', 'error', form);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                const btnSpan = saveBtn.querySelector('span');
+                if (btnSpan) btnSpan.textContent = '설정 저장';
+            }
+        }
+    } catch (err) {
+        console.error('[ERROR] 프로필 저장 통신 오류:', err);
+        showProfileAlert('서버 통신 중 오류가 발생했습니다. 다시 시도해 주세요.', 'error', form);
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            const btnSpan = saveBtn.querySelector('span');
+            if (btnSpan) btnSpan.textContent = '설정 저장';
+        }
+    }
+};
+
+function showProfileAlert(msg, type, form) {
+    let alertBox = null;
+    if (form) {
+        alertBox = form.querySelector('#profile-alert-box, .profile-alert-box');
+    }
+    if (!alertBox) {
+        alertBox = document.getElementById('profile-alert-box');
+    }
+    if (!alertBox) return;
+    
+    alertBox.style.display = 'block';
+    alertBox.textContent = msg;
+    if (type === 'success') {
+        alertBox.style.background = 'rgba(16, 185, 129, 0.15)';
+        alertBox.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+        alertBox.style.color = '#34d399';
+    } else {
+        alertBox.style.background = 'rgba(239, 68, 68, 0.15)';
+        alertBox.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+        alertBox.style.color = '#f87171';
+    }
+}
 
 // ==========================================
 // Master Portal Task Filter Interaction

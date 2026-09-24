@@ -7397,3 +7397,54 @@ body.audit-portal-body {
     }
 }
 
+/* ==============================================================================
+   Auditor (CPA) Registration Styles
+   ============================================================================== */
+.additional-fields.show {
+    max-height: 800px !important;
+    gap: 24px !important;
+}
+
+.oauth-additional-fields.show {
+    max-height: 650px !important;
+    gap: 18px !important;
+}
+
+.auditor-check-card {
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    border-radius: 14px;
+    padding: 13px 16px;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.auditor-check-card:hover {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(96, 165, 250, 0.45);
+}
+
+.auditor-label-text {
+    font-weight: 600;
+    color: #93c5fd !important;
+    font-size: 0.9rem !important;
+    letter-spacing: -0.2px;
+}
+
+.auditor-help-text {
+    font-size: 0.76rem !important;
+    color: var(--text-secondary) !important;
+    margin-top: 5px !important;
+    margin-left: 26px !important;
+    line-height: 1.4 !important;
+}
+
+.auditor-extra-fields {
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.auditor-extra-fields.hidden {
+    display: none !important;
+}
+

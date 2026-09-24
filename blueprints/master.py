@@ -1604,4 +1604,28 @@ def delete_chat_message(message_id):
     }), 200
 
 
+@master_bp.route('/api/master/audit-logs', methods=['GET'])
+def get_audit_logs():
+    """
+    회원정보 및 권한 변경 이력(user_change_logs) 목록을 최신순으로 조회합니다.
+    """
+    logger.info("[ROUTE] GET /api/master/audit-logs - Fetching user change logs")
+    if 'email' not in session or session['email'] != MASTER_EMAIL:
+        return jsonify({'error': '마스터 관리자 권한이 필요합니다.'}), 403
+
+    if not supabase:
+        return jsonify({'error': 'Supabase 연결이 설정되어 있지 않습니다.'}), 500
+
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        res = supabase.table('user_change_logs').select('*').order('created_at', desc=True).limit(limit).execute()
+        logs = res.data or []
+        logger.info("[AUDIT_LOGS_RES] Loaded %d user change log records", len(logs))
+        return jsonify({'success': True, 'logs': logs})
+    except Exception as e:
+        logger.error("[ERROR] Failed to fetch audit logs: %s", e, exc_info=True)
+        return jsonify({'error': f'감사 로그 조회 실패: {str(e)}'}), 500
+
+
+
 

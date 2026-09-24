@@ -458,6 +458,22 @@ Render.com 무료/기본 인스턴스(RAM 512MB) 및 클라우드 배포 환경�
    - Render.com `Environment`에 MinIO 및 `PYTHONUNBUFFERED=1` 등록.
    - `Procfile`의 `--workers 1 --threads 4 --worker-class gthread` 표준화.
 
+---
+
+## 🛡️ [회원 인증 & 보안 감사 로그 시스템] (2026.09.24)
+
+### 1. 회원가입 및 프로필 관리 고도화 & 감사인(`is_auditor`) 원클릭 즉시 라우팅
+* **신규 가입 시 감사인 지정**: 일반 회원가입 및 소셜(Mock OAuth) 가입 시 `🏛️ 공인회계사 / 감사팀 참여자 (is_auditor)` 체크박스 및 `cpa_number`(선택) 등록 지원 ➔ 가입 즉시 `/audit` 자동 진입.
+* **전역 프로필 설정 공통 모달 (`templates/components/profile_modal.html`)**: 고객사(`company.html`), AI 감사(`audit.html`), 마스터(`master.html`, `master_detail.html`), 랜딩(`intro.html`) 전 화면에 ⚙️ 프로필 설정 버튼 통일 배치.
+* **실시간 즉각 라우팅 & 세션 동기화**: 기존 일반 고객이 `is_auditor`를 체크하고 저장하면, 지체 없이 **AI 감사 전용 포털([`/audit`](file:///C:/Users/CLAUD/landing_page/templates/audit.html))**로 즉시 전환.
+* **DOM 충돌 없는 정밀 폼 바인딩**: 모달과 인페이지 폼 간의 ID 중복을 제거하고 사용자가 작성 중인 폼의 입력값만 100% 온전하게 추출하여 화면을 실시간 갱신.
+
+### 2. 회원정보 및 권한 변경 이력 감사 로그 (Audit Trail)
+* **전용 이력 테이블 (`database/user_change_logs_schema.sql`)**: 회원정보/권한 수정 시 `user_email`, `changed_by`, `change_type`, `before_data`(JSONB), `after_data`(JSONB), `ip_address`, `created_at` 자동 영구 보존.
+* **비간섭형 백엔드 diff 추출 (`blueprints/auth.py`)**: `update_user_profile` 실행 시 실제로 변경된 항목만 스마트 추출하며, 로그 적재 실패 시에도 회원정보 수정은 안전하게 완료되는 무결성 방어 아키텍처 적용.
+* **마스터 관리자 실시간 모니터링 (`templates/master.html`, `blueprints/master.py`)**: 마스터 포털 `시스템 통계 & AI 파이프라인` 내 `🛡️ 회원정보 변경 & 보안 감사 로그` 서브 탭에서 전사 회원의 권한 승격 및 정보 변경 이력을 실시간 대조/열람 가능.
+
+
 
 
 

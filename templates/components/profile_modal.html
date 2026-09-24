@@ -1,0 +1,122 @@
+<!-- 전역 회원정보 & 감사인(is_auditor) 권한 설정 공통 모달 컴포넌트 -->
+<div class="oauth-modal-overlay hidden" id="global-profile-modal" style="z-index: 9999;">
+    <div class="oauth-modal-card" style="max-width: 600px; padding: 28px; width: 92%; max-height: 90vh; overflow-y: auto;">
+        <div class="oauth-modal-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <span class="oauth-modal-title" style="font-size: 1.18rem; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                <span>⚙️</span> 회원정보 및 권한 설정
+            </span>
+            <button type="button" class="oauth-modal-close" onclick="closeGlobalProfileModal()" title="닫기">×</button>
+        </div>
+
+        <form id="global-profile-form" onsubmit="handleProfileUpdate(event)">
+            <!-- 이메일 (읽기 전용) -->
+            <div class="input-group" style="margin-bottom: 20px;">
+                <input type="email" id="profile-email" value="{{ session.get('email', '') }}" readonly style="opacity: 0.75; cursor: not-allowed; color: #94a3b8;">
+                <label for="profile-email" style="top: -18px; font-size: 12px; color: var(--accent-color);">로그인 계정 이메일 (수정 불가)</label>
+                <span class="bar"></span>
+            </div>
+
+            <!-- 감사인(CPA) 여부 토글 카드 -->
+            <div class="auditor-check-card" style="margin-bottom: 20px; background: rgba(37, 99, 235, 0.12); border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 14px; padding: 14px 16px;">
+                <label class="remember-container" style="margin-bottom: 0; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="profile-is_auditor" class="remember-checkbox" {% if session.get('role') in ['cpa', 'auditor', 'master'] %}checked{% endif %}>
+                    <div class="remember-custom" style="border-color: #60a5fa;"></div>
+                    <span class="auditor-label-text" style="font-size: 0.95rem; font-weight: 700; color: #93c5fd;">🏛️ 공인회계사 / 감사팀 참여자 (is_auditor)</span>
+                </label>
+                <p class="auditor-help-text" style="margin-left: 26px; margin-top: 6px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.45;">
+                    💡 <strong>체크 후 저장 시 AI 감사포털(/audit)로 즉시 자동 이동</strong>하며, K-GAAP 감사조서 및 전사 감사 프로젝트 관리 권한이 부여됩니다.
+                </p>
+                <div class="auditor-extra-fields {% if session.get('role') not in ['cpa', 'auditor', 'master'] %}hidden{% endif %}" id="profile-auditor-extra-fields">
+                    <div class="input-group" style="margin-top: 14px; margin-bottom: 4px;">
+                        <input type="text" id="profile-cpa_number" value="{{ session.get('cpa_number', '') }}" autocomplete="off" placeholder=" ">
+                        <label for="profile-cpa_number">공인회계사 등록번호 (선택)</label>
+                        <span class="bar"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 기본 프로필 정보 -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div class="input-group">
+                    <input type="text" id="profile-username" value="{{ session.get('username', '') }}" required placeholder=" ">
+                    <label for="profile-username">회계사 / 담당자 이름</label>
+                    <span class="bar"></span>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" id="profile-company" value="{{ session.get('company', '') }}" required placeholder=" ">
+                    <label for="profile-company">회사명 / 소속 회계법인</label>
+                    <span class="bar"></span>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div class="input-group">
+                    <input type="text" id="profile-corporate_number" placeholder=" ">
+                    <label for="profile-corporate_number" id="profile-corporate_number-label">법인등록번호 (000000-0000000)</label>
+                    <span class="bar"></span>
+                </div>
+
+                <div class="input-group select-group">
+                    <select id="profile-task_type">
+                        <option value="회계감사" {% if session.get('task_type') == '회계감사' or session.get('role') in ['cpa', 'auditor'] %}selected{% endif %}>회계감사</option>
+                        <option value="세무 자문" {% if session.get('task_type') == '세무 자문' %}selected{% endif %}>세무 자문</option>
+                        <option value="장부기장" {% if session.get('task_type') == '장부기장' %}selected{% endif %}>장부기장</option>
+                        <option value="경영컨설팅" {% if session.get('task_type') == '경영컨설팅' %}selected{% endif %}>경영컨설팅</option>
+                        <option value="기타" {% if session.get('task_type') == '기타' %}selected{% endif %}>기타</option>
+                    </select>
+                    <label for="profile-task_type">해당 업무</label>
+                    <span class="bar"></span>
+                </div>
+            </div>
+
+            <!-- 비밀번호 변경 -->
+            <div style="padding-top: 16px; border-top: 1px dashed rgba(255,255,255,0.1); margin-bottom: 20px;">
+                <p style="font-size: 0.82rem; color: #a5b4fc; font-weight: 600; margin-bottom: 12px;">🔒 비밀번호 변경 (변경 시에만 입력)</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="input-group">
+                        <input type="password" id="profile-password" autocomplete="new-password" placeholder=" ">
+                        <label for="profile-password">새 비밀번호</label>
+                        <span class="bar"></span>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="profile-password-confirm" autocomplete="new-password" placeholder=" ">
+                        <label for="profile-password-confirm">새 비밀번호 확인</label>
+                        <span class="bar"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="profile-alert-box" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px;"></div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="btn-logout" onclick="closeGlobalProfileModal()" style="padding: 10px 18px; border-radius: 10px;">닫기</button>
+                <button type="submit" id="btn-save-profile" class="btn-submit" style="width: auto; min-width: 130px; padding: 10px 24px;">
+                    <span>설정 저장</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    window.openGlobalProfileModal = function() {
+        const modal = document.getElementById('global-profile-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            if (typeof window.loadUserProfileData === 'function') {
+                window.loadUserProfileData();
+            }
+        }
+    };
+    window.closeGlobalProfileModal = function() {
+        const modal = document.getElementById('global-profile-modal');
+        if (modal) modal.classList.add('hidden');
+    };
+    // 모달 배경 클릭 시 닫기
+    document.getElementById('global-profile-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'global-profile-modal') {
+            window.closeGlobalProfileModal();
+        }
+    });
+</script>

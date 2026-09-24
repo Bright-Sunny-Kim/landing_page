@@ -718,6 +718,11 @@
         고객사 로그인
         {% endif %}
       </a>
+      {% if 'email' in session %}
+      <button type="button" onclick="openGlobalProfileModal()" class="cpa-btn-top" style="padding: 8px 12px; font-size: 1.05rem; cursor: pointer; background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.35);" title="회원정보 및 감사인(is_auditor) 권한 설정">
+        ⚙️
+      </button>
+      {% endif %}
       <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="메뉴 열기">
         <span class="hamburger-line"></span>
         <span class="hamburger-line"></span>
@@ -911,6 +916,12 @@
         </svg>
     </a>
   </section>
+
+  <!-- 전역 회원정보 & 감사인 권한 설정 모달 -->
+  {% include 'components/profile_modal.html' %}
+
+  <!-- 전역 AI 회계기준 어시스턴트 플로팅 팝업 위젯 -->
+  {% include 'components/ai_cpa_widget.html' %}
 
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   <script>
