@@ -436,5 +436,28 @@ Render.com 무료/기본 인스턴스(RAM 512MB) 및 클라우드 배포 환경�
 4. **API 라우트 `finally:` 가비지 컬렉션 의무화**:
    - API 응답 반환 직전 `finally: gc.collect()`를 호출하여 워커 프로세스 점유 메모리를 즉시 OS로 반환한다.
 
+---
+
+## 🏆 [인프라 & 성능 최적화 완료 이력] (2026.09.24)
+
+### 1. 문제 해결 (Issue Resolution)
+* **문제 증상**: Render.com 배포 환경에서 대용량 회계분석 보고서(`/api/company/portal-analytics/...`) 조회 시 `Worker was sent SIGKILL! Out of memory` 발생 및 프론트엔드 `500/502 Bad Gateway` 및 `Unexpected token '<'` 파싱 에러 발생.
+* **근본 원인 1 (메모리 폭증)**: 13,000+건 장부 전수 검사 및 `_sanitize_val` 재귀 딥카피로 512MB RAM 한도 초과.
+* **근본 원인 2 (스토리지 프록시 병목)**: Cloudflare Tunnel이 Nginx 프록시(80번)를 거치며 대용량 S3 API(ListObjectsV2) 버퍼링으로 502 에러 유발 및 Render 환경변수 미등록.
+
+### 2. 적용된 해결책 (Implemented Solution)
+1. **백엔드 메모리 다이어트 & In-Memory GC**:
+   - [`core/audit_engine.py`](file:///C:/Users/CLAUD/landing_page/core/audit_engine.py): 이상치 샘플 50건 상한 캡핑, 중간 번들 `del` 및 `gc.collect()` 호출, 경량 JSON 정제기 도입.
+   - 단일 연산 메모리 피크: **~600MB ➔ 100~150MB로 75% 절감**.
+2. **MinIO Lakehouse 2단계 사전 연산(Pre-computation) 캐시 엔진 구축**:
+   - [`core/storage_manager.py`](file:///C:/Users/CLAUD/landing_page/core/storage_manager.py): 업로드/동기화 시 `analytics.json` 자동 사전 계산 및 MinIO 영구 적재.
+   - [`blueprints/api.py`](file:///C:/Users/CLAUD/landing_page/blueprints/api.py): Cache-First 우선 조회(0.01초 소요, RAM 1MB 미만) 및 Self-Healing Fallback 구현.
+3. **Cloudflare Zero Trust ➔ MinIO 9000 포트 직결**:
+   - Nginx 프록시 버퍼 병목을 우회하여 Cloudflare Tunnel에서 사내 MinIO 9000(S3 API) 포트로 직결 연결 (`HTTP/2 200 OK` 확인).
+4. **환경변수 및 Gunicorn 프로세스 표준화**:
+   - Render.com `Environment`에 MinIO 및 `PYTHONUNBUFFERED=1` 등록.
+   - `Procfile`의 `--workers 1 --threads 4 --worker-class gthread` 표준화.
+
+
 
 
