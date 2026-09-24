@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  chromadb:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: chroma_server
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      # 우분투 서버의 /mnt/storage/chroma_db 경로와 바인드 마운트
+      - /mnt/storage/chroma_db:/chroma/chroma
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

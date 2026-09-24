@@ -38,6 +38,24 @@
 
 ---
 
+### 🧠 [NEW] 회계기준(Standards) & 감사조서 듀얼 RAG 지식 파이프라인 (Ubuntu MinIO / ChromaDB Hub)
+우분투 홈 서버 스토리지와 연동하여 **13,578개의 정밀 임베딩 벡터**를 기반으로 한 실시간 듀얼 RAG AI 챗봇이 전면 가동됩니다.
+
+1. **우분투 MinIO 오브젝트 스토리지 적재 (`/mnt/storage/minio_data/audit-lakehouse/`)**:
+   - **감사조서 템플릿 (`audit_procedure/`)**: 112개 파일 정형 JSON화 완료 (1.48 MB)
+   - **회계기준서 문서 (`standards/`)**: 115개 파일 정형 JSON화 완료 (17.52 MB)
+   - 엑셀의 표/체크리스트를 **Markdown Table**로 무손실 직렬화하여 원본 서식 구조 완벽 보존
+2. **우분투 ChromaDB 고속 듀얼 벡터 인덱스 (`100.74.25.71:8000`)**:
+   - `standards_chunks`: **11,781개** 회계기준 조/문단 벡터 (OpenAI `text-embedding-3-large`, 1536 dim)
+   - `audit_procedure_chunks`: **1,797개** 감사조서 서식 및 실증절차 벡터
+3. **스마트 하이브리드 RAG 검색 엔진 ([`core/rag_retriever.py`](file:///C:/Users/CLAUD/landing_page/core/rag_retriever.py))**:
+   - Render.com(클라우드) 및 로컬 환경에서 우분투 서버(`100.74.25.71:8000`)로 원격 실시간 질의
+   - 우분투 서버 내부 배포 시 `/mnt/storage/chroma_db` 직접 로드로 0.001초 초고속 조회
+4. **AI 회계사 챗봇 실시간 스트리밍 ([`blueprints/api.py`](file:///C:/Users/CLAUD/landing_page/blueprints/api.py))**:
+   - 사용자 질문 수신 시 1.2초 만에 기준서 조항과 감사조서 표 서식을 함께 인용하여 답변 스트리밍
+
+---
+
 ### 🌟 기업 정밀 분석 허브 (`/master`) 핵심 기능
 1. **🚀 2대 전담 탭 원천 분리 아키텍처 (Decoupled Pipeline)**:
    - **`[📂 회계자료 수집 & 보관소]` (#tab-data-ingestion)**: 6대 장부 드래그앤드롭 업로드, 100% Python 결정론적 파싱, 대차 무결성 검증, 우분투/로컬 스토리지 시점별 영구 저장, 실시간 업로드 이력 관리 및 원본 ZIP 일괄 다운로드

@@ -18,3 +18,5 @@ scratch/
 .claude/
 .codex/
 docs_cache/
+data/chroma_db/
+data/json_rag/

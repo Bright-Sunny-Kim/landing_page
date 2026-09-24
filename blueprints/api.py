@@ -18,26 +18,21 @@ from core.extensions import (
 api_bp = Blueprint('api', __name__)
 
 def _generate_fallback_cpa_stream(question: str, category: str, conversation_id: str):
-    """우분투 서버 RAG/Dify 통신 장애 시 클라이언트에 무중단 회계기준 답변을 제공하는 로컬/LLM Fallback 스트리밍 생성기"""
+    """우분투 서버 RAG/Dify 연동 시 클라이언트에 고품질 회계기준+감사조서 답변을 제공하는 실시간 스트리밍 생성기"""
     global openai_client
-    logger.info("[FAQ Fallback] Activating local/LLM fallback stream for question: %s (Category: %s)", question, category)
+    logger.info("[FAQ RAG] Activating dual RAG stream for question: '%s' (Category: %s)", question, category)
     
-    # 1. 로컬 RAG 검색 시도
+    # 1. 듀얼 RAG 지식 검색 (기준서 + 감사절차 템플릿)
     rag_context = ""
     sources_summary = []
     try:
-        from core.audit_engine import query_k_gaap_rag
-        matched_docs = query_k_gaap_rag(question, limit=3)
-        if matched_docs:
-            context_blocks = []
-            for doc in matched_docs:
-                src_label = f"{doc.get('standard_no', '')} {doc.get('paragraph_no', '')} ({doc.get('title', '')})".strip()
-                sources_summary.append(src_label)
-                context_blocks.append(f"[{src_label}]\n{doc.get('content', '')}")
-            rag_context = "\n\n".join(context_blocks)
-            logger.info("[FAQ Fallback] Retrieved %d fallback reference docs: %s", len(matched_docs), sources_summary)
+        from core.rag_retriever import query_dual_rag
+        retrieval_res = query_dual_rag(question, top_k_std=3, top_k_proc=3)
+        rag_context = retrieval_res.get("combined_context", "")
+        sources_summary = retrieval_res.get("sources_summary", [])
+        logger.info("[FAQ RAG] Retrieved %d reference chunks in %.3f sec", len(sources_summary), retrieval_res.get("elapsed_seconds", 0))
     except Exception as re_err:
-        logger.warning("[FAQ Fallback] Fallback local RAG query warning: %s", re_err)
+        logger.warning("[FAQ RAG] Dual RAG retrieval warning: %s", re_err, exc_info=True)
 
     # 2. OpenAI 클라이언트 확보
     if not openai_client:
@@ -50,14 +45,18 @@ def _generate_fallback_cpa_stream(question: str, category: str, conversation_id:
     if openai_client:
         try:
             system_prompt = (
-                f"당신은 대한민국 공인회계사 및 회계감사 전문 AI 어시스턴트입니다.\n"
-                f"사용자가 질문한 회계/세무/감사 기준({category})에 대해 명확하고 논리정연하게 답변해 주세요.\n"
-                f"답변 형식: 1) 핵심 결론 요약, 2) 상세 규정 및 실무 적용 가이드, 3) 관련 기준서 조항 근거\n"
+                f"당신은 대한민국 최고 수준의 공인회계사(CPA) 및 회계감사 전문 AI 어시스턴트입니다.\n"
+                f"사용자가 질문한 회계/세무/감사 주제({category})에 대해 명확하고 논리정연하며 실무에 즉시 적용 가능한 답변을 작성해 주세요.\n\n"
+                f"[답변 작성 원칙]\n"
+                f"1. **핵심 결론 요약**: 질문에 대한 회계처리 또는 감사 결론을 2~3줄로 명확히 제시.\n"
+                f"2. **회계기준서 규정 해설**: 관련 기준서(K-IFRS 또는 K-GAAP 일반기준)의 주요 조항 및 이론적 근거를 설명.\n"
+                f"3. **실제 감사조서 절차 및 서식 안내**: 제공된 감사조서 템플릿 코드(예: C-0, P-0 등)와 단계별 실증감사절차, 마크다운 표 서식을 상세히 안내.\n"
+                f"4. **실무 유의사항 및 체크포인트**: 감사 현장에서 주의해야 할 경영진 주장(실재성, 완전성, 평가 등)과 증빙 확인 요령 안내.\n"
             )
             if rag_context:
-                system_prompt += f"\n[참고 기준서 발췌 데이터]\n{rag_context}\n"
+                system_prompt += f"\n[신뢰할 수 있는 사내 DB 발췌 근거 데이터]\n{rag_context}\n"
 
-            logger.info("[FAQ Fallback] Calling OpenAI ChatCompletion stream...")
+            logger.info("[FAQ RAG] Calling OpenAI ChatCompletion stream (gpt-4o-mini)...")
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -80,19 +79,19 @@ def _generate_fallback_cpa_stream(question: str, category: str, conversation_id:
 
             # 출처 안내가 있을 경우 마무리 전송
             if sources_summary:
-                src_text = "\n\n---\n**📚 관련 참고 기준서 근거:**\n" + "\n".join([f"- {s}" for s in sources_summary])
+                src_text = "\n\n---\n**📚 관련 참고 기준서 및 감사조서 서식 근거:**\n" + "\n".join([f"- {s}" for s in sources_summary])
                 yield f"data: {json.dumps({'event': 'message', 'answer': src_text, 'conversation_id': conversation_id}, ensure_ascii=False)}\n\n".encode('utf-8')
             
-            logger.info("[FAQ Fallback] OpenAI fallback stream completed successfully.")
+            logger.info("[FAQ RAG] Dual RAG response stream completed successfully.")
             return
         except Exception as oai_err:
-            logger.error("[FAQ Fallback] OpenAI API call failed: %s", oai_err, exc_info=True)
+            logger.error("[FAQ RAG] OpenAI API stream failed: %s", oai_err, exc_info=True)
 
     # 4. LLM API까지 모두 불가할 때 최종 룰베이스 응답
-    logger.warning("[FAQ Fallback] Returning rule-based fallback response.")
-    base_msg = f"안녕하세요. 현재 외부 RAG 연동 서버 점검 중으로 내장 회계기준 검색 결과를 안내해 드립니다.\n\n"
+    logger.warning("[FAQ RAG] Returning rule-based fallback response.")
+    base_msg = f"안녕하세요. 현재 회계기준/감사조서 검색 결과를 안내해 드립니다.\n\n"
     if rag_context:
-        base_msg += f"**[관련 회계기준 발췌 조항]**\n{rag_context}\n\n상세한 자문은 1:1 담당 회계사 상담실을 이용해 주시기 바랍니다."
+        base_msg += f"**[관련 회계기준 및 감사조서 발췌]**\n{rag_context}\n\n상세한 자문은 1:1 담당 회계사 상담실을 이용해 주시기 바랍니다."
     else:
         base_msg += f"질문하신 '{question}'과 관련된 회계/감사 기준 적용에 대해서는 담당 공인회계사 1:1 자문 상담 창구를 통해 신속히 답변해 드리겠습니다."
 
@@ -187,83 +186,31 @@ def dify_retrieval():
         return jsonify({"records": []}), 200
         
     try:
-        global openai_client
-        if not openai_client:
-            api_key = os.getenv("OPENAI_API_KEY", "")
-            if api_key:
-                from openai import OpenAI
-                openai_client = OpenAI(api_key=api_key)
-
-        query_embedding = None
-        if openai_client:
-            try:
-                embed_response = openai_client.embeddings.create(
-                    input=query,
-                    model="text-embedding-3-large",
-                    dimensions=1536
-                )
-                query_embedding = embed_response.data[0].embedding
-                logger.info("[Dify Retrieval] OpenAI embedding generated successfully.")
-            except Exception as emb_e:
-                logger.warning("[Dify Retrieval] OpenAI embedding error: %s", emb_e)
-
+        from core.rag_retriever import query_dual_rag
+        retrieval_res = query_dual_rag(query, top_k_std=5, top_k_proc=5)
+        
         initial_records = []
         documents_for_rerank = []
+        
+        # 1. 기준서 청크 수집
+        for std in retrieval_res.get("standards", []):
+            content = f"[{std['category']}] {std['document_id']} ({std['article_title']})\n{std['content']}"
+            initial_records.append({
+                "content": content,
+                "score": std.get("similarity", 0.5)
+            })
+            documents_for_rerank.append(content)
+            
+        # 2. 감사절차 청크 수집
+        for proc in retrieval_res.get("procedures", []):
+            content = f"[{proc['section_name']}/{proc['sub_category']}] {proc['template_id']} - 절차 {proc['step_no']}\n{proc['content']}"
+            initial_records.append({
+                "content": content,
+                "score": proc.get("similarity", 0.5)
+            })
+            documents_for_rerank.append(content)
 
-        # 1. Ubuntu ChromaDB 검색 시도
-        if query_embedding:
-            try:
-                import chromadb
-                host = os.environ.get("CHROMA_SERVER_HOST", "localhost")
-                port = int(os.environ.get("CHROMA_SERVER_PORT", "8000"))
-                logger.info("[Dify Retrieval] Connecting to ChromaDB at %s:%d...", host, port)
-                
-                chroma_client = chromadb.HttpClient(host=host, port=port)
-                collection = chroma_client.get_collection(name="document_chunks")
-                
-                results = collection.query(
-                    query_embeddings=[query_embedding],
-                    n_results=20
-                )
-                
-                if results and results.get('ids') and len(results['ids'][0]) > 0:
-                    for i in range(len(results['ids'][0])):
-                        metadata = results['metadatas'][0][i]
-                        document = results['documents'][0][i]
-                        distance = results['distances'][0][i]
-                        sim = 1.0 - distance
-                        
-                        if sim >= 0.10:
-                            doc_name = metadata.get("document_name", "알수없음")
-                            cat = metadata.get("category", "기타")
-                            art_name = metadata.get("article_name", "")
-                            
-                            content = f"[{cat}] {doc_name} ({art_name})\n{document}"
-                            initial_records.append({
-                                "content": content,
-                                "score": float(sim)
-                            })
-                            documents_for_rerank.append(content)
-                    logger.info("[Dify Retrieval] Retrieved %d chunks from ChromaDB.", len(initial_records))
-            except Exception as chroma_err:
-                logger.warning("[Dify Retrieval] ChromaDB connection failed, trying fallback: %s", chroma_err)
-
-        # 2. ChromaDB 결과가 없을 때 로컬 RAG Fallback 검색
-        if not initial_records:
-            logger.info("[Dify Retrieval] Fallback to core.audit_engine K-GAAP RAG...")
-            try:
-                from core.audit_engine import query_k_gaap_rag
-                fallback_docs = query_k_gaap_rag(query, limit=5)
-                for doc in fallback_docs:
-                    content = f"[{doc.get('standard_no', 'K-GAAP')}] {doc.get('title', '')}\n{doc.get('content', '')}"
-                    initial_records.append({
-                        "content": content,
-                        "score": float(doc.get("score", 0.5))
-                    })
-                    documents_for_rerank.append(content)
-                logger.info("[Dify Retrieval] Local RAG retrieved %d records.", len(initial_records))
-            except Exception as fb_err:
-                logger.error("[Dify Retrieval] Fallback RAG search failed: %s", fb_err)
+        logger.info("[Dify Retrieval] Total %d raw chunks retrieved from dual RAG engine.", len(initial_records))
 
         final_records = []
         if documents_for_rerank:
