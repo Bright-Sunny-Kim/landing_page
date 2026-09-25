@@ -504,8 +504,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnExportDsd) {
         btnExportDsd.addEventListener('click', async () => {
+            const origHtml = btnExportDsd.innerHTML;
             btnExportDsd.disabled = true;
-            btnExportDsd.innerHTML = '<span>⏳ .dsd 패키징 중...</span>';
+            btnExportDsd.innerHTML = '<span class="audit-loading-spinner"></span><span>.dsd 패키징 중...</span>';
 
             const opinion = document.getElementById('final-opinion-type')?.value || '적정의견';
             const firm = document.getElementById('final-audit-firm')?.value || '회계법인 혜안';
@@ -561,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('DSD 파일 다운로드 중 오류가 발생했습니다.');
             } finally {
                 btnExportDsd.disabled = false;
-                btnExportDsd.innerHTML = '<span>📥 DART 제출용 .dsd 다운로드</span>';
+                btnExportDsd.innerHTML = origHtml;
             }
         });
     }

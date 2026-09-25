@@ -57,20 +57,89 @@ def audit_page():
 
 @audit_bp.route('/api/audit/companies', methods=['GET'])
 def get_audit_companies():
-    """감사 대상 고객사 목록 반환"""
-    logger.info("[API_REQ] GET /api/audit/companies")
+    """감사 대상 고객사 목록 반환 (회계사 포털 전용 전체 감사 고객사 및 배정 정보 연동)"""
+    user_email = session.get('email', '')
+    user_role = session.get('role', 'client')
+    session_company = session.get('company', '').strip()
+    logger.info("[API_REQ] GET /api/audit/companies for user=%s, role=%s, session_company=%s", 
+                user_email, user_role, session_company)
     try:
-        if supabase:
-            res = supabase.table('companies').select('id, company_name, corporate_number').execute()
-            companies = res.data or []
-        else:
-            # Fallback 로컬 목록
+        assignments = load_assignments_data() or []
+        known_companies = {}
+        
+        # 1. assignments에서 로드
+        for idx, a in enumerate(assignments):
+            cname = a.get('company_name')
+            if cname:
+                known_companies[cname] = {
+                    "id": a.get('id', idx + 1),
+                    "company_name": cname,
+                    "corporate_number": a.get('corporate_number', '법인'),
+                    "in_charge_name": a.get('in_charge_name', '김동선'),
+                    "in_charge_email": a.get('in_charge_email', 'cpaeastsun@gmail.com'),
+                    "status_label": a.get('status_label', '실증감사 진행중')
+                }
+                
+        # 2. MinIO S3 company-uploads 버킷에서 실제 업로드된 기업 추출
+        try:
+            if storage_manager and storage_manager.s3_client:
+                resp = storage_manager.s3_client.list_objects_v2(Bucket='company-uploads', Delimiter='/')
+                for p in resp.get('CommonPrefixes', []):
+                    prefix_name = p.get('Prefix', '').rstrip('/')
+                    if prefix_name and prefix_name not in known_companies:
+                        known_companies[prefix_name] = {
+                            "id": len(known_companies) + 1,
+                            "company_name": prefix_name,
+                            "corporate_number": "법인",
+                            "in_charge_name": "김동선",
+                            "in_charge_email": "cpaeastsun@gmail.com",
+                            "status_label": "실증감사 진행중"
+                        }
+        except Exception as s3_err:
+            logger.warning("[API_WARN] S3 company listing warning: %s", s3_err)
+
+        # 3. 로컬 보관함 폴더 확인
+        try:
+            if os.path.exists(storage_manager.local_base_dir):
+                for d in os.listdir(storage_manager.local_base_dir):
+                    full_d = os.path.join(storage_manager.local_base_dir, d)
+                    if os.path.isdir(full_d) and d not in known_companies and not d.startswith('.'):
+                        known_companies[d] = {
+                            "id": len(known_companies) + 1,
+                            "company_name": d,
+                            "corporate_number": "법인",
+                            "in_charge_name": "김동선",
+                            "in_charge_email": "cpaeastsun@gmail.com",
+                            "status_label": "실증감사 진행중"
+                        }
+        except Exception as loc_err:
+            logger.warning("[API_WARN] Local archive listing warning: %s", loc_err)
+
+        # 4. 세션 회사 추가
+        if session_company and session_company not in known_companies:
+            known_companies[session_company] = {
+                "id": len(known_companies) + 1,
+                "company_name": session_company,
+                "corporate_number": "법인",
+                "in_charge_name": "김동선",
+                "in_charge_email": "cpaeastsun@gmail.com",
+                "status_label": "실증감사 진행중"
+            }
+
+        companies = list(known_companies.values())
+        
+        # 기본 기업이 없을 때의 안전 Fallback
+        if not companies:
             companies = [
-                {"id": 1, "company_name": "(주)프레오", "corporate_number": "110111-1234567"},
-                {"id": 2, "company_name": "(주)더존비즈온", "corporate_number": "110111-2345678"},
-                {"id": 3, "company_name": "회계법인 혜안", "corporate_number": "110111-3456789"}
+                {"id": 1, "company_name": "혜안_임시", "corporate_number": "법인", "in_charge_name": "김동선", "in_charge_email": "cpaeastsun@gmail.com", "status_label": "실증감사 진행중"},
+                {"id": 2, "company_name": "(주)프레오", "corporate_number": "110111-1234567", "in_charge_name": "김동선", "in_charge_email": "cpaeastsun@gmail.com", "status_label": "실증감사 진행중"},
+                {"id": 3, "company_name": "(주)더존비즈온", "corporate_number": "법인", "in_charge_name": "이진우", "in_charge_email": "jw.lee@hyean.com", "status_label": "기획/계획 단계"}
             ]
-        logger.info("[API_RES] /api/audit/companies count=%d", len(companies))
+
+        # 세션 회사 또는 혜안_임시가 최상단에 오도록 우선 정렬
+        companies.sort(key=lambda c: 0 if c['company_name'] in [session_company, '혜안_임시'] else 1)
+        
+        logger.info("[API_RES] /api/audit/companies count=%d for %s", len(companies), user_email)
         return jsonify({"success": True, "companies": companies})
     except Exception as e:
         logger.error("[API_ERROR] get_audit_companies failed: %s", e, exc_info=True)
@@ -115,6 +184,44 @@ def get_template_tree():
 # ==============================================================================
 # 3. AI 감사조서 자동생성 및 엑셀 다운로드 API
 # ==============================================================================
+
+@audit_bp.route('/api/audit/working-papers/reconcile', methods=['POST'])
+def reconcile_working_paper_api():
+    """계정 선택 시 6대 장부 JSON 기반 실시간 대사(Reconciliation) 수치 즉시 반환"""
+    data = request.get_json() or {}
+    company_name = data.get('company_name', '').strip()
+    fiscal_year = int(data.get('fiscal_year', 2025))
+    account_code = data.get('account_code', 'A-0').strip()
+    
+    logger.info("[WP_RECON:REQ] Reconcile account: company=%s, year=%s, account=%s", 
+                company_name, fiscal_year, account_code)
+    
+    if not company_name:
+        return jsonify({"success": False, "error": "회사명을 선택해주세요."}), 400
+        
+    try:
+        archive_payload = storage_manager.load_dataset(company_name)
+        normalized_bundle = archive_payload.get('normalized_bundle') if archive_payload else None
+        
+        # 가벼운 대사 계산 수행
+        result = generate_kgaap_account_working_paper(
+            company_name=company_name,
+            fiscal_year=fiscal_year,
+            account_code=account_code,
+            normalized_bundle=normalized_bundle,
+            author=session.get('username', '공인회계사')
+        )
+        
+        return jsonify({
+            "success": True, 
+            "reconciliation": result.get('reconciliation', {}),
+            "related_pnl": result.get('related_pnl', []),
+            "account_info": result.get('account_info', {})
+        })
+    except Exception as e:
+        logger.error("[WP_RECON:ERR] Reconcile failed: %s", e, exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 @audit_bp.route('/api/audit/working-papers/generate', methods=['POST'])
 def generate_working_paper_api():
@@ -278,43 +385,186 @@ def handle_audit_schedules():
 
 
 # ==============================================================================
-# 5. 감사 프로젝트 & 담당 배정 API
+# 5. 감사 프로젝트 & 회사별 Job Assign 관리 API
 # ==============================================================================
+
+ASSIGNMENTS_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'audit_assignments.json')
+
+def load_assignments_data():
+    """배정 데이터 로컬 JSON 로드 (Fallback 및 영속화)"""
+    if os.path.exists(ASSIGNMENTS_FILE_PATH):
+        try:
+            with open(ASSIGNMENTS_FILE_PATH, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error("[ASSIGN_LOAD:ERR] Failed to read assignments json: %s", e, exc_info=True)
+    
+    # 기본 초기 배정 데이터
+    default_data = [
+        {
+            "id": 1,
+            "company_name": "(주)프레오",
+            "fiscal_year": 2025,
+            "in_charge_name": "김동선",
+            "in_charge_email": "cpaeastsun@gmail.com",
+            "partner_name": "이진우 파트너",
+            "members": [
+                {"name": "김동선", "email": "cpaeastsun@gmail.com", "role": "In-charge"},
+                {"name": "박지민", "email": "jm.park@hyean.com", "role": "Staff CPA"},
+                {"name": "최영수", "email": "ys.choi@hyean.com", "role": "Staff CPA"}
+            ],
+            "account_assignments": {
+                "A-0": "cpaeastsun@gmail.com",
+                "C-0": "jm.park@hyean.com",
+                "E-0": "cpaeastsun@gmail.com",
+                "G-0": "ys.choi@hyean.com"
+            },
+            "status": "in_progress",
+            "status_label": "실증감사 진행중",
+            "target_report_date": "2026-03-20"
+        },
+        {
+            "id": 2,
+            "company_name": "(주)더존비즈온",
+            "fiscal_year": 2025,
+            "in_charge_name": "이진우",
+            "in_charge_email": "jw.lee@hyean.com",
+            "partner_name": "이진우 파트너",
+            "members": [
+                {"name": "이진우", "email": "jw.lee@hyean.com", "role": "In-charge"},
+                {"name": "정다은", "email": "de.jung@hyean.com", "role": "Staff CPA"}
+            ],
+            "account_assignments": {
+                "A-0": "jw.lee@hyean.com",
+                "C-0": "de.jung@hyean.com"
+            },
+            "status": "planned",
+            "status_label": "기획/계획 단계",
+            "target_report_date": "2026-03-15"
+        },
+        {
+            "id": 3,
+            "company_name": "혜안_임시",
+            "fiscal_year": 2025,
+            "in_charge_name": "김동선",
+            "in_charge_email": "cpaeastsun@gmail.com",
+            "partner_name": "이진우 파트너",
+            "members": [
+                {"name": "김동선 (Master)", "email": "cpaeastsun@gmail.com", "role": "In-charge"},
+                {"name": "김동선 (CPA)", "email": "cpaeastsun@naver.com", "role": "Lead CPA"}
+            ],
+            "account_assignments": {
+                "A-0": "cpaeastsun@naver.com",
+                "C-0": "cpaeastsun@naver.com",
+                "E-0": "cpaeastsun@naver.com",
+                "G-0": "cpaeastsun@naver.com"
+            },
+            "status": "in_progress",
+            "status_label": "실증감사 진행중",
+            "target_report_date": "2026-03-20"
+        }
+    ]
+    save_assignments_data(default_data)
+    return default_data
+
+def save_assignments_data(data):
+    """배정 데이터 로컬 JSON 저장"""
+    try:
+        os.makedirs(os.path.dirname(ASSIGNMENTS_FILE_PATH), exist_ok=True)
+        with open(ASSIGNMENTS_FILE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        logger.info("[ASSIGN_SAVE:OK] Saved %d assignments to %s", len(data), ASSIGNMENTS_FILE_PATH)
+        return True
+    except Exception as e:
+        logger.error("[ASSIGN_SAVE:ERR] Failed to save assignments: %s", e, exc_info=True)
+        return False
+
 
 @audit_bp.route('/api/audit/projects', methods=['GET'])
 def get_audit_projects():
     """사업연도별 감사 프로젝트 및 참여 배정 목록 조회"""
     logger.info("[ASSIGN_REQ] GET /api/audit/projects")
     try:
-        # 모의 프로젝트 목록
-        mock_projects = [
-            {
-                "id": 1,
-                "company_name": "(주)프레오",
-                "fiscal_year": 2025,
-                "in_charge": "김동선 공인회계사",
-                "engagement_partner": "이진우 파트너",
-                "members": ["김동선", "박지민", "최영수"],
-                "target_report_date": "2026-03-20",
-                "status": "in_progress",
-                "status_label": "실증감사 진행중"
-            },
-            {
-                "id": 2,
-                "company_name": "(주)더존비즈온",
-                "fiscal_year": 2025,
-                "in_charge": "이진우 공인회계사",
-                "engagement_partner": "이진우 파트너",
-                "members": ["이진우", "정다은"],
-                "target_report_date": "2026-03-15",
-                "status": "planned",
-                "status_label": "기획/계획 단계"
-            }
-        ]
-        return jsonify({"success": True, "projects": mock_projects})
+        assignments = load_assignments_data()
+        projects = []
+        for a in assignments:
+            projects.append({
+                "id": a.get("id"),
+                "company_name": a.get("company_name"),
+                "fiscal_year": a.get("fiscal_year", 2025),
+                "in_charge": f"{a.get('in_charge_name', '')} ({a.get('in_charge_email', '')})",
+                "engagement_partner": a.get("partner_name", ""),
+                "members": [m.get("name") for m in a.get("members", [])],
+                "target_report_date": a.get("target_report_date", "2026-03-20"),
+                "status": a.get("status", "in_progress"),
+                "status_label": a.get("status_label", "진행중")
+            })
+        return jsonify({"success": True, "projects": projects})
     except Exception as e:
-        logger.error("[ASSIGN_ERROR] Failed to fetch projects: %s", e)
+        logger.error("[ASSIGN_ERROR] Failed to fetch projects: %s", e, exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@audit_bp.route('/api/audit/assignments', methods=['GET', 'POST'])
+def handle_audit_assignments():
+    """회사별 Job Assign 목록 조회 및 저장/수정 API"""
+    if request.method == 'GET':
+        company_name = request.args.get('company_name', '').strip()
+        user_email = request.args.get('user_email', '').strip()
+        logger.info("[ASSIGN:REQ] GET assignments: company=%s, user_email=%s", company_name, user_email)
+        
+        try:
+            assignments = load_assignments_data()
+            
+            # 특정 회사 필터링
+            if company_name:
+                assignments = [a for a in assignments if a.get('company_name') == company_name]
+                
+            # 특정 사용자 필터링 (본인이 In-charge이거나 멤버에 포함된 건)
+            if user_email:
+                assignments = [
+                    a for a in assignments 
+                    if a.get('in_charge_email') == user_email or 
+                    any(m.get('email') == user_email for m in a.get('members', []))
+                ]
+                
+            logger.info("[ASSIGN:RES] Returned %d assignments", len(assignments))
+            return jsonify({"success": True, "assignments": assignments})
+        except Exception as e:
+            logger.error("[ASSIGN:ERR] Failed to get assignments: %s", e, exc_info=True)
+            return jsonify({"success": False, "error": str(e)}), 500
+            
+    elif request.method == 'POST':
+        payload = request.get_json() or {}
+        company_name = payload.get('company_name', '').strip()
+        fiscal_year = int(payload.get('fiscal_year', 2025))
+        
+        logger.info("[ASSIGN:POST] Update assignment for company=%s, year=%d", company_name, fiscal_year)
+        
+        if not company_name:
+            return jsonify({"success": False, "error": "회사명을 입력해주세요."}), 400
+            
+        try:
+            assignments = load_assignments_data()
+            found = False
+            for idx, item in enumerate(assignments):
+                if item.get('company_name') == company_name and int(item.get('fiscal_year', 0)) == fiscal_year:
+                    # 업데이트
+                    assignments[idx].update(payload)
+                    found = True
+                    break
+            
+            if not found:
+                new_id = max([a.get('id', 0) for a in assignments] or [0]) + 1
+                payload['id'] = new_id
+                assignments.append(payload)
+                
+            save_assignments_data(assignments)
+            logger.info("[ASSIGN:POST_SUCCESS] Saved assignment for %s", company_name)
+            return jsonify({"success": True, "assignment": payload})
+        except Exception as e:
+            logger.error("[ASSIGN:POST_ERR] Failed to save assignment: %s", e, exc_info=True)
+            return jsonify({"success": False, "error": str(e)}), 500
 
 
 # ==============================================================================

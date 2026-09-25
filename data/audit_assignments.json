@@ -1,0 +1,97 @@
+[
+  {
+    "id": 1,
+    "company_name": "혜안_임시",
+    "fiscal_year": 2025,
+    "in_charge_name": "김동선",
+    "in_charge_email": "cpaeastsun@gmail.com",
+    "partner_name": "이진우 파트너",
+    "members": [
+      {
+        "name": "김동선",
+        "email": "cpaeastsun@gmail.com",
+        "role": "In-charge"
+      },
+      {
+        "name": "cpakds",
+        "email": "cpakds@naver.com",
+        "role": "Staff CPA"
+      },
+      {
+        "name": "cpaeastsun",
+        "email": "cpaeastsun@naver.com",
+        "role": "Staff CPA"
+      }
+    ],
+    "account_assignments": {
+      "A-0": "cpaeastsun@gmail.com",
+      "C-0": "cpakds@naver.com",
+      "E-0": "cpaeastsun@naver.com",
+      "G-0": "cpakds@naver.com"
+    },
+    "status": "in_progress",
+    "status_label": "실증감사 진행중",
+    "target_report_date": "2026-03-20"
+  },
+  {
+    "id": 2,
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "in_charge_name": "김동선",
+    "in_charge_email": "cpaeastsun@gmail.com",
+    "partner_name": "이진우 파트너",
+    "members": [
+      {
+        "name": "김동선",
+        "email": "cpaeastsun@gmail.com",
+        "role": "In-charge"
+      },
+      {
+        "name": "박지민",
+        "email": "jm.park@hyean.com",
+        "role": "Staff CPA"
+      },
+      {
+        "name": "최영수",
+        "email": "ys.choi@hyean.com",
+        "role": "Staff CPA"
+      }
+    ],
+    "account_assignments": {
+      "A-0": "cpaeastsun@gmail.com",
+      "C-0": "jm.park@hyean.com",
+      "E-0": "cpaeastsun@gmail.com",
+      "G-0": "ys.choi@hyean.com"
+    },
+    "status": "in_progress",
+    "status_label": "실증감사 진행중",
+    "target_report_date": "2026-03-20"
+  },
+  {
+    "id": 3,
+    "company_name": "(주)더존비즈온",
+    "fiscal_year": 2025,
+    "in_charge_name": "이진우",
+    "in_charge_email": "jw.lee@hyean.com",
+    "partner_name": "이진우 파트너",
+    "members": [
+      {
+        "name": "이진우",
+        "email": "jw.lee@hyean.com",
+        "role": "In-charge"
+      },
+      {
+        "name": "정다은",
+        "email": "de.jung@hyean.com",
+        "role": "Staff CPA"
+      }
+    ],
+    "account_assignments": {
+      "A-0": "jw.lee@hyean.com",
+      "C-0": "de.jung@hyean.com"
+    },
+    "status": "planned",
+    "status_label": "기획/계획 단계",
+    "target_report_date": "2026-03-15"
+  }
+]

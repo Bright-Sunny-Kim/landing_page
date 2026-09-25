@@ -921,6 +921,10 @@ document.addEventListener('click', (e) => {
     if (subtabBtn) {
         window.loadMasterRequests();
     }
+    const assignSubtabBtn = e.target.closest('.master-subtab-btn[data-subtab="subtab-audit-assign"]');
+    if (assignSubtabBtn && typeof window.loadMasterJobAssignments === 'function') {
+        window.loadMasterJobAssignments();
+    }
 });
 
 // ==========================================

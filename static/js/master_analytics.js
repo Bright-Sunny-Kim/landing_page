@@ -1870,6 +1870,217 @@
         });
     };
 
+    // =========================================================================
+    // 🏢 마스터 포털: 회사별 Job Assign(감사팀 및 계정 배정) 관리 모듈
+    // =========================================================================
+    let masterAssignmentsCache = [];
+
+    window.loadMasterJobAssignments = async function () {
+        const tbody = document.getElementById('master-assign-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                    ⏳ 배정 데이터를 불러오는 중입니다...
+                </td>
+            </tr>
+        `;
+
+        try {
+            const data = await safeFetchJson('/api/audit/assignments');
+            if (data.success && data.assignments) {
+                masterAssignmentsCache = data.assignments;
+                renderJobAssignTable(data.assignments);
+            }
+        } catch (err) {
+            console.error('[ASSIGN:LOAD_ERR]', err);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 25px; color: #f87171;">
+                        ❌ 배정 목록 로드 실패: ${err.message}
+                    </td>
+                </tr>
+            `;
+        }
+    };
+
+    function renderJobAssignTable(assignments) {
+        const tbody = document.getElementById('master-assign-table-body');
+        if (!tbody) return;
+
+        if (!assignments || assignments.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                        등록된 감사 배정 내역이 없습니다. 상단 [➕ 신규 감사 배정] 버튼으로 등록하세요.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = assignments.map(a => {
+            const memberNames = (a.members || []).map(m => m.name || m.email).join(', ') || '-';
+            const accCounts = Object.keys(a.account_assignments || {}).length;
+            const statusBadge = a.status === 'in_progress'
+                ? '<span style="color: #38bdf8; background: rgba(56,189,248,0.15); padding: 3px 8px; border-radius: 4px; font-size: 0.78rem;">실증감사 진행중</span>'
+                : '<span style="color: #a855f7; background: rgba(168,85,247,0.15); padding: 3px 8px; border-radius: 4px; font-size: 0.78rem;">' + (a.status_label || '기획/계획 단계') + '</span>';
+
+            const safeComp = (a.company_name || '').replace(/'/g, "\\'");
+            return `
+                <tr>
+                    <td class="col-company"><strong>${a.company_name}</strong></td>
+                    <td><span class="badge" style="background: rgba(99,102,241,0.2); color: #a5b4fc; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${a.fiscal_year}년</span></td>
+                    <td>
+                        <div style="font-weight: 600; color: #f8fafc; font-size: 0.88rem;">${a.in_charge_name || '미지정'}</div>
+                        <div style="font-size: 0.75rem; color: #94a3b8;">${a.in_charge_email || ''}</div>
+                    </td>
+                    <td style="font-size: 0.84rem; color: #cbd5e1;">${memberNames}</td>
+                    <td>
+                        <span class="badge-tag" style="background: rgba(16,185,129,0.15); color: #34d399; font-size: 0.8rem; padding: 3px 8px; border-radius: 4px;">
+                            ${accCounts}개 계정 지정
+                        </span>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td style="font-size: 0.82rem; color: #94a3b8;">${a.target_report_date || '-'}</td>
+                    <td>
+                        <button type="button" onclick="openJobAssignModal('${safeComp}')" class="btn-submit" style="padding: 4px 12px; font-size: 0.8rem; width: auto;">
+                            ✏️ 배정 수정
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.openJobAssignModal = function (companyName = '') {
+        const modal = document.getElementById('modal-job-assign');
+        if (!modal) return;
+
+        const form = document.getElementById('form-job-assign');
+        if (form) form.reset();
+
+        const titleEl = document.getElementById('job-assign-modal-title');
+        const compInput = document.getElementById('assign-company-name');
+        const yearSelect = document.getElementById('assign-fiscal-year');
+        const inchargeEmail = document.getElementById('assign-incharge-email');
+        const inchargeName = document.getElementById('assign-incharge-name');
+        const partnerName = document.getElementById('assign-partner-name');
+        const statusSelect = document.getElementById('assign-status');
+
+        if (companyName) {
+            titleEl.textContent = `[${companyName}] 감사팀 및 계정 배정 수정`;
+            const found = masterAssignmentsCache.find(a => a.company_name === companyName);
+            if (found) {
+                compInput.value = found.company_name || '';
+                compInput.readOnly = true;
+                yearSelect.value = String(found.fiscal_year || 2025);
+                inchargeEmail.value = found.in_charge_email || '';
+                inchargeName.value = found.in_charge_name || '';
+                partnerName.value = found.partner_name || '';
+                statusSelect.value = found.status || 'in_progress';
+
+                const accMap = found.account_assignments || {};
+                const accA = document.getElementById('assign-acc-A-0');
+                const accC = document.getElementById('assign-acc-C-0');
+                const accE = document.getElementById('assign-acc-E-0');
+                const accG = document.getElementById('assign-acc-G-0');
+                if (accA) accA.value = accMap['A-0'] || '';
+                if (accC) accC.value = accMap['C-0'] || '';
+                if (accE) accE.value = accMap['E-0'] || '';
+                if (accG) accG.value = accMap['G-0'] || '';
+            }
+        } else {
+            titleEl.textContent = '➕ 신규 감사팀 및 계정 배정 등록';
+            compInput.readOnly = false;
+            compInput.value = '';
+            yearSelect.value = '2025';
+            inchargeEmail.value = 'cpaeastsun@gmail.com';
+            inchargeName.value = '김동선';
+            partnerName.value = '이진우 파트너';
+            statusSelect.value = 'planned';
+        }
+
+        modal.style.display = 'flex';
+    };
+
+    window.closeJobAssignModal = function () {
+        const modal = document.getElementById('modal-job-assign');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.handleSaveJobAssignment = async function (e) {
+        e.preventDefault();
+        const compName = document.getElementById('assign-company-name').value.trim();
+        const fiscalYear = parseInt(document.getElementById('assign-fiscal-year').value, 10) || 2025;
+        const inchargeEmail = document.getElementById('assign-incharge-email').value.trim();
+        const inchargeName = document.getElementById('assign-incharge-name').value.trim();
+        const partnerName = document.getElementById('assign-partner-name').value.trim();
+        const status = document.getElementById('assign-status').value;
+
+        const statusLabels = {
+            'planned': '기획/계획 단계',
+            'interim': '사전/중간 감사',
+            'in_progress': '실증감사 진행중',
+            'final_review': '감사완결 및 심리',
+            'completed': '보고서 발행완료'
+        };
+
+        const accMap = {};
+        const accA = document.getElementById('assign-acc-A-0')?.value.trim();
+        const accC = document.getElementById('assign-acc-C-0')?.value.trim();
+        const accE = document.getElementById('assign-acc-E-0')?.value.trim();
+        const accG = document.getElementById('assign-acc-G-0')?.value.trim();
+
+        if (accA) accMap['A-0'] = accA;
+        if (accC) accMap['C-0'] = accC;
+        if (accE) accMap['E-0'] = accE;
+        if (accG) accMap['G-0'] = accG;
+
+        const members = [];
+        if (inchargeEmail) {
+            members.push({ name: inchargeName || 'In-Charge', email: inchargeEmail, role: 'In-charge' });
+        }
+        [accA, accC, accE, accG].forEach(em => {
+            if (em && !members.some(m => m.email === em)) {
+                members.push({ name: em.split('@')[0], email: em, role: 'Staff CPA' });
+            }
+        });
+
+        const payload = {
+            company_name: compName,
+            fiscal_year: fiscalYear,
+            in_charge_name: inchargeName,
+            in_charge_email: inchargeEmail,
+            partner_name: partnerName,
+            members: members,
+            account_assignments: accMap,
+            status: status,
+            status_label: statusLabels[status] || '진행중',
+            target_report_date: '2026-03-20'
+        };
+
+        try {
+            const res = await safeFetchJson('/api/audit/assignments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.success) {
+                alert(`✓ [${compName}] 감사팀 및 계정 배정이 성공적으로 저장되었습니다.`);
+                closeJobAssignModal();
+                loadMasterJobAssignments();
+            } else {
+                alert(`배정 저장 실패: ${res.error || '알 수 없는 오류'}`);
+            }
+        } catch (err) {
+            console.error('[ASSIGN:SAVE_ERR]', err);
+            alert(`배정 저장 중 오류가 발생했습니다: ${err.message}`);
+        }
+    };
+
     // DOM 로드 완료 시 기본 초기화
     document.addEventListener('DOMContentLoaded', () => {
         window.initDataIngestion();
@@ -1877,4 +2088,5 @@
     });
 
 })();
+
 

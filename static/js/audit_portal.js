@@ -21,14 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
         activeAccountName: '현금및현금성자산·장단기금융상품',
         activeWorkingPaperMd: '',
         reconciliationData: null,
+        relatedPnlData: [],
         calendarInstance: null,
-        templatesTree: []
+        templatesTree: [],
+        companiesList: [],
+        ajeEntries: []
     };
 
     // DOM 요소 캐싱
     const dom = {
         companySelect: document.getElementById('audit-company-select'),
         yearSelect: document.getElementById('audit-year-select'),
+        inchargeBadge: document.getElementById('audit-incharge-badge'),
+        statusBadge: document.getElementById('audit-project-status-badge'),
         menuItems: document.querySelectorAll('.audit-menu-list .master-menu-item'),
         tabPanes: document.querySelectorAll('.audit-tab-pane'),
         wpTreeContainer: document.getElementById('wp-tree-container'),
@@ -37,13 +42,44 @@ document.addEventListener('DOMContentLoaded', () => {
         wpActiveTitle: document.getElementById('wp-active-title'),
         wpActiveSection: document.getElementById('wp-active-section'),
         wpEditor: document.getElementById('wp-markdown-editor'),
+        wpPreview: document.getElementById('wp-markdown-rendered-view'),
         btnGenerateAi: document.getElementById('btn-generate-wp-ai'),
         btnSaveWp: document.getElementById('btn-save-wp'),
         btnExportExcel: document.getElementById('btn-export-wp-excel'),
         reconPriorVal: document.getElementById('recon-prior-val'),
         reconCurrentVal: document.getElementById('recon-current-val'),
         reconVarianceVal: document.getElementById('recon-variance-val'),
+        reconAdjTotalVal: document.getElementById('recon-adj-total-val'),
+        reconFinalVal: document.getElementById('recon-final-val'),
         reconStatusVal: document.getElementById('recon-status-val'),
+        reconSubaccountsTbody: document.getElementById('recon-subaccounts-tbody'),
+        reconSubaccountsTfoot: document.getElementById('recon-subaccounts-tfoot'),
+        tfootPriorVal: document.getElementById('tfoot-prior-val'),
+        tfootCurrentVal: document.getElementById('tfoot-current-val'),
+        tfootVarianceVal: document.getElementById('tfoot-variance-val'),
+        tfootRateVal: document.getElementById('tfoot-rate-val'),
+        tfootDrAdj: document.getElementById('tfoot-dr-adj'),
+        tfootCrAdj: document.getElementById('tfoot-cr-adj'),
+        tfootFinalVal: document.getElementById('tfoot-final-val'),
+        ajeContainer: document.getElementById('wp-aje-container'),
+        ajeRowsTbody: document.getElementById('aje-rows-tbody'),
+        btnAddAjeRow: document.getElementById('btn-add-aje-row'),
+        ajeBalanceBadge: document.getElementById('aje-balance-badge'),
+        ajeTfootDrSum: document.getElementById('aje-tfoot-dr-sum'),
+        ajeTfootCrSum: document.getElementById('aje-tfoot-cr-sum'),
+        ajeTfootStatus: document.getElementById('aje-tfoot-status'),
+        ajeAccountSuggestions: document.getElementById('aje-account-suggestions'),
+        relatedPnlContainer: document.getElementById('wp-related-pnl-container'),
+        relatedPnlTbody: document.getElementById('related-pnl-tbody'),
+        relatedPnlTfoot: document.getElementById('related-pnl-tfoot'),
+        pnlCountBadge: document.getElementById('pnl-count-badge'),
+        pnlTfootPriorVal: document.getElementById('pnl-tfoot-prior-val'),
+        pnlTfootCurrentVal: document.getElementById('pnl-tfoot-current-val'),
+        pnlTfootVarianceVal: document.getElementById('pnl-tfoot-variance-val'),
+        pnlTfootRateVal: document.getElementById('pnl-tfoot-rate-val'),
+        pnlTfootDrAdj: document.getElementById('pnl-tfoot-dr-adj'),
+        pnlTfootCrAdj: document.getElementById('pnl-tfoot-cr-adj'),
+        pnlTfootFinalVal: document.getElementById('pnl-tfoot-final-val'),
         wpTabBtns: document.querySelectorAll('.wp-tab-btn'),
         wpTabContents: document.querySelectorAll('.wp-tab-content'),
         ragGuideView: document.getElementById('wp-rag-guide-view'),
@@ -65,16 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadTemplatesTree();
         await loadProjects();
         initCalendar();
+        initAjeBlock();
         setupEventListeners();
     }
 
-    // 고객사 목록 로드
+    // 고객사 목록 로드 (로그인한 회계사 배정 우선 바인딩)
     async function loadCompanies() {
         console.log('[REQUEST] GET /api/audit/companies');
         try {
             const res = await fetch('/api/audit/companies');
             const data = await res.json();
             if (data.success && data.companies) {
+                state.companiesList = data.companies;
                 dom.companySelect.innerHTML = '<option value="">감사 대상 기업을 선택하세요</option>';
                 data.companies.forEach((comp, idx) => {
                     const opt = document.createElement('option');
@@ -83,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (idx === 0) {
                         opt.selected = true;
                         state.currentCompany = comp.company_name;
+                        updateHeaderBadges(comp);
                     }
                     dom.companySelect.appendChild(opt);
                 });
@@ -90,6 +129,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error('[ERROR] Failed to load companies:', err);
+        }
+    }
+
+    function updateHeaderBadges(comp) {
+        if (!comp) return;
+        if (dom.inchargeBadge) {
+            dom.inchargeBadge.textContent = `In-charge: ${comp.in_charge_name || '김동선'}`;
+        }
+        if (dom.statusBadge) {
+            dom.statusBadge.textContent = comp.status_label || '실증감사 진행중';
         }
     }
 
@@ -101,17 +150,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             if (data.success && data.tree) {
                 state.templatesTree = data.tree;
-                renderTemplatesTree(data.tree);
+                await loadCompanyAssignment(state.currentCompany);
             }
         } catch (err) {
             console.error('[ERROR] Failed to load template tree:', err);
         }
     }
 
-    // 조서 색인 아코디언 트리 렌더링 (Section만 먼저 표시, 클릭 시 세부내역 확장)
+    // 선택된 회사의 배정 정보 로드 (계정별 담당자 맵핑)
+    async function loadCompanyAssignment(companyName) {
+        if (!companyName) {
+            renderTemplatesTree(state.templatesTree);
+            return;
+        }
+        try {
+            const res = await fetch(`/api/audit/assignments?company_name=${encodeURIComponent(companyName)}`);
+            const data = await res.json();
+            if (data.success && data.assignments && data.assignments.length > 0) {
+                state.currentCompanyAssignment = data.assignments[0];
+            } else {
+                state.currentCompanyAssignment = null;
+            }
+        } catch (err) {
+            console.warn('[ASSIGN:FETCH_WARN]', err);
+            state.currentCompanyAssignment = null;
+        }
+        renderTemplatesTree(state.templatesTree);
+    }
+
+    // 조서 색인 아코디언 트리 렌더링 (본인 배정 계정 [내 담당] 뱃지 부여)
     function renderTemplatesTree(tree, filterQuery = '') {
         dom.wpTreeContainer.innerHTML = '';
         const query = filterQuery.toLowerCase().trim();
+        const myEmail = document.body.dataset.userEmail || '';
+        const assignMap = state.currentCompanyAssignment?.account_assignments || {};
         
         tree.forEach(section => {
             if (!section.items || section.items.length === 0) return;
@@ -130,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const groupEl = document.createElement('div');
             groupEl.className = 'wp-section-group';
             
-            // 기본 상태: 검색 중일 때만 자동 확장, 기본 상태에서는 모든 Section을 접어서 6대 Section이 한눈에 보이도록 처리
             const isAutoExpanded = query ? true : false;
             
             const headerEl = document.createElement('div');
@@ -147,15 +218,28 @@ document.addEventListener('DOMContentLoaded', () => {
             listEl.className = `wp-item-list ${isAutoExpanded ? 'open' : ''}`;
             
             matchingItems.forEach(item => {
-                const itemEl = document.createElement('div');
                 const isActive = (item.account_code === state.activeAccountCode);
-                itemEl.className = `wp-tree-item ${isActive ? 'active' : ''}`;
+                const assignedEmail = assignMap[item.account_code] || '';
+                const isAssignedToMe = (myEmail && assignedEmail === myEmail);
+                
+                const itemEl = document.createElement('div');
+                itemEl.className = `wp-tree-item ${isActive ? 'active' : ''} ${isAssignedToMe ? 'my-assigned-wp' : ''}`;
                 itemEl.dataset.sectionCode = section.code;
                 itemEl.dataset.accountCode = item.account_code;
                 itemEl.dataset.accountName = item.account_name;
                 
+                let assignBadge = '';
+                if (isAssignedToMe) {
+                    assignBadge = `<span class="badge-tag" style="background: rgba(16,185,129,0.2); color: #34d399; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: 600;">내 담당</span>`;
+                } else if (assignedEmail) {
+                    assignBadge = `<span class="badge-tag" style="background: rgba(148,163,184,0.15); color: #94a3b8; font-size: 0.7rem; padding: 1px 5px; border-radius: 4px; margin-left: 4px;">${assignedEmail.split('@')[0]}</span>`;
+                }
+                
                 itemEl.innerHTML = `
-                    <span><strong>[${item.account_code}]</strong> ${item.account_name}</span>
+                    <div style="display: flex; align-items: center; min-width: 0; flex: 1;">
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><strong>[${item.account_code}]</strong> ${item.account_name}</span>
+                        ${assignBadge}
+                    </div>
                     <span class="wp-item-proc-badge">${item.procedure_count}절차</span>
                 `;
                 
@@ -181,9 +265,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // 2. 조서 선택 및 AI 자동생성 인터랙션
+    // 2. 조서 선택 및 6대 장부 실시간 수치 대사 (Reconciliation)
     // =========================================================================
-    function selectWorkingPaper(sectionCode, accountCode, accountName, sectionTitle) {
+    async function selectWorkingPaper(sectionCode, accountCode, accountName, sectionTitle) {
         state.activeSectionCode = sectionCode;
         state.activeAccountCode = accountCode;
         state.activeAccountName = accountName;
@@ -193,6 +277,16 @@ document.addEventListener('DOMContentLoaded', () => {
         dom.wpActiveTitle.textContent = accountName;
         dom.wpActiveSection.textContent = sectionTitle || `Section ${sectionCode}`;
         
+        // 드롭다운 버튼 라벨 갱신 & 드롭다운 팝오버 닫기
+        const dropdownLabel = document.getElementById('wp-dropdown-label');
+        if (dropdownLabel) {
+            dropdownLabel.textContent = `[${accountCode}] ${accountName} ▾`;
+        }
+        const dropdownMenu = document.getElementById('wp-tree-dropdown-menu');
+        if (dropdownMenu) {
+            dropdownMenu.style.display = 'none';
+        }
+
         // 트리 active 클래스 토글
         document.querySelectorAll('.wp-tree-item').forEach(el => {
             el.classList.toggle('active', el.dataset.accountCode === accountCode);
@@ -202,7 +296,606 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // RAG 가이드 뷰 업데이트
         updateRagGuideView(accountCode);
+
+        // 이전 조서 내용 초기화 (새 계정 선택)
+        if (dom.wpEditor) dom.wpEditor.value = '';
+        renderMarkdownPreview('');
+
+        // 6대 장부 JSON 실시간 대사 수치 즉시 조회
+        if (state.currentCompany) {
+            try {
+                const res = await fetch('/api/audit/working-papers/reconcile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        company_name: state.currentCompany,
+                        fiscal_year: state.currentYear,
+                        account_code: accountCode
+                    })
+                });
+                const result = await res.json();
+                if (result.success && result.reconciliation) {
+                    renderReconciliationDashboard(result.reconciliation);
+                    const pnlList = result.related_pnl || result.reconciliation.related_pnl || [];
+                    renderRelatedPnlDashboard(pnlList);
+                }
+            } catch (err) {
+                console.warn('[RECON:WARN] Quick reconcile failed:', err);
+            }
+        }
     }
+
+    // =========================================================================
+    // 2-1. 대사 대시보드 및 계정과목별 세부 테이블 렌더링 & 실시간 수정분개 계산
+    // =========================================================================
+    function renderReconciliationDashboard(recon) {
+        if (!recon) return;
+        state.reconciliationData = recon;
+        
+        // 1. 상단 요약 바 갱신
+        const pVal = Number(recon.prior_val || 0);
+        const cVal = Number(recon.current_val || 0);
+        const vVal = Number(recon.variance_val || (cVal - pVal));
+        const vRate = Number(recon.variance_pct || 0);
+        const drTotal = Number(recon.adj_debit_total || 0);
+        const crTotal = Number(recon.adj_credit_total || 0);
+        const finalVal = Number(recon.adjusted_val || (cVal + drTotal - crTotal));
+        
+        if (dom.reconPriorVal) dom.reconPriorVal.textContent = pVal.toLocaleString() + '원';
+        if (dom.reconCurrentVal) dom.reconCurrentVal.textContent = cVal.toLocaleString() + '원';
+        if (dom.reconVarianceVal) {
+            const sign = vVal > 0 ? '+' : '';
+            dom.reconVarianceVal.textContent = `${sign}${vVal.toLocaleString()}원 (${sign}${vRate.toFixed(1)}%)`;
+        }
+        if (dom.reconAdjTotalVal) {
+            dom.reconAdjTotalVal.textContent = `${drTotal.toLocaleString()}원 / ${crTotal.toLocaleString()}원`;
+        }
+        if (dom.reconFinalVal) {
+            dom.reconFinalVal.textContent = finalVal.toLocaleString() + '원';
+        }
+        if (dom.reconStatusVal) {
+            dom.reconStatusVal.textContent = recon.is_matched ? '🟢 100% 일치' : '🔴 대사 불일치';
+            dom.reconStatusVal.className = `recon-badge ${recon.is_matched ? 'badge-planned' : ''}`;
+        }
+        
+        // 2. 하단 계정과목별 세부 대사 테이블 렌더링
+        const subAccounts = recon.sub_accounts || [];
+        if (!dom.reconSubaccountsTbody) return;
+        
+        if (subAccounts.length === 0) {
+            dom.reconSubaccountsTbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; color: #94a3b8; padding: 18px;">
+                        해당 조서 코드와 매핑된 세부 계정과목이 없습니다.
+                    </td>
+                </tr>
+            `;
+            if (dom.reconSubaccountsTfoot) dom.reconSubaccountsTfoot.style.display = 'none';
+            return;
+        }
+        
+        dom.reconSubaccountsTbody.innerHTML = '';
+        subAccounts.forEach((acc, idx) => {
+            const accName = acc.account_name || acc.name || '계정';
+            const accPrior = Number(acc.prior_amount || acc.prior || 0);
+            const accCurrent = Number(acc.current_amount || acc.current || 0);
+            const accVar = Number(acc.variance_amount || acc.variance || (accCurrent - accPrior));
+            const accRate = Number(acc.variance_rate || acc.variance_pct || 0);
+            const accDr = Number(acc.adj_debit || 0);
+            const accCr = Number(acc.adj_credit || 0);
+            const accFinal = Number(acc.adjusted_amount || (accCurrent + accDr - accCr));
+            
+            const sign = accVar > 0 ? '+' : '';
+            const badgeClass = accVar > 0 ? 'plus' : (accVar < 0 ? 'minus' : 'zero');
+            const contraBadge = acc.is_contra ? `<span style="font-size: 0.7rem; color: #f87171; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); padding: 1px 5px; border-radius: 4px; margin-right: 6px; font-weight: 600;">차감</span>` : '';
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="acc-name">${contraBadge}${accName}</td>
+                <td class="num-cell" style="color: #94a3b8;">${accPrior.toLocaleString()}원</td>
+                <td class="num-cell" style="font-weight: 600; color: #f1f5f9;">${accCurrent.toLocaleString()}원</td>
+                <td class="num-cell">
+                    <span class="var-badge ${badgeClass}">${sign}${accVar.toLocaleString()}원</span>
+                </td>
+                <td class="num-cell">
+                    <span class="var-badge ${badgeClass}">${sign}${accRate.toFixed(1)}%</span>
+                </td>
+                <td class="num-cell">
+                    <input type="number" class="recon-adj-input debit-input" data-idx="${idx}" value="${accDr}" step="1000" placeholder="0">
+                </td>
+                <td class="num-cell">
+                    <input type="number" class="recon-adj-input credit-input" data-idx="${idx}" value="${accCr}" step="1000" placeholder="0">
+                </td>
+                <td class="num-cell acc-final-cell" style="font-weight: 700; color: #38bdf8;">${accFinal.toLocaleString()}원</td>
+            `;
+            dom.reconSubaccountsTbody.appendChild(tr);
+        });
+        
+        // 3. 푸터 합계 갱신
+        if (dom.reconSubaccountsTfoot) {
+            dom.reconSubaccountsTfoot.style.display = 'table-footer-group';
+            if (dom.tfootPriorVal) dom.tfootPriorVal.textContent = pVal.toLocaleString() + '원';
+            if (dom.tfootCurrentVal) dom.tfootCurrentVal.textContent = cVal.toLocaleString() + '원';
+            if (dom.tfootVarianceVal) {
+                const sign = vVal > 0 ? '+' : '';
+                dom.tfootVarianceVal.textContent = `${sign}${vVal.toLocaleString()}원`;
+            }
+            if (dom.tfootRateVal) {
+                const sign = vVal > 0 ? '+' : '';
+                dom.tfootRateVal.textContent = `${sign}${vRate.toFixed(1)}%`;
+            }
+            if (dom.tfootDrAdj) dom.tfootDrAdj.textContent = `${drTotal.toLocaleString()}원`;
+            if (dom.tfootCrAdj) dom.tfootCrAdj.textContent = `${crTotal.toLocaleString()}원`;
+            if (dom.tfootFinalVal) dom.tfootFinalVal.textContent = `${finalVal.toLocaleString()}원`;
+        }
+        
+        // 4. 입력 이벤트 바인딩 (실시간 차변/대변 수정분개 계산)
+        bindAdjustmentInputEvents(subAccounts, pVal, cVal, vVal, vRate);
+
+        // 5. AJE 자동완성 드롭다운 갱신 및 기존 AJE 분개내역 재동기화
+        updateAjeDatalistSuggestions(subAccounts);
+        if (state.ajeEntries && state.ajeEntries.length > 0) {
+            syncAjeToReconciliationTable();
+        }
+    }
+
+    function bindAdjustmentInputEvents(subAccounts, pVal, cVal, vVal, vRate) {
+        dom.reconSubaccountsTbody.querySelectorAll('.recon-adj-input').forEach(input => {
+            input.addEventListener('input', (e) => {
+                const idx = parseInt(e.target.dataset.idx, 10);
+                const tr = e.target.closest('tr');
+                if (!tr || isNaN(idx) || !subAccounts[idx]) return;
+                
+                const drInput = tr.querySelector('.debit-input');
+                const crInput = tr.querySelector('.credit-input');
+                const finalCell = tr.querySelector('.acc-final-cell');
+                
+                const drVal = parseFloat(drInput.value) || 0;
+                const crVal = parseFloat(crInput.value) || 0;
+                
+                const accCurrent = Number(subAccounts[idx].current_amount || subAccounts[idx].current || 0);
+                const accFinal = accCurrent + drVal - crVal;
+                
+                subAccounts[idx].adj_debit = drVal;
+                subAccounts[idx].adj_credit = crVal;
+                subAccounts[idx].adjusted_amount = accFinal;
+                
+                if (finalCell) finalCell.textContent = accFinal.toLocaleString() + '원';
+                
+                // 전체 합계 재계산 (차감 계정은 순액에서 차감)
+                let totalDr = 0;
+                let totalCr = 0;
+                let totalFinal = 0;
+                subAccounts.forEach(a => {
+                    const c = Number(a.current_amount || a.current || 0);
+                    const d = Number(a.adj_debit || 0);
+                    const r = Number(a.adj_credit || 0);
+                    totalDr += d;
+                    totalCr += r;
+                    const netRow = (c + d - r);
+                    if (a.is_contra) {
+                        totalFinal -= netRow;
+                    } else {
+                        totalFinal += netRow;
+                    }
+                });
+                
+                if (state.reconciliationData) {
+                    state.reconciliationData.adj_debit_total = totalDr;
+                    state.reconciliationData.adj_credit_total = totalCr;
+                    state.reconciliationData.adjusted_val = totalFinal;
+                    state.reconciliationData.sub_accounts = subAccounts;
+                }
+                
+                if (dom.reconAdjTotalVal) dom.reconAdjTotalVal.textContent = `${totalDr.toLocaleString()}원 / ${totalCr.toLocaleString()}원`;
+                if (dom.reconFinalVal) dom.reconFinalVal.textContent = totalFinal.toLocaleString() + '원';
+                if (dom.tfootDrAdj) dom.tfootDrAdj.textContent = `${totalDr.toLocaleString()}원`;
+                if (dom.tfootCrAdj) dom.tfootCrAdj.textContent = `${totalCr.toLocaleString()}원`;
+                if (dom.tfootFinalVal) dom.tfootFinalVal.textContent = `${totalFinal.toLocaleString()}원`;
+            });
+        });
+    }
+
+    // =========================================================================
+    // 2-2. 📊 관련 손익항목 (Related P&L Items) 대시보드 렌더링
+    // =========================================================================
+    function renderRelatedPnlDashboard(pnlList = []) {
+        state.relatedPnlData = pnlList || [];
+        if (!dom.relatedPnlTbody) return;
+
+        if (!pnlList || pnlList.length === 0) {
+            dom.relatedPnlTbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; color: #94a3b8; padding: 16px;">
+                        해당 조서 계정과 매핑된 손익계산서(I/S) 항목이 없습니다.
+                    </td>
+                </tr>
+            `;
+            if (dom.relatedPnlTfoot) dom.relatedPnlTfoot.style.display = 'none';
+            if (dom.pnlCountBadge) dom.pnlCountBadge.textContent = '관련 손익 0건';
+            return;
+        }
+
+        if (dom.pnlCountBadge) dom.pnlCountBadge.textContent = `관련 손익 ${pnlList.length}건`;
+        dom.relatedPnlTbody.innerHTML = '';
+
+        let totalPrior = 0;
+        let totalCurrent = 0;
+        let totalVar = 0;
+        let totalDr = 0;
+        let totalCr = 0;
+        let totalFinal = 0;
+
+        pnlList.forEach((item) => {
+            const name = item.account_name || item.name || '손익항목';
+            const pnlType = item.pnl_type || '비용';
+            const prior = Number(item.prior_amount || item.prior || 0);
+            const curr = Number(item.current_amount || item.current || 0);
+            const diff = Number(item.variance_amount || item.variance || (curr - prior));
+            const rate = Number(item.variance_pct || item.variance_rate || 0);
+            const drAdj = Number(item.adj_debit || 0);
+            const crAdj = Number(item.adj_credit || 0);
+            
+            // 손익 최종치 산정 (비용은 Dr 증가, 수익은 Cr 증가)
+            let finalVal = curr;
+            if (pnlType.includes('비용')) {
+                finalVal = curr + drAdj - crAdj;
+            } else if (pnlType.includes('수익')) {
+                finalVal = curr - drAdj + crAdj;
+            } else {
+                finalVal = curr + drAdj - crAdj;
+            }
+            item.adjusted_amount = finalVal;
+
+            totalPrior += prior;
+            totalCurrent += curr;
+            totalVar += diff;
+            totalDr += drAdj;
+            totalCr += crAdj;
+            totalFinal += finalVal;
+
+            const sign = diff > 0 ? '+' : '';
+            const badgeClass = diff > 0 ? 'plus' : (diff < 0 ? 'minus' : 'zero');
+            let typeBadgeClass = 'other';
+            if (pnlType.includes('비용')) typeBadgeClass = 'expense';
+            else if (pnlType.includes('수익')) typeBadgeClass = 'revenue';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="pnl-name">${name}</td>
+                <td style="text-align: center;"><span class="pnl-type-badge ${typeBadgeClass}">${pnlType}</span></td>
+                <td class="num-cell" style="color: #94a3b8;">${prior.toLocaleString()}원</td>
+                <td class="num-cell" style="font-weight: 600; color: #f1f5f9;">${curr.toLocaleString()}원</td>
+                <td class="num-cell"><span class="var-badge ${badgeClass}">${sign}${diff.toLocaleString()}원</span></td>
+                <td class="num-cell"><span class="var-badge ${badgeClass}">${sign}${rate.toFixed(1)}%</span></td>
+                <td class="num-cell aje-pnl-dr-cell" style="color: #60a5fa; font-weight: 600;">${drAdj ? drAdj.toLocaleString() + '원' : '-'}</td>
+                <td class="num-cell aje-pnl-cr-cell" style="color: #f87171; font-weight: 600;">${crAdj ? crAdj.toLocaleString() + '원' : '-'}</td>
+                <td class="num-cell pnl-final-cell" style="font-weight: 700; color: #34d399;">${finalVal.toLocaleString()}원</td>
+            `;
+            dom.relatedPnlTbody.appendChild(tr);
+        });
+
+        // 푸터 업데이트
+        if (dom.relatedPnlTfoot) {
+            dom.relatedPnlTfoot.style.display = 'table-footer-group';
+            if (dom.pnlTfootPriorVal) dom.pnlTfootPriorVal.textContent = totalPrior.toLocaleString() + '원';
+            if (dom.pnlTfootCurrentVal) dom.pnlTfootCurrentVal.textContent = totalCurrent.toLocaleString() + '원';
+            if (dom.pnlTfootVarianceVal) {
+                const sign = totalVar > 0 ? '+' : '';
+                dom.pnlTfootVarianceVal.textContent = `${sign}${totalVar.toLocaleString()}원`;
+            }
+            if (dom.pnlTfootRateVal) {
+                const totalRate = totalPrior !== 0 ? (totalVar / Math.abs(totalPrior) * 100) : 0;
+                const sign = totalVar > 0 ? '+' : '';
+                dom.pnlTfootRateVal.textContent = `${sign}${totalRate.toFixed(1)}%`;
+            }
+            if (dom.pnlTfootDrAdj) dom.pnlTfootDrAdj.textContent = `${totalDr.toLocaleString()}원`;
+            if (dom.pnlTfootCrAdj) dom.pnlTfootCrAdj.textContent = `${totalCr.toLocaleString()}원`;
+            if (dom.pnlTfootFinalVal) dom.pnlTfootFinalVal.textContent = `${totalFinal.toLocaleString()}원`;
+        }
+
+        updateAjeDatalistSuggestions();
+    }
+
+    // =========================================================================
+    // 2-3. ⚖️ 감사 수정분개 (AJE / RJE) 인터랙티브 분개장 엔진
+    // =========================================================================
+    function initAjeBlock() {
+        if (!dom.btnAddAjeRow || !dom.ajeRowsTbody) return;
+
+        // 분개 행 추가 버튼 리스너
+        dom.btnAddAjeRow.addEventListener('click', () => {
+            addAjeRow();
+        });
+
+        // 초기 기본 1개 분개 행 생성 (비어있을 때)
+        if (state.ajeEntries.length === 0) {
+            addAjeRow();
+        } else {
+            renderAjeRows();
+        }
+    }
+
+    // Datalist 계정과목 추천 업데이트 (현재 계정의 세부 과목 및 관련 손익 과목 등록)
+    function updateAjeDatalistSuggestions(subAccounts = []) {
+        if (!dom.ajeAccountSuggestions) return;
+        const baseSuggestions = [
+            '대손상각비', '대손충당금', '감가상각비', '감가상각누계액', '외상매출금',
+            '받을어음', '외상매입금', '지급어음', '미수금', '미지급금', '선급금', '선수금',
+            '이자수익', '이자비용', '외환차익', '외환차손', '유형자산처분이익', '유형자산처분손실',
+            '보조금', '잡손실', '잡이익', '전기오류수정손실', '전기오류수정이익', '당기순이익'
+        ];
+        
+        const subList = subAccounts.length ? subAccounts : (state.reconciliationData?.sub_accounts || []);
+        const subNames = subList.map(a => a.account_name || a.name).filter(Boolean);
+        const pnlNames = (state.relatedPnlData || []).map(p => p.account_name || p.name).filter(Boolean);
+        
+        const uniqueList = Array.from(new Set([...subNames, ...pnlNames, ...baseSuggestions]));
+        
+        dom.ajeAccountSuggestions.innerHTML = uniqueList.map(name => `<option value="${name}">`).join('');
+    }
+
+    function addAjeRow(drAcc = '', drAmt = 0, crAcc = '', crAmt = 0, memo = '') {
+        const newRow = {
+            id: 'aje_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+            dr_account: drAcc,
+            dr_amount: drAmt,
+            cr_account: crAcc,
+            cr_amount: crAmt,
+            memo: memo
+        };
+        state.ajeEntries.push(newRow);
+        renderAjeRows();
+        syncAjeToReconciliationTable();
+    }
+
+    function deleteAjeRow(rowId) {
+        state.ajeEntries = state.ajeEntries.filter(r => r.id !== rowId);
+        if (state.ajeEntries.length === 0) {
+            addAjeRow();
+        } else {
+            renderAjeRows();
+            syncAjeToReconciliationTable();
+        }
+    }
+
+    function renderAjeRows() {
+        if (!dom.ajeRowsTbody) return;
+        dom.ajeRowsTbody.innerHTML = '';
+
+        state.ajeEntries.forEach((row) => {
+            const tr = document.createElement('tr');
+            tr.dataset.id = row.id;
+            tr.innerHTML = `
+                <td>
+                    <input type="text" class="aje-table-input aje-dr-account" list="aje-account-suggestions" placeholder="예: 대손상각비" value="${row.dr_account || ''}">
+                </td>
+                <td>
+                    <input type="number" class="aje-table-input num-input debit-val aje-dr-amount" step="1000" placeholder="0" value="${row.dr_amount ? row.dr_amount : ''}">
+                </td>
+                <td>
+                    <input type="text" class="aje-table-input aje-cr-account" list="aje-account-suggestions" placeholder="예: 대손충당금" value="${row.cr_account || ''}">
+                </td>
+                <td>
+                    <input type="number" class="aje-table-input num-input credit-val aje-cr-amount" step="1000" placeholder="0" value="${row.cr_amount ? row.cr_amount : ''}">
+                </td>
+                <td>
+                    <input type="text" class="aje-table-input aje-memo" placeholder="분개 사유/내역" value="${row.memo || ''}">
+                </td>
+                <td style="text-align: center;">
+                    <button type="button" class="btn-del-aje-row" data-id="${row.id}" title="분개 행 삭제">❌</button>
+                </td>
+            `;
+
+            // 입력 이벤트 바인딩 (실시간 총괄표 및 관련 손익 동기화)
+            tr.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', () => {
+                    row.dr_account = tr.querySelector('.aje-dr-account').value.trim();
+                    row.dr_amount = parseFloat(tr.querySelector('.aje-dr-amount').value) || 0;
+                    row.cr_account = tr.querySelector('.aje-cr-account').value.trim();
+                    row.cr_amount = parseFloat(tr.querySelector('.aje-cr-amount').value) || 0;
+                    row.memo = tr.querySelector('.aje-memo').value.trim();
+
+                    syncAjeToReconciliationTable();
+                });
+            });
+
+            // 삭제 버튼 리스너
+            tr.querySelector('.btn-del-aje-row').addEventListener('click', () => {
+                deleteAjeRow(row.id);
+            });
+
+            dom.ajeRowsTbody.appendChild(tr);
+        });
+    }
+
+    // 계정과목 유연한 매칭 헬퍼
+    function isAccountMatched(inputAcc, targetAcc) {
+        if (!inputAcc || !targetAcc) return false;
+        const s1 = inputAcc.replace(/[\s\(\)\/_\-\[\]]/g, '').toLowerCase();
+        const s2 = targetAcc.replace(/[\s\(\)\/_\-\[\]]/g, '').toLowerCase();
+        if (s1 === s2) return true;
+        if (s1.length >= 2 && s2.includes(s1)) return true;
+        if (s2.length >= 2 && s1.includes(s2)) return true;
+        return false;
+    }
+
+    // 🔄 AJE 분개 내역 ➔ 총괄 대사표 & 관련 손익항목(Related P&L) 실시간 자동 집계 전파
+    function syncAjeToReconciliationTable() {
+        let totalDr = 0;
+        let totalCr = 0;
+
+        state.ajeEntries.forEach(entry => {
+            const drVal = Number(entry.dr_amount || 0);
+            const crVal = Number(entry.cr_amount || 0);
+            totalDr += drVal;
+            totalCr += crVal;
+        });
+
+        // 1. AJE 푸터 및 대차평형 뱃지 갱신
+        if (dom.ajeTfootDrSum) dom.ajeTfootDrSum.textContent = totalDr.toLocaleString() + '원';
+        if (dom.ajeTfootCrSum) dom.ajeTfootCrSum.textContent = totalCr.toLocaleString() + '원';
+        
+        const diff = totalDr - totalCr;
+        if (dom.ajeBalanceBadge) {
+            if (diff === 0) {
+                dom.ajeBalanceBadge.className = 'aje-diff-badge balanced';
+                dom.ajeBalanceBadge.textContent = '🟢 대차일치 (차액 0원)';
+                if (dom.ajeTfootStatus) dom.ajeTfootStatus.textContent = '대차 평형 상태';
+            } else {
+                dom.ajeBalanceBadge.className = 'aje-diff-badge unbalanced';
+                dom.ajeBalanceBadge.textContent = `🔴 대차차액: ${Math.abs(diff).toLocaleString()}원`;
+                if (dom.ajeTfootStatus) dom.ajeTfootStatus.textContent = `차액 발생 (${diff > 0 ? '차변' : '대변'} +${Math.abs(diff).toLocaleString()}원)`;
+            }
+        }
+
+        // 2. 총괄 대사표(Reconciliation Table) 계정과목별 실시간 자동 반영
+        if (state.reconciliationData && state.reconciliationData.sub_accounts) {
+            const subAccounts = state.reconciliationData.sub_accounts;
+            let grandDr = 0;
+            let grandCr = 0;
+            let grandFinal = 0;
+
+            subAccounts.forEach((acc, idx) => {
+                const rawName = (acc.account_name || acc.name || '').trim();
+
+                // AJE 분개장에서 일치하는 계정과목 차변/대변 금액 합산
+                let matchedDr = 0;
+                let matchedCr = 0;
+
+                state.ajeEntries.forEach(entry => {
+                    if (isAccountMatched(entry.dr_account, rawName)) matchedDr += Number(entry.dr_amount || 0);
+                    if (isAccountMatched(entry.cr_account, rawName)) matchedCr += Number(entry.cr_amount || 0);
+                });
+
+                acc.adj_debit = matchedDr;
+                acc.adj_credit = matchedCr;
+
+                const accCurrent = Number(acc.current_amount || acc.current || 0);
+                const accFinal = accCurrent + matchedDr - matchedCr;
+                acc.adjusted_amount = accFinal;
+
+                grandDr += matchedDr;
+                grandCr += matchedCr;
+
+                const netRow = accFinal;
+                if (acc.is_contra) {
+                    grandFinal -= netRow;
+                } else {
+                    grandFinal += netRow;
+                }
+
+                // 대사 테이블 DOM 해당 행 실시간 갱신
+                if (dom.reconSubaccountsTbody) {
+                    const tr = dom.reconSubaccountsTbody.children[idx];
+                    if (tr) {
+                        const drInput = tr.querySelector('.debit-input');
+                        const crInput = tr.querySelector('.credit-input');
+                        const finalCell = tr.querySelector('.acc-final-cell');
+
+                        if (drInput) drInput.value = matchedDr || '';
+                        if (crInput) crInput.value = matchedCr || '';
+                        if (finalCell) finalCell.textContent = accFinal.toLocaleString() + '원';
+                    }
+                }
+            });
+
+            // 상단 요약 바 및 대사 푸터 실시간 갱신
+            state.reconciliationData.adj_debit_total = grandDr;
+            state.reconciliationData.adj_credit_total = grandCr;
+            state.reconciliationData.adjusted_val = grandFinal;
+            state.reconciliationData.aje_entries = state.ajeEntries;
+
+            if (dom.reconAdjTotalVal) dom.reconAdjTotalVal.textContent = `${grandDr.toLocaleString()}원 / ${grandCr.toLocaleString()}원`;
+            if (dom.reconFinalVal) dom.reconFinalVal.textContent = grandFinal.toLocaleString() + '원';
+            if (dom.tfootDrAdj) dom.tfootDrAdj.textContent = `${grandDr.toLocaleString()}원`;
+            if (dom.tfootCrAdj) dom.tfootCrAdj.textContent = `${grandCr.toLocaleString()}원`;
+            if (dom.tfootFinalVal) dom.tfootFinalVal.textContent = `${grandFinal.toLocaleString()}원`;
+        }
+
+        // 3. 📊 관련 손익항목(Related P&L) 테이블 실시간 자동 반영
+        if (state.relatedPnlData && state.relatedPnlData.length > 0) {
+            let pnlTotalDr = 0;
+            let pnlTotalCr = 0;
+            let pnlTotalFinal = 0;
+
+            state.relatedPnlData.forEach((item, idx) => {
+                const pnlName = (item.account_name || item.name || '').trim();
+                const pnlType = item.pnl_type || '비용';
+
+                let matchedDr = 0;
+                let matchedCr = 0;
+
+                state.ajeEntries.forEach(entry => {
+                    if (isAccountMatched(entry.dr_account, pnlName)) matchedDr += Number(entry.dr_amount || 0);
+                    if (isAccountMatched(entry.cr_account, pnlName)) matchedCr += Number(entry.cr_amount || 0);
+                });
+
+                item.adj_debit = matchedDr;
+                item.adj_credit = matchedCr;
+
+                const curr = Number(item.current_amount || item.current || 0);
+                let finalVal = curr;
+                if (pnlType.includes('비용')) {
+                    finalVal = curr + matchedDr - matchedCr;
+                } else if (pnlType.includes('수익')) {
+                    finalVal = curr - matchedDr + matchedCr;
+                } else {
+                    finalVal = curr + matchedDr - matchedCr;
+                }
+                item.adjusted_amount = finalVal;
+
+                pnlTotalDr += matchedDr;
+                pnlTotalCr += matchedCr;
+                pnlTotalFinal += finalVal;
+
+                // 손익 테이블 DOM 행 갱신
+                if (dom.relatedPnlTbody) {
+                    const tr = dom.relatedPnlTbody.children[idx];
+                    if (tr) {
+                        const drCell = tr.querySelector('.aje-pnl-dr-cell');
+                        const crCell = tr.querySelector('.aje-pnl-cr-cell');
+                        const finalCell = tr.querySelector('.pnl-final-cell');
+
+                        if (drCell) drCell.textContent = matchedDr ? matchedDr.toLocaleString() + '원' : '-';
+                        if (crCell) crCell.textContent = matchedCr ? matchedCr.toLocaleString() + '원' : '-';
+                        if (finalCell) finalCell.textContent = finalVal.toLocaleString() + '원';
+                    }
+                }
+            });
+
+            // 손익 푸터 갱신
+            if (dom.pnlTfootDrAdj) dom.pnlTfootDrAdj.textContent = `${pnlTotalDr.toLocaleString()}원`;
+            if (dom.pnlTfootCrAdj) dom.pnlTfootCrAdj.textContent = `${pnlTotalCr.toLocaleString()}원`;
+            if (dom.pnlTfootFinalVal) dom.pnlTfootFinalVal.textContent = `${pnlTotalFinal.toLocaleString()}원`;
+        }
+    }
+
+    // 드롭다운 메뉴 토글
+    window.toggleWpTreeDropdown = function (e) {
+        if (e) e.stopPropagation();
+        const menu = document.getElementById('wp-tree-dropdown-menu');
+        if (!menu) return;
+        const isOpen = menu.style.display === 'block';
+        menu.style.display = isOpen ? 'none' : 'block';
+        if (!isOpen) {
+            const searchInput = document.getElementById('wp-tree-search');
+            if (searchInput) {
+                setTimeout(() => searchInput.focus(), 50);
+            }
+        }
+    };
+
+    // 외부 클릭 시 드롭다운 닫기
+    document.addEventListener('click', (e) => {
+        const wrapper = document.querySelector('.wp-dropdown-wrapper');
+        const menu = document.getElementById('wp-tree-dropdown-menu');
+        if (menu && menu.style.display === 'block') {
+            if (wrapper && !wrapper.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        }
+    });
 
     function updateRagGuideView(accountCode) {
         let foundItem = null;
@@ -229,16 +922,71 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ✨ AI 조서 자동생성 실행
-    async function handleGenerateWorkingPaper() {
-        if (!state.currentCompany) {
-            alert('감사 대상 기업을 먼저 선택해주세요.');
+    // =========================================================================
+    // 2-2. 비동기 알림 토스트 (Non-blocking Toast)
+    // =========================================================================
+    function showAuditToast(message, type = 'success') {
+        let toastContainer = document.getElementById('audit-toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'audit-toast-container';
+            toastContainer.style.cssText = 'position: fixed; bottom: 28px; right: 28px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;';
+            document.body.appendChild(toastContainer);
+        }
+        
+        const toast = document.createElement('div');
+        const bg = type === 'error' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : (type === 'warning' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #10b981, #059669)');
+        toast.style.cssText = `background: ${bg}; color: #ffffff; padding: 12px 20px; border-radius: 10px; font-size: 0.88rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.35); pointer-events: auto; opacity: 0; transform: translateY(12px); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.2);`;
+        toast.innerHTML = `<span>${message}</span>`;
+        toastContainer.appendChild(toast);
+        
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        });
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(12px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3200);
+    }
+
+    // =========================================================================
+    // 2-3. 조서 마크다운 실시간 서식 렌더러 (Markdown & Table Preview)
+    // =========================================================================
+    function renderMarkdownPreview(markdownText) {
+        if (!dom.wpPreview) return;
+        const text = (markdownText || '').trim();
+        if (!text) {
+            dom.wpPreview.innerHTML = `
+                <div class="wp-empty-placeholder" style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+                    <div style="font-size: 2.4rem; margin-bottom: 12px;">📑</div>
+                    <h3 style="color: #cbd5e1; font-size: 1.1rem; margin-bottom: 6px;">선택된 계정의 조서가 아직 생성되지 않았습니다</h3>
+                    <p style="font-size: 0.88rem; color: #64748b;">우측 상단의 <strong>[✨ AI 조서 자동생성]</strong> 버튼을 클릭하여 K-GAAP 표준 감사조서를 생성하세요.</p>
+                </div>
+            `;
             return;
         }
 
+        if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+            dom.wpPreview.innerHTML = marked.parse(text);
+        } else {
+            dom.wpPreview.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit; line-height: 1.7; color: #e2e8f0;">${text}</pre>`;
+        }
+    }
+
+    // ✨ AI 조서 자동생성 실행
+    async function handleGenerateWorkingPaper() {
+        if (!state.currentCompany) {
+            showAuditToast('감사 대상 기업을 먼저 선택해주세요.', 'warning');
+            return;
+        }
+
+        const origHtml = dom.btnGenerateAi.innerHTML;
         console.log(`[WP] Generating AI working paper for [${state.activeAccountCode}] at ${state.currentCompany}`);
         dom.btnGenerateAi.disabled = true;
-        dom.btnGenerateAi.innerHTML = '<span>⏳ 생성 및 대사 중...</span>';
+        dom.btnGenerateAi.innerHTML = '<span class="audit-loading-spinner"></span><span>생성 및 대사 중...</span>';
 
         try {
             const res = await fetch('/api/audit/working-papers/generate', {
@@ -255,30 +1003,40 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success && result.data) {
                 const wpData = result.data;
                 state.activeWorkingPaperMd = wpData.working_paper_md;
-                state.reconciliationData = wpData.reconciliation;
                 
-                // 마크다운 에디터 바인딩
+                // 마크다운 에디터 및 실시간 서식 뷰어 바인딩
                 dom.wpEditor.value = wpData.working_paper_md;
+                renderMarkdownPreview(wpData.working_paper_md);
                 
-                // 6대 장부 대사 바 수치 바인딩
+                // 미리보기 서식 탭 자동 활성화
+                const subTabBtns = document.querySelectorAll('.wp-sub-tabs .wp-tab-btn');
+                const subTabContents = document.querySelectorAll('.wp-tab-content');
+                subTabBtns.forEach(b => b.classList.toggle('active', b.dataset.subtab === 'subtab-wp-preview'));
+                subTabContents.forEach(c => {
+                    const isPreview = (c.id === 'subtab-wp-preview');
+                    c.style.display = isPreview ? 'block' : 'none';
+                    c.classList.toggle('active', isPreview);
+                });
+                
+                // 6대 장부 대사 대시보드 렌더링
                 if (wpData.reconciliation) {
-                    const r = wpData.reconciliation;
-                    dom.reconPriorVal.textContent = Number(r.prior_val || 0).toLocaleString() + '원';
-                    dom.reconCurrentVal.textContent = Number(r.current_val || 0).toLocaleString() + '원';
-                    dom.reconVarianceVal.textContent = `${Number(r.variance_val || 0).toLocaleString()}원 (${r.variance_pct.toFixed(1)}%)`;
-                    dom.reconStatusVal.textContent = '🟢 대사 완료 (100%)';
+                    renderReconciliationDashboard(wpData.reconciliation);
+                }
+                if (wpData.related_pnl || wpData.reconciliation?.related_pnl) {
+                    renderRelatedPnlDashboard(wpData.related_pnl || wpData.reconciliation.related_pnl);
                 }
                 
+                showAuditToast(`✨ [${state.activeAccountCode}] AI 감사조서 자동생성이 완료되었습니다.`);
                 console.log('[WP:SUCCESS] Working paper successfully generated and rendered');
             } else {
-                alert(result.error || '감사조서 생성에 실패했습니다.');
+                showAuditToast(result.error || '감사조서 생성에 실패했습니다.', 'error');
             }
         } catch (err) {
             console.error('[ERROR] Generate working paper failed:', err);
-            alert('조서 생성 중 오류가 발생했습니다: ' + err.message);
+            showAuditToast('조서 생성 중 오류가 발생했습니다: ' + err.message, 'error');
         } finally {
             dom.btnGenerateAi.disabled = false;
-            dom.btnGenerateAi.innerHTML = '<svg class="btn-icon" viewBox="0 0 24 24"><path d="M7.5 5.6L10 0l2.5 5.6L18 8l-5.5 2.4L10 16l-2.5-5.6L2 8l5.5-2.4zm12 9.4l1.5-3.4 1.5 3.4 3.4 1.5-3.4 1.5-1.5 3.4-1.5-3.4-3.4-1.5 3.4-1.5z"/></svg><span>✨ AI 조서 자동생성</span>';
+            dom.btnGenerateAi.innerHTML = origHtml;
         }
     }
 
@@ -286,13 +1044,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleExportExcel() {
         const mdContent = dom.wpEditor.value.trim();
         if (!mdContent) {
-            alert('먼저 조서를 생성하거나 작성해주세요.');
+            showAuditToast('먼저 조서를 생성하거나 작성해주세요.', 'warning');
             return;
         }
 
+        const origHtml = dom.btnExportExcel.innerHTML;
         console.log(`[WP] Exporting Excel for [${state.activeAccountCode}]`);
         dom.btnExportExcel.disabled = true;
-        dom.btnExportExcel.innerHTML = '<span>⏳ 엑셀 변환 중...</span>';
+        dom.btnExportExcel.innerHTML = '<span class="audit-loading-spinner"></span><span>엑셀 변환 중...</span>';
 
         try {
             const res = await fetch('/api/audit/working-papers/export-excel', {
@@ -311,22 +1070,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 const blob = await res.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
+                a.style.display = 'none';
                 a.href = url;
                 a.download = `${state.currentYear}_${state.currentCompany}_감사조서_${state.activeAccountCode}.xlsx`;
                 document.body.appendChild(a);
                 a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
+                
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    if (a.parentNode) a.remove();
+                }, 1000);
+                
+                showAuditToast(`📥 [${state.activeAccountCode}] K-GAAP 엑셀 다운로드가 완료되었습니다.`);
                 console.log('[WP:EXCEL_DOWNLOAD_COMPLETE]');
             } else {
-                alert('엑셀 다운로드에 실패했습니다.');
+                showAuditToast('엑셀 다운로드에 실패했습니다.', 'error');
             }
         } catch (err) {
             console.error('[ERROR] Excel export failed:', err);
-            alert('엑셀 다운로드 오류: ' + err.message);
+            showAuditToast('엑셀 다운로드 오류: ' + err.message, 'error');
         } finally {
             dom.btnExportExcel.disabled = false;
-            dom.btnExportExcel.innerHTML = '<svg class="btn-icon" viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z"/></svg><span>📥 K-GAAP 엑셀 다운로드</span>';
+            dom.btnExportExcel.innerHTML = origHtml;
         }
     }
 
@@ -464,8 +1229,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // 기업 선택 변경
-        dom.companySelect.addEventListener('change', (e) => {
+        dom.companySelect.addEventListener('change', async (e) => {
             state.currentCompany = e.target.value;
+            const foundComp = state.companiesList.find(c => c.company_name === state.currentCompany);
+            if (foundComp) {
+                updateHeaderBadges(foundComp);
+            }
+            await loadCompanyAssignment(state.currentCompany);
+            if (state.activeAccountCode) {
+                selectWorkingPaper(state.activeSectionCode || '4000', state.activeAccountCode, state.activeAccountName, state.activeSectionTitle || 'Section 4000 계정별 입증감사');
+            }
             console.log(`[ACTION] Changed company to: ${state.currentCompany}`);
         });
 
@@ -481,14 +1254,30 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTemplatesTree(state.templatesTree, query);
         });
 
-        // 에디터 탭 전환 (조서 본체 vs RAG 가이드)
-        dom.wpTabBtns.forEach(btn => {
+        // 조서 마크다운 에디터 직접 입력 시 실시간 미리보기 동기화
+        if (dom.wpEditor) {
+            dom.wpEditor.addEventListener('input', (e) => {
+                state.activeWorkingPaperMd = e.target.value;
+                renderMarkdownPreview(e.target.value);
+            });
+        }
+
+        // 서식 탭 전환 (미리보기 vs 에디터 vs RAG 가이드)
+        const subTabBtns = document.querySelectorAll('.wp-sub-tabs .wp-tab-btn');
+        const subTabContents = document.querySelectorAll('.wp-tab-content');
+        subTabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                dom.wpTabBtns.forEach(b => b.classList.remove('active'));
+                subTabBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                const targetId = btn.dataset.target;
-                dom.wpTabContents.forEach(content => {
-                    content.style.display = (content.id === targetId) ? 'block' : 'none';
+                const targetId = btn.dataset.subtab || btn.dataset.target;
+                subTabContents.forEach(content => {
+                    if (content.id === targetId) {
+                        content.style.display = 'block';
+                        content.classList.add('active');
+                    } else {
+                        content.style.display = 'none';
+                        content.classList.remove('active');
+                    }
                 });
             });
         });
@@ -496,15 +1285,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // 버튼 클릭 이벤트
         dom.btnGenerateAi.addEventListener('click', handleGenerateWorkingPaper);
         dom.btnExportExcel.addEventListener('click', handleExportExcel);
-        dom.btnSaveWp.addEventListener('click', () => alert('감사조서가 저장되었습니다. (Draft 상태)'));
+        dom.btnSaveWp.addEventListener('click', () => showAuditToast('💾 감사조서가 성공적으로 저장되었습니다. (Draft 상태)'));
 
         const btnRefresh = document.getElementById('btn-refresh-audit-data');
         if (btnRefresh) {
-            btnRefresh.addEventListener('click', () => {
-                loadCompanies();
-                loadProjects();
-                if (state.calendarInstance) state.calendarInstance.refetchEvents();
-                alert('감사 데이터를 새로고침했습니다.');
+            btnRefresh.addEventListener('click', async () => {
+                const origHtml = btnRefresh.innerHTML;
+                btnRefresh.disabled = true;
+                btnRefresh.innerHTML = '<span class="audit-loading-spinner"></span><span>새로고침 중...</span>';
+                try {
+                    await loadCompanies();
+                    await loadProjects();
+                    if (state.calendarInstance) state.calendarInstance.refetchEvents();
+                    showAuditToast('🔄 감사 데이터가 최신 상태로 새로고침되었습니다.');
+                } finally {
+                    btnRefresh.disabled = false;
+                    btnRefresh.innerHTML = origHtml;
+                }
             });
         }
 
@@ -613,14 +1410,21 @@ ${basisText}${kamContent}
 
         if (btnGenReport) {
             btnGenReport.addEventListener('click', () => {
-                generateAuditReportDraft();
-                alert('K-GAAS 700 표준 AI 감사보고서 초안이 생성되었습니다.');
+                const origHtml = btnGenReport.innerHTML;
+                btnGenReport.disabled = true;
+                btnGenReport.innerHTML = '<span class="audit-loading-spinner"></span><span>보고서 작성 중...</span>';
+                setTimeout(() => {
+                    generateAuditReportDraft();
+                    showAuditToast('📑 K-GAAS 700 표준 AI 감사보고서 초안이 생성되었습니다.');
+                    btnGenReport.disabled = false;
+                    btnGenReport.innerHTML = origHtml;
+                }, 300);
             });
         }
 
         if (btnSaveReport) {
             btnSaveReport.addEventListener('click', () => {
-                alert('감사보고서가 시스템에 안전하게 저장되었습니다.');
+                showAuditToast('💾 감사보고서가 시스템에 안전하게 저장되었습니다.');
             });
         }
 
@@ -669,6 +1473,132 @@ ${basisText}${kamContent}
         dom.formSchedule.addEventListener('submit', handleSaveSchedule);
     }
 
+    // =========================================================================
+    // 6. [K-GAAP 표준 감사절차 참고 모달] 핸들러
+    // =========================================================================
+    window.openProcedureGuideModal = function () {
+        const modal = document.getElementById('modal-audit-procedure-guide');
+        if (!modal) return;
+
+        const titleEl = document.getElementById('proc-guide-title');
+        const fileEl = document.getElementById('proc-guide-file');
+        const bodyEl = document.getElementById('proc-guide-body');
+
+        // 현재 선택된 계정 템플릿 정보 검색
+        let foundTemplate = null;
+        for (const sec of state.templatesTree) {
+            for (const item of (sec.items || [])) {
+                if (item.account_code === state.activeAccountCode) {
+                    foundTemplate = item;
+                    break;
+                }
+            }
+            if (foundTemplate) break;
+        }
+
+        const accCode = state.activeAccountCode || 'A-0';
+        const accName = state.activeAccountName || '현금및현금성자산';
+
+        if (titleEl) {
+            titleEl.textContent = `[${accCode}] ${accName} K-GAAP 표준 감사절차`;
+        }
+        if (fileEl && foundTemplate) {
+            fileEl.textContent = `서식 파일: ${foundTemplate.filename || '-'} (${foundTemplate.procedure_count || 0}개 실증절차)`;
+        }
+
+        // 세부 절차 목록 렌더링
+        if (bodyEl) {
+            bodyEl.innerHTML = '';
+
+            // 기본 가이드 헤더 카드
+            const introCard = document.createElement('div');
+            introCard.style.cssText = 'background: rgba(30,41,59,0.5); padding: 14px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);';
+            introCard.innerHTML = `
+                <div style="font-size: 0.9rem; font-weight: 600; color: #93c5fd; margin-bottom: 6px;">
+                    📌 [${accCode}] ${accName} 핵심 감사 포인트 및 기준서 지침
+                </div>
+                <div style="font-size: 0.83rem; color: #cbd5e1; line-height: 1.5;">
+                    • <strong>준용 기준서</strong>: K-GAAS 330(평가된 위험에 대한 감사인의 대응), K-GAAS 500(감사증거), K-GAAS 505(외부조회)<br>
+                    • <strong>핵심 주장</strong>: 실재성(Existence), 완전성(Completeness), 기간귀속(Cutoff), 권리와 의무(Rights & Obligations)
+                </div>
+            `;
+            bodyEl.appendChild(introCard);
+
+            // 템플릿 내 세부 절차 목록 (없을 경우 기본 표준 절차 fallback 생성)
+            let procList = foundTemplate?.procedures || [];
+            if (!procList || procList.length === 0) {
+                procList = [
+                    {
+                        procedure_type: "Part 1. 기본 실증절차",
+                        title: `1. ${accName} 총괄표 작성 및 총계정원장/시산표 대사`,
+                        assertions: ["E", "C", "CL"],
+                        content: "당기 및 전기 잔액의 일치 여부를 총계정원장 및 재무상태표와 상호 대사하고 주요 변동 원인을 분석함."
+                    },
+                    {
+                        procedure_type: "Part 1. 기본 실증절차",
+                        title: `2. ${accName} 금융기관/거래처 외부조회 및 회신 검증`,
+                        assertions: ["E", "R&O"],
+                        content: "기준일 현재 전 금융기관 및 주요 거래처에 조회서를 발송하고 직접 회신받아 장부 잔액과 대사함."
+                    },
+                    {
+                        procedure_type: "Part 2. 추가 감사절차",
+                        title: `3. 기말 결산 전후 기간귀속(Cut-off) 테스트`,
+                        assertions: ["CO", "C"],
+                        content: "결산일 전후 10일간의 입출금 및 거래 전표를 표본 추출하여 올바른 회계기간에 귀속되었는지 검증함."
+                    }
+                ];
+            }
+
+            procList.forEach((proc, idx) => {
+                const card = document.createElement('div');
+                card.style.cssText = 'background: rgba(15,23,42,0.8); padding: 14px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 8px;';
+
+                const assertionsHtml = (proc.assertions || ['E', 'C']).map(ast => {
+                    return `<span class="badge-tag" style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${ast}</span>`;
+                }).join(' ');
+
+                const safeContent = (proc.content || proc.title || '').replace(/'/g, "\\'");
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; color: #a5b4fc; font-weight: 600;">${proc.procedure_type || 'Part 1. 실증절차'}</span>
+                        <div style="display: flex; gap: 4px;">
+                            ${assertionsHtml}
+                        </div>
+                    </div>
+                    <div style="font-size: 0.9rem; font-weight: 600; color: #f8fafc;">
+                        ${proc.title || `${idx + 1}. 실증감사절차`}
+                    </div>
+                    <div style="font-size: 0.82rem; color: #94a3b8; line-height: 1.4;">
+                        ${proc.content || '표준 감사 지침에 따라 표본을 추출하고 원본 증빙과의 일치성을 대사함.'}
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+                        <button type="button" class="btn-submit" onclick="insertProcedureToEditor('${safeContent}')" style="padding: 4px 12px; font-size: 0.78rem; width: auto;">
+                            📋 조서에 이 절차 삽입
+                        </button>
+                    </div>
+                `;
+                bodyEl.appendChild(card);
+            });
+        }
+
+        modal.style.display = 'flex';
+    };
+
+    window.closeProcedureGuideModal = function () {
+        const modal = document.getElementById('modal-audit-procedure-guide');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.insertProcedureToEditor = function (procedureText) {
+        if (!dom.wpEditor) return;
+        const insertBlock = `\n\n### [수행된 감사절차]\n- **절차 내용**: ${procedureText}\n- **수행 결과**: 원본 증빙 및 원장과 대사하였으며 중요한 왜곡표시가 발견되지 아니함.\n- **검증 완료일**: ${new Date().toISOString().split('T')[0]}`;
+        dom.wpEditor.value += insertBlock;
+        alert('✓ 선택한 감사절차가 조서 에디터에 추가되었습니다.');
+        closeProcedureGuideModal();
+    };
+
     // 포털 시작
     initAuditPortal();
 });
+

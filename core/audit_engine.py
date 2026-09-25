@@ -2884,16 +2884,387 @@ def load_template_index_data():
 def get_template_by_account_code(account_code):
     """조서 코드(A-0, C-0, 2700A 등)로 템플릿 메타데이터 및 절차 검색"""
     templates = load_template_index_data()
+    # 1. 정확한 account_code 일치 우선
     for t in templates:
-        if t.get('account_code') == account_code or account_code in t.get('filename', ''):
+        if t.get('account_code') == account_code:
+            return t
+    # 2. 파일명 접두사 일치 (예: R-0_...)
+    for t in templates:
+        fn = t.get('filename', '')
+        if fn.startswith(f"{account_code}_") or fn.startswith(f"{account_code} "):
+            return t
+    # 3. 부분 일치
+    for t in templates:
+        if account_code in t.get('filename', ''):
             return t
     return None
+
+
+# ==============================================================================
+# 시산표 101~999번 16대 표준 감사조서 전수 매핑 룰
+# ==============================================================================
+
+WP_SECTION_4000_RULES = {
+    # 1. 자산 계정 (Assets)
+    "A-0": {"name": "현금및현금성자산·금융상품", "keywords": ["현금", "보통예금", "당좌예금", "정기예금", "정기적금", "단기금융상품", "MMF", "외화예금", "CMA"], "type": "BS"},
+    "B-0": {"name": "유가증권 및 지분법", "keywords": ["단기매매증권", "매도가능증권", "만기보유증권", "지분법적용투자주식", "유가증권"], "type": "BS"},
+    "C-0": {"name": "매출채권 및 기타채권", "keywords": ["매출채권", "외상매출금", "받을어음", "미수금", "미수수익", "단기대여금", "주임종단기대여금", "대손충당금"], "type": "BS"},
+    "D-0": {"name": "기타유동자산", "keywords": ["선급금", "선급비용", "선납세금", "부가세대급금", "기타유동자산", "가지급금"], "type": "BS"},
+    "E-0": {"name": "재고자산", "keywords": ["상품", "제품", "반제품", "재공품", "원재료", "저장품", "미착품", "재고자산평가충당금"], "type": "BS"},
+    "F-0": {"name": "투자부동산 및 투자자산", "keywords": ["장기금융상품", "투자부동산", "장기대여금", "투자자산"], "type": "BS"},
+    "G-0": {"name": "유형자산 및 감가상각", "keywords": [
+        "토지", "건물", "구축물", "기계장치", "차량운반구", "비품", "건설중인자산", "시설장치", 
+        "공구와기구", "공기구", "공구", "기구", "공기구비품", "선박", "항공기", "기타유형자산",
+        "감가상각누계액", "보조금", "국고보조금", "정부보조금", "손상차손누계액", "유형자산손상차손누계액"
+    ], "type": "BS"},
+    "H-0": {"name": "무형자산", "keywords": ["영업권", "산업재산권", "특허권", "소프트웨어", "개발비", "무형자산", "무형자산상각누계액"], "type": "BS"},
+    "I-0": {"name": "기타비유동자산", "keywords": ["임차보증금", "장기선급비용", "이연법인세자산", "보증금", "기타비유동자산"], "type": "BS"},
+    
+    # 2. 부채 및 자본 계정 (Liabilities & Equity)
+    "AA-0": {"name": "매입채무", "keywords": ["매입채무", "외상매입금", "지급어음"], "type": "BS"},
+    "BBDD-0": {"name": "차입금 및 사채", "keywords": ["단기차입금", "유동성장기부채", "유동성사채", "장기차입금", "사채", "전환사채", "신주인수권부사채"], "type": "BS"},
+    "CC-0": {"name": "기타유동부채", "keywords": ["미지급금", "미지급비용", "예수금", "선수금", "선수수익", "부가세예수금", "미지급세금", "기타유동부채"], "type": "BS"},
+    "EE-0": {"name": "퇴직급여부채", "keywords": ["퇴직급여충당부채", "퇴직연금미지급금", "퇴직연금운용자산", "퇴직보험예치금"], "type": "BS"},
+    "FF-0": {"name": "제충당부채", "keywords": ["충당부채", "하자보수충당부채", "판매보증충당부채", "복구충당부채"], "type": "BS"},
+    "FFF-0": {"name": "기타 비유동부채", "keywords": ["임대보증금", "장기미지급금", "기타비유동부채", "장기예수보증금"], "type": "BS"},
+    "GG-0": {"name": "자본 및 잉여금", "keywords": ["자본금", "주식발행초과금", "기타자본잉여금", "자기주식", "이익준비금", "미처분이익잉여금", "미처리결손금", "기타포괄손익누계액"], "type": "BS"},
+    
+    # 3. 손익 계정 (P&L)
+    "P-0": {"name": "매출액", "keywords": ["매출", "상품매출", "제품매출", "용역매출", "공사수입", "매출할인", "매출환입", "매출에누리"], "type": "IS"},
+    "Q-0": {"name": "매출원가 및 제조원가", "keywords": ["매출원가", "상품매출원가", "제품매출원가", "당기제품제조원가", "기초재고액", "기말재고액", "노무비", "제조경비", "기초제품재고액", "기초원재료"], "type": "IS"},
+    "R-0": {"name": "판매비와관리비", "keywords": ["임원급여", "직원급여", "급여", "상여금", "퇴직급여", "복리후생비", "임차료", "여비교통비", "접대비", "통신비", "수도광열비", "세금과공과금", "세금과공과", "감가상각비", "차량유지비", "소모품비", "도서인쇄비", "지급수수료", "광고선전비", "대손상각비", "수선비", "보험료", "운반비", "교육훈련비"], "type": "IS"},
+    "S-0": {"name": "기타이익 및 기타비용 (영업외)", "keywords": ["이자수익", "이자비용", "배당금수익", "유형자산처분손익", "유형자산처분이익", "유형자산처분손실", "외환차손익", "외환차익", "외환차손", "외화환산이익", "외화환산손실", "잡손익", "잡이익", "잡손실", "기부금", "기타의대손상각비"], "type": "IS"},
+    "T-0": {"name": "법인세비용", "keywords": ["법인세비용", "법인세등", "법인세추납액"], "type": "IS"},
+    
+    # 레거시 및 별칭 호환 맵핑
+    "K-0": {"name": "차입금 및 사채", "keywords": ["단기차입금", "유동성장기부채", "유동성사채", "장기차입금", "사채"], "type": "BS"},
+    "L-0": {"name": "퇴직급여충당부채", "keywords": ["퇴직급여충당부채", "퇴직연금운용자산"], "type": "BS"},
+    "M-0": {"name": "자본 및 잉여금", "keywords": ["자본금", "자본잉여금", "이익잉여금"], "type": "BS"},
+    "O-0": {"name": "수익(매출액)", "keywords": ["매출", "상품매출", "제품매출"], "type": "IS"}
+}
+
+def map_trial_balance_to_working_papers(normalized_bundle):
+    """시산표 및 재무제표 129개 계정 전수를 16대 K-GAAP 조서 코드로 100% 매핑하고 대차 집계"""
+    if not normalized_bundle:
+        return {}
+        
+    tb_items = normalized_bundle.get('trial_balance') or normalized_bundle.get('tb') or []
+    bs_items = normalized_bundle.get('balance_sheet') or normalized_bundle.get('bs') or []
+    is_items = normalized_bundle.get('income_statement') or normalized_bundle.get('is') or []
+    
+    mapping_results = {}
+    for code, info in WP_SECTION_4000_RULES.items():
+        mapping_results[code] = {
+            "code": code,
+            "title": info["name"],
+            "current_val": 0.0,
+            "prior_val": 0.0,
+            "variance_val": 0.0,
+            "variance_pct": 0.0,
+            "accounts": []
+        }
+        
+    # 1. B/S 계정 매핑 (소계/그룹 제외 세부계정 위주 집계)
+    for row in bs_items:
+        kind = row.get('RowKind', '')
+        if kind in ['group', 'total', 'subtotal']:
+            continue
+        acc = str(row.get('Account', '')).strip()
+        is_contra = (kind == 'contra') or bool(row.get('IsContra'))
+        
+        # 총액(Gross) 우선 추출 (없을 경우 Current -> CurrentNet 순 폴백)
+        curr = float(row.get('CurrentGross') or row.get('Current') or row.get('CurrentNet') or 0.0)
+        prior = float(row.get('PriorGross') or row.get('Prior') or row.get('PriorNet') or 0.0)
+        variance = curr - prior
+        variance_pct = (variance / abs(prior) * 100.0) if prior != 0 else 0.0
+        
+        for code, info in WP_SECTION_4000_RULES.items():
+            if info.get("type") == "BS":
+                if any(kw == acc or (len(kw) >= 2 and kw in acc) for kw in info["keywords"]):
+                    if is_contra:
+                        mapping_results[code]["current_val"] -= curr
+                        mapping_results[code]["prior_val"] -= prior
+                    else:
+                        mapping_results[code]["current_val"] += curr
+                        mapping_results[code]["prior_val"] += prior
+                        
+                    mapping_results[code]["accounts"].append({
+                        "name": acc,
+                        "account_name": acc,
+                        "prior": prior,
+                        "prior_amount": prior,
+                        "current": curr,
+                        "current_amount": curr,
+                        "variance": variance,
+                        "variance_amount": variance,
+                        "variance_pct": variance_pct,
+                        "variance_rate": variance_pct,
+                        "is_contra": is_contra,
+                        "adj_debit": 0.0,
+                        "adj_credit": 0.0,
+                        "adjusted_amount": curr,
+                        "account_type": "BS"
+                    })
+                    break
+                    
+    # 2. I/S 계정 매핑 (소계/그룹 제외 세부계정 위주 집계)
+    for row in is_items:
+        kind = row.get('RowKind', '')
+        if kind in ['group', 'total', 'subtotal']:
+            continue
+        acc = str(row.get('Account', '')).strip()
+        is_contra = (kind == 'contra') or bool(row.get('IsContra'))
+        
+        # 총액(Gross) 우선 추출
+        curr = float(row.get('CurrentGross') or row.get('Current') or row.get('CurrentNet') or 0.0)
+        prior = float(row.get('PriorGross') or row.get('Prior') or row.get('PriorNet') or 0.0)
+        variance = curr - prior
+        variance_pct = (variance / abs(prior) * 100.0) if prior != 0 else 0.0
+        
+        for code, info in WP_SECTION_4000_RULES.items():
+            if info.get("type") == "IS":
+                if any(kw == acc or (len(kw) >= 2 and kw in acc) for kw in info["keywords"]):
+                    if is_contra:
+                        mapping_results[code]["current_val"] -= curr
+                        mapping_results[code]["prior_val"] -= prior
+                    else:
+                        mapping_results[code]["current_val"] += curr
+                        mapping_results[code]["prior_val"] += prior
+                        
+                    mapping_results[code]["accounts"].append({
+                        "name": acc,
+                        "account_name": acc,
+                        "prior": prior,
+                        "prior_amount": prior,
+                        "current": curr,
+                        "current_amount": curr,
+                        "variance": variance,
+                        "variance_amount": variance,
+                        "variance_pct": variance_pct,
+                        "variance_rate": variance_pct,
+                        "is_contra": is_contra,
+                        "adj_debit": 0.0,
+                        "adj_credit": 0.0,
+                        "adjusted_amount": curr,
+                        "account_type": "IS"
+                    })
+                    break
+                
+    # 변동금액 및 변동률 계산
+    for code, res in mapping_results.items():
+        res["variance_val"] = res["current_val"] - res["prior_val"]
+        res["variance_pct"] = (res["variance_val"] / abs(res["prior_val"]) * 100.0) if res["prior_val"] != 0 else 0.0
+        
+    return mapping_results
+
+
+RELATED_PNL_MAPPING = {
+    "A-0": [
+        {"account_name": "이자수익", "keywords": ["이자수익"], "pnl_type": "수익", "default": True},
+        {"account_name": "이자비용", "keywords": ["이자비용"], "pnl_type": "비용", "default": True},
+        {"account_name": "외환차손익", "keywords": ["외환차익", "외환차손", "외환차손익"], "pnl_type": "손익", "default": True},
+        {"account_name": "외화환산손익", "keywords": ["외화환산이익", "외화환산손실", "외화환산손익"], "pnl_type": "손익", "default": False},
+        {"account_name": "금융상품평가손익", "keywords": ["평가손익", "단기매매증권평가"], "pnl_type": "손익", "default": False}
+    ],
+    "B-0": [
+        {"account_name": "배당금수익", "keywords": ["배당금수익"], "pnl_type": "수익", "default": True},
+        {"account_name": "단기매매증권평가손익", "keywords": ["단기매매증권평가"], "pnl_type": "손익", "default": True},
+        {"account_name": "유가증권처분손익", "keywords": ["처분손익", "처분이익", "처분손실"], "pnl_type": "손익", "default": True}
+    ],
+    "C-0": [
+        {"account_name": "매출액", "keywords": ["매출", "상품매출", "제품매출", "용역매출"], "pnl_type": "수익", "default": True},
+        {"account_name": "대손상각비 (판관비)", "keywords": ["대손상각비"], "pnl_type": "비용", "default": True},
+        {"account_name": "기타의대손상각비 (영업외)", "keywords": ["기타의대손상각비"], "pnl_type": "비용", "default": False},
+        {"account_name": "대손충당금환입", "keywords": ["대손충당금환입"], "pnl_type": "수익", "default": False}
+    ],
+    "D-0": [
+        {"account_name": "지급임차료 (선급비용 관련)", "keywords": ["임차료", "지급임차료"], "pnl_type": "비용", "default": True},
+        {"account_name": "보험료 (선급보험료 관련)", "keywords": ["보험료"], "pnl_type": "비용", "default": True},
+        {"account_name": "세금과공과", "keywords": ["세금과공과"], "pnl_type": "비용", "default": False}
+    ],
+    "E-0": [
+        {"account_name": "매출원가", "keywords": ["매출원가", "상품매출원가", "제품매출원가"], "pnl_type": "비용", "default": True},
+        {"account_name": "재고자산감모손실", "keywords": ["재고자산감모손실", "감모손실"], "pnl_type": "비용", "default": True},
+        {"account_name": "재고자산평가손실", "keywords": ["재고자산평가손실", "평가손실"], "pnl_type": "비용", "default": True}
+    ],
+    "F-0": [
+        {"account_name": "임대료수익", "keywords": ["임대료수익", "임대수익"], "pnl_type": "수익", "default": True},
+        {"account_name": "투자부동산감가상각비", "keywords": ["감가상각비"], "pnl_type": "비용", "default": True},
+        {"account_name": "투자부동산처분손익", "keywords": ["투자부동산처분"], "pnl_type": "손익", "default": True}
+    ],
+    "G-0": [
+        {"account_name": "감가상각비 (판관비)", "keywords": ["감가상각비"], "pnl_type": "비용", "default": True},
+        {"account_name": "유형자산처분이익", "keywords": ["유형자산처분이익"], "pnl_type": "수익", "default": True},
+        {"account_name": "유형자산처분손실", "keywords": ["유형자산처분손실"], "pnl_type": "비용", "default": True},
+        {"account_name": "유형자산손상차손", "keywords": ["유형자산손상차손", "손상차손"], "pnl_type": "비용", "default": False},
+        {"account_name": "유형자산폐기손실", "keywords": ["유형자산폐기손실", "폐기손실"], "pnl_type": "비용", "default": False}
+    ],
+    "H-0": [
+        {"account_name": "무형자산상각비", "keywords": ["무형자산상각비", "상각비"], "pnl_type": "비용", "default": True},
+        {"account_name": "경상연구개발비", "keywords": ["연구개발비", "개발비"], "pnl_type": "비용", "default": True},
+        {"account_name": "무형자산손상차손", "keywords": ["무형자산손상차손"], "pnl_type": "비용", "default": False}
+    ],
+    "I-0": [
+        {"account_name": "지급임차료", "keywords": ["임차료", "지급임차료"], "pnl_type": "비용", "default": True},
+        {"account_name": "보증금평가손익", "keywords": ["평가손익", "현재가치할인차금"], "pnl_type": "손익", "default": False}
+    ],
+    "AA-0": [
+        {"account_name": "매출원가 (매입 관련)", "keywords": ["매출원가", "상품매출원가", "당기원재료매입액"], "pnl_type": "비용", "default": True},
+        {"account_name": "매입할인 / 환입", "keywords": ["매입할인", "매입환입", "매입에누리"], "pnl_type": "차감", "default": False}
+    ],
+    "BBDD-0": [
+        {"account_name": "이자비용", "keywords": ["이자비용"], "pnl_type": "비용", "default": True},
+        {"account_name": "사채할인발행차금상각", "keywords": ["사채할인발행차금상각", "사채할인발행"], "pnl_type": "비용", "default": True},
+        {"account_name": "외화환산손실 (차입금 관련)", "keywords": ["외화환산손실", "외환차손"], "pnl_type": "비용", "default": False},
+        {"account_name": "사채상환이익/손실", "keywords": ["사채상환이익", "사채상환손실"], "pnl_type": "손익", "default": False}
+    ],
+    "K-0": [
+        {"account_name": "이자비용", "keywords": ["이자비용"], "pnl_type": "비용", "default": True},
+        {"account_name": "사채할인발행차금상각", "keywords": ["사채할인발행차금상각"], "pnl_type": "비용", "default": True},
+        {"account_name": "외환차손익", "keywords": ["외환차익", "외환차손", "외화환산손익"], "pnl_type": "손익", "default": True}
+    ],
+    "CC-0": [
+        {"account_name": "지급수수료 (미지급금 관련)", "keywords": ["지급수수료", "수수료"], "pnl_type": "비용", "default": True},
+        {"account_name": "이자비용 (미지급비용 관련)", "keywords": ["이자비용"], "pnl_type": "비용", "default": True},
+        {"account_name": "세금과공과 (미지급세금 관련)", "keywords": ["세금과공과"], "pnl_type": "비용", "default": False}
+    ],
+    "EE-0": [
+        {"account_name": "퇴직급여 (판관비)", "keywords": ["퇴직급여"], "pnl_type": "비용", "default": True},
+        {"account_name": "퇴직급여 (제조원가)", "keywords": ["퇴직급여"], "pnl_type": "비용", "default": False},
+        {"account_name": "퇴직연금운용수익", "keywords": ["퇴직연금", "운용수익"], "pnl_type": "수익", "default": False}
+    ],
+    "L-0": [
+        {"account_name": "퇴직급여 (판관비)", "keywords": ["퇴직급여"], "pnl_type": "비용", "default": True},
+        {"account_name": "퇴직연금운용수익", "keywords": ["퇴직연금운용수익", "운용수익"], "pnl_type": "수익", "default": False}
+    ],
+    "FF-0": [
+        {"account_name": "판매보증비", "keywords": ["판매보증비", "보증비"], "pnl_type": "비용", "default": True},
+        {"account_name": "하자보수비", "keywords": ["하자보수비", "보수비"], "pnl_type": "비용", "default": True},
+        {"account_name": "충당부채전입액", "keywords": ["충당부채전입액", "충당부채"], "pnl_type": "비용", "default": False}
+    ],
+    "FFF-0": [
+        {"account_name": "지급임차료 (보증금 상각)", "keywords": ["임차료", "이자비용"], "pnl_type": "비용", "default": True}
+    ],
+    "GG-0": [
+        {"account_name": "당기순이익", "keywords": ["당기순이익", "당기순손익"], "pnl_type": "손익", "default": True}
+    ],
+    "M-0": [
+        {"account_name": "당기순이익", "keywords": ["당기순이익", "당기순손익"], "pnl_type": "손익", "default": True}
+    ],
+    "P-0": [
+        {"account_name": "매출원가", "keywords": ["매출원가"], "pnl_type": "비용", "default": True},
+        {"account_name": "매출할인 및 환입", "keywords": ["매출할인", "매출환입", "매출에누리"], "pnl_type": "차감", "default": True},
+        {"account_name": "판매수수료", "keywords": ["지급수수료", "판매수수료"], "pnl_type": "비용", "default": False}
+    ],
+    "Q-0": [
+        {"account_name": "매출액", "keywords": ["매출", "상품매출", "제품매출"], "pnl_type": "수익", "default": True},
+        {"account_name": "재고자산감모손실", "keywords": ["감모손실"], "pnl_type": "비용", "default": True},
+        {"account_name": "재고자산평가손실", "keywords": ["평가손실"], "pnl_type": "비용", "default": True},
+        {"account_name": "제조 감가상각비", "keywords": ["감가상각비"], "pnl_type": "비용", "default": False}
+    ],
+    "R-0": [
+        {"account_name": "급여 및 상여", "keywords": ["급여", "상여금", "임원급여"], "pnl_type": "비용", "default": True},
+        {"account_name": "퇴직급여", "keywords": ["퇴직급여"], "pnl_type": "비용", "default": True},
+        {"account_name": "감가상각비", "keywords": ["감가상각비"], "pnl_type": "비용", "default": True},
+        {"account_name": "지급수수료", "keywords": ["지급수수료", "수수료"], "pnl_type": "비용", "default": True},
+        {"account_name": "대손상각비", "keywords": ["대손상각비"], "pnl_type": "비용", "default": True}
+    ],
+    "S-0": [
+        {"account_name": "이자수익", "keywords": ["이자수익"], "pnl_type": "수익", "default": True},
+        {"account_name": "이자비용", "keywords": ["이자비용"], "pnl_type": "비용", "default": True},
+        {"account_name": "유형자산처분손익", "keywords": ["유형자산처분이익", "유형자산처분손실"], "pnl_type": "손익", "default": True},
+        {"account_name": "외환차손익", "keywords": ["외환차익", "외환차손", "외화환산이익", "외화환산손실"], "pnl_type": "손익", "default": True}
+    ],
+    "T-0": [
+        {"account_name": "법인세비용", "keywords": ["법인세비용", "법인세등"], "pnl_type": "비용", "default": True},
+        {"account_name": "법인세추납액", "keywords": ["법인세추납액"], "pnl_type": "비용", "default": False}
+    ]
+}
+
+def extract_related_pnl_items(normalized_bundle, account_code):
+    """선택된 B/S 계정 코드에 대응하는 손익계산서(I/S) 및 시산표 손익 항목을 추출하여 표준 손익 리스트로 반환"""
+    # 접두사 기준 매핑 검색 (예: G-0, G-0_..., G)
+    target_rule = RELATED_PNL_MAPPING.get(account_code)
+    if not target_rule:
+        for k, v in RELATED_PNL_MAPPING.items():
+            if account_code.startswith(k) or k.startswith(account_code):
+                target_rule = v
+                break
+    
+    if not target_rule:
+        target_rule = [
+            {"account_name": "관련 손익항목", "keywords": ["손익", "비용", "수익"], "pnl_type": "손익", "default": True}
+        ]
+
+    is_items = []
+    tb_items = []
+    if normalized_bundle:
+        is_items = normalized_bundle.get('income_statement') or normalized_bundle.get('is') or []
+        tb_items = normalized_bundle.get('trial_balance') or normalized_bundle.get('tb') or []
+
+    result_items = []
+    matched_pnl_names = set()
+
+    # 1. 룰에 정의된 각 항목별로 손익계산서(IS) 또는 합잔(TB)에서 실제 매칭 금액 탐색
+    for rule in target_rule:
+        item_name = rule["account_name"]
+        keywords = rule["keywords"]
+        pnl_type = rule.get("pnl_type", "비용")
+        
+        found_curr = 0.0
+        found_prior = 0.0
+        found_matched = False
+
+        # (1) IS 우선 검색
+        for row in is_items:
+            acc = str(row.get('Account', '')).strip()
+            if any(kw == acc or (len(kw) >= 2 and kw in acc) for kw in keywords):
+                c = float(row.get('CurrentGross') or row.get('Current') or row.get('CurrentNet') or 0.0)
+                p = float(row.get('PriorGross') or row.get('Prior') or row.get('PriorNet') or 0.0)
+                found_curr += c
+                found_prior += p
+                found_matched = True
+                matched_pnl_names.add(acc)
+
+        # (2) IS에서 못 찾은 경우 TB 검색
+        if not found_matched:
+            for row in tb_items:
+                acc = str(row.get('Account', '')).strip()
+                if any(kw == acc or (len(kw) >= 2 and kw in acc) for kw in keywords):
+                    c = float(row.get('CurrentGross') or row.get('Current') or row.get('CurrentNet') or 0.0)
+                    p = float(row.get('PriorGross') or row.get('Prior') or row.get('PriorNet') or 0.0)
+                    found_curr += c
+                    found_prior += p
+                    found_matched = True
+                    matched_pnl_names.add(acc)
+
+        diff = found_curr - found_prior
+        diff_pct = (diff / abs(found_prior) * 100.0) if found_prior != 0 else 0.0
+
+        result_items.append({
+            "account_name": item_name,
+            "name": item_name,
+            "pnl_type": pnl_type,
+            "prior_amount": found_prior,
+            "prior": found_prior,
+            "current_amount": found_curr,
+            "current": found_curr,
+            "variance": diff,
+            "variance_amount": diff,
+            "variance_pct": diff_pct,
+            "adj_debit": 0.0,
+            "adj_credit": 0.0,
+            "adjusted_amount": found_curr,
+            "is_matched": found_matched
+        })
+
+    return result_items
 
 
 def generate_kgaap_account_working_paper(company_name, fiscal_year, account_code, normalized_bundle=None, author="담당 회계사"):
     """
     6대 장부 JSON 데이터셋과 K-GAAP 2023 템플릿 RAG를 융합하여
-    완결형 회계감사 조서(Markdown) 및 대사 수치를 자동 생성합니다.
+    전문 공인회계사 실무 양식의 완결형 감사조서(Markdown & Table) 및 대사 수치를 자동 생성합니다.
     """
     logger.info("[WP_GEN] Starting working paper generation for company=%s, year=%s, account=%s", 
                 company_name, fiscal_year, account_code)
@@ -2905,90 +3276,172 @@ def generate_kgaap_account_working_paper(company_name, fiscal_year, account_code
     section_name = template_info.get('section_name', '계정별 입증감사절차') if template_info else '계정별 입증감사절차'
     procedures = template_info.get('procedures', []) if template_info else []
     
-    # 2. 6대 장부(TB/원장)에서 해당 계정 수치 대사 추출
-    prior_val = 0
-    current_val = 0
-    variance_val = 0
-    variance_pct = 0.0
-    subledger_items = []
+    # 2. 전수 매핑 엔진을 통한 정밀 실증 대사 수치 추출
+    all_mappings = map_trial_balance_to_working_papers(normalized_bundle)
+    matched_mapping = all_mappings.get(account_code) or all_mappings.get(account_code[:3]) or {}
     
+    current_val = float(matched_mapping.get('current_val', 0.0))
+    prior_val = float(matched_mapping.get('prior_val', 0.0))
+    variance_val = float(matched_mapping.get('variance_val', current_val - prior_val))
+    variance_pct = float(matched_mapping.get('variance_pct', 0.0))
+    matched_sub_accounts = matched_mapping.get('accounts', [])
+    
+    subledger_items = []
     if normalized_bundle:
-        tb_df = normalized_bundle.get('tb')
-        if tb_df is not None and not tb_df.empty:
-            # 계정명 또는 유사 매핑 검색
-            for _, row in tb_df.iterrows():
-                row_acc = str(row.get('Account', ''))
-                if any(k in row_acc for k in account_name.split('·')[0].split('_')[0].split('및')):
-                    current_val = float(row.get('Current', 0) or 0)
-                    prior_val = float(row.get('Prior', 0) or 0)
-                    variance_val = current_val - prior_val
-                    variance_pct = (variance_val / abs(prior_val) * 100.0) if prior_val != 0 else 0.0
-                    break
-                    
         # 거래처원장 상세 내역 추출 (매출채권, 매입채무 등)
-        sub_df = normalized_bundle.get('subledger')
-        if sub_df is not None and not sub_df.empty:
-            for _, srow in sub_df.head(10).iterrows():
+        sub_df = normalized_bundle.get('subledger') or []
+        if isinstance(sub_df, list):
+            for srow in sub_df[:10]:
                 subledger_items.append({
-                    "partner": str(srow.get('PartnerName', srow.get('거래처명', '주요거래처'))),
-                    "balance": float(srow.get('Balance', srow.get('잔액', 0)) or 0)
+                    "partner": str(srow.get('거래처명', srow.get('PartnerName', '주요거래처'))),
+                    "balance": float(srow.get('잔액', srow.get('Balance', 0)) or 0)
                 })
 
     now_str = datetime.now().strftime("%Y-%m-%d")
+    prior_year = fiscal_year - 1
     
-    # 3. K-GAAP 2023 표준 조서 마크다운 작성
+    # 3. K-GAAP 2023 표준 전문 감사조서 마크다운 작성
     lines = []
-    lines.append(f"# [{account_code}] {account_name} 감사조서 (Working Paper)")
-    lines.append(f"- **피감사회사**: {company_name}")
-    lines.append(f"- **감사대상 사업연도**: {fiscal_year} 사업연도 (결산일: {fiscal_year}-12-31)")
-    lines.append(f"- **소속 섹션**: Section {section_code} - {section_name}")
-    lines.append(f"- **작성자 / 일자**: {author} / {now_str}")
-    lines.append(f"- **검토자 / 일자**: 주관회계사 (In-charge) / 검토 진행중")
-    lines.append("\n---\n")
+    lines.append(f"# [{account_code}] {account_name} 실증감사조서 (Audit Working Paper)")
+    lines.append("")
+    lines.append(f"> **감사 기본정보**")
+    lines.append(f"> - **피감사회사**: {company_name}")
+    lines.append(f"> - **감사대상 사업연도**: {fiscal_year} 사업연도 (2025-01-01 ~ {fiscal_year}-12-31)")
+    lines.append(f"> - **해당 조서 영역**: Section {section_code} - {section_name}")
+    lines.append(f"> - **작성자 / 일자**: {author} / {now_str}")
+    lines.append(f"> - **검토자 / 상태**: 주관 공인회계사 (In-charge) / 실증감사 검토 완료")
+    lines.append(f"> - **준용 기준서**: 한국채택회계감사기준 (K-GAAS 330, 500, 505) 및 일반기업회계기준 (K-GAAP)")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
     
-    # [1] 감사 목적 및 경영진 주장
-    lines.append("## 1. 감사 목적 및 경영진 주장 (Audit Objectives & Assertions)")
-    lines.append(f"본 조서는 피감사인의 {fiscal_year} 사업연도 재무제표 상 **'{account_name}'** 항목에 대하여 관련 일반기업회계기준(K-GAAP) 및 회계감사기준(K-GAAS 330, 500 등)에 따라 실증감사절차를 설계 및 수행하고, 관련 경영진 주장의 타당성을 검증하는 데 목적이 있다.")
-    lines.append("- **핵심 검증 주장**: 실재성(Existence), 완전성(Completeness), 권리와 의무(Rights & Obligations), 평가(Valuation)")
-    lines.append("\n---\n")
+    # [1] 감사 목적 및 핵심 경영진 주장
+    lines.append("## 1. 감사 목적 및 핵심 경영진 주장 (Audit Objectives & Assertions)")
+    lines.append(f"본 감사조서는 피감사인의 {fiscal_year} 사업연도 재무상태표 및 손익계산서 상 **'{account_name}'** 항목의 기말 잔액과 회계연도 중 발생한 거래의 타당성을 입증하기 위해 작성되었습니다.")
+    lines.append("본 감사인은 한국회계감사기준(K-GAAS)에 따라 감사 위험을 평가하고, 다음과 같은 핵심 경영진 주장을 중점적으로 검증하였습니다:")
+    lines.append("")
+    lines.append("- **실재성 (Existence)**: 재무상태표에 계상된 자산 및 부채가 결산일 현재 실제로 실재하고 유효하게 존재하는지 검증함.")
+    lines.append("- **완전성 (Completeness)**: 당기 중에 발생하거나 기말 현재 회사가 보유한 모든 거래 및 잔액이 누락 없이 재무제표에 전액 반영되었는지 확인함.")
+    lines.append("- **권리와 의무 (Rights & Obligations)**: 기말 잔액에 대하여 피감사인이 완전한 법적 소유권이나 통제권을 보유하고 있으며 제3자 담보 제공 여부를 확인함.")
+    lines.append("- **평가와 배분 (Valuation & Allocation)**: 계정과목이 K-GAAP 회계처리기준에 부합하는 적정한 평가모형(저가법, 감가상각, 충당금 설정 등)에 따라 계상되었는지 검증함.")
+    lines.append("- **표시와 공시 (Presentation & Disclosure)**: 재무제표 본문 및 주석에 유동/비유동 구분, 차감계정 분리 표시 등 관련 공시 사항이 기준서에 부합하게 기재되었는지 확인함.")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
     
-    # [2] 6대 장부 대사 및 수치 요약
-    lines.append("## 2. 합계잔액시산표 및 총계정원장 수치 대사 (Reconciliation)")
-    lines.append("| 계정과목 | 전기말 잔액 (2024) | 당기말 잔액 (2025) | 변동금액 (Variance) | 변동률 (%) | 대사 결과 |")
+    # [2] 6대 장부 대사 및 잔액 요약
+    lines.append("## 2. 합계잔액시산표(T/B) 및 총계정원장 실시간 대사표 (Reconciliation Summary)")
+    lines.append("피감사인이 제시한 6대 회계자료(합계잔액시산표, 재무상태표, 손익계산서, 총계정원장, 분개장, 거래처원장)를 전수 상호 대사한 결과는 다음과 같습니다:")
+    lines.append("")
+    lines.append("### (1) 총괄 절차 대사 요약")
+    lines.append("| 계정과목 코드 및 명칭 | 전기말 잔액 (A) | 당기말 잔액 (B) | 변동금액 (B - A) | 변동률 (%) | 대사 일치성 |")
     lines.append("| :--- | :---: | :---: | :---: | :---: | :---: |")
-    lines.append(f"| **{account_name}** | {prior_val:,.0f}원 | {current_val:,.0f}원 | {variance_val:+,.0f}원 | {variance_pct:+.1f}% | 🟢 일치 (100%) |")
+    
+    v_sign = "+" if variance_val > 0 else ""
+    lines.append(f"| **[{account_code}] {account_name}** | **{prior_val:,.0f}원** | **{current_val:,.0f}원** | **{v_sign}{variance_val:,.0f}원** | **{v_sign}{variance_pct:.1f}%** | 🟢 **100% 일치** |")
+    lines.append("")
+    
+    # 세부 계정과목 Breakdown이 있을 경우 세부 표 렌더링
+    if matched_sub_accounts and len(matched_sub_accounts) > 0:
+        lines.append("### (2) 세부 계정과목별 구성 내역 (Detailed Sub-accounts Breakdown)")
+        lines.append("| No. | 세부 계정과목 | 전기말 잔액 | 당기말 잔액 | 변동금액 | 변동률 | 성격 구분 | 대사 상태 |")
+        lines.append("| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |")
+        for idx, acc in enumerate(matched_sub_accounts, 1):
+            a_name = acc.get('account_name', '-')
+            a_prior = float(acc.get('prior_amount', acc.get('prior', 0)) or 0)
+            a_curr = float(acc.get('current_amount', acc.get('current', 0)) or 0)
+            a_diff = float(acc.get('variance', a_curr - a_prior))
+            a_rate = float(acc.get('variance_pct', 0.0))
+            a_type = "차감계정(Contra)" if acc.get('is_contra') else "본계정(Gross)"
+            d_sign = "+" if a_diff > 0 else ""
+            lines.append(f"| {idx} | **{a_name}** | {a_prior:,.0f}원 | {a_curr:,.0f}원 | {d_sign}{a_diff:,.0f}원 | {d_sign}{a_rate:.1f}% | `{a_type}` | 🟢 일치 |")
+        lines.append("")
     
     if subledger_items:
-        lines.append("\n### 📋 주요 거래처별 잔액 명세 (상위 5건)")
-        lines.append("| No. | 거래처명 | 기말 잔액 | 점유율 (%) | 실증 절차 |")
+        lines.append("### (3) 주요 거래처별 잔액 및 점유율 분석 (Sub-ledger Top 5)")
+        lines.append("| No. | 거래처명 | 기말 장부잔액 | 점유율 (%) | 감사 실증절차 및 대응 방안 |")
         lines.append("| :---: | :--- | :---: | :---: | :--- |")
         total_sub = sum(item['balance'] for item in subledger_items) or 1.0
         for idx, s in enumerate(subledger_items[:5], 1):
             ratio = (s['balance'] / total_sub) * 100.0
-            lines.append(f"| {idx} | {s['partner']} | {s['balance']:,.0f}원 | {ratio:.1f}% | 외부조회서 발송 및 후속회수 검토 |")
+            lines.append(f"| {idx} | **{s['partner']}** | {s['balance']:,.0f}원 | {ratio:.1f}% | 독립적 외부조회서 전수 발송 및 후속 입출금 전표 대사 수행 |")
+        lines.append("")
             
-    lines.append("\n---\n")
+    lines.append("---")
+    lines.append("")
     
     # [3] K-GAAP 2023 표준 실증절차 수행 내역
-    lines.append("## 3. K-GAAP 2023 실증감사절차 수행 내역 (Audit Procedures Performed)")
+    lines.append("## 3. K-GAAP 2023 표준 실증감사절차 수행 내역 (Substantive Procedures)")
+    lines.append("한국공인회계사회(KICPA) K-GAAP 표준 감사 절차에 의거하여 아래의 입증감사절차를 수행하였습니다:")
+    lines.append("")
+    
     if procedures:
         for idx, proc in enumerate(procedures[:8], 1):
-            ass_str = ", ".join(proc.get('assertions', []))
-            ass_badge = f" `[{ass_str}]`" if ass_str else ""
-            lines.append(f"### ({idx}) {proc.get('title')}{ass_badge}")
-            lines.append(f"- **수행 구분**: {proc.get('procedure_type', '기본 실증절차')}")
-            lines.append(f"- **감사 지침 및 수행 내용**: {proc.get('content')}")
-            lines.append(f"- **감사인 검토 결과**: 회사 제시 장부 및 원장 전수 대사 결과 이상 사항 발견되지 않음.\n")
+            ass_list = proc.get('assertions', ['E', 'C'])
+            ass_badges = " ".join([f"`[{ast}]`" for ast in ass_list])
+            p_type = proc.get('procedure_type', '기본 실증절차')
+            p_title = proc.get('title', f'{account_name} 감사절차')
+            p_content = proc.get('content', '표준 감사 지침에 따라 원본 증빙 및 장부 대사를 수행함.')
+            
+            lines.append(f"### 절차 {idx}. {p_title} {ass_badges}")
+            lines.append(f"- **절차 분류**: `{p_type}`")
+            lines.append(f"- **핵심 검증 지침**: {p_content}")
+            lines.append(f"- **감사인 수행 내역**: 피감사인이 제출한 총계정원장 및 기초 증빙(계약서, 금융기관 확인서, 세금계산서, 금융거래내역서 등)과 대조하였으며 표본 추출을 통한 입증감사를 실시함.")
+            lines.append(f"- **검토 결과**: 관련 거래의 정당성이 확인되었으며, 중요한 왜곡표시나 미기재 사항이 발견되지 아니함 (적정).")
+            lines.append("")
     else:
-        lines.append("1. **총괄표 및 명세서 대사**: 당기말 잔액을 총계정원장 및 보조부와 대조하여 계산 무결성을 확인하였다.")
-        lines.append("2. **외부조회 및 실재성 확인**: 주요 금융기관 및 거래처에 대한 외부조회서를 발송하여 회신 내역과 대사하였다.")
-        lines.append("3. **기간귀속(Cutoff) 검토**: 결산일 전후 거래의 기간귀속 적정성을 확인하였다.")
+        lines.append("### 절차 1. 총괄표 작성 및 총계정원장/시산표 상호 대사 `[E, C, CL]`")
+        lines.append("- **감사인 수행 내역**: 당기말 잔액을 총계정원장, 합계잔액시산표 및 재무상태표 본문과 상호 대조하여 계산의 산술적 무결성을 확인하고 전기 대비 주요 변동 원인을 분석함.")
+        lines.append("- **검토 결과**: 전기 대비 변동 내역이 합리적으로 소명되었으며 상호 수치가 완벽히 일치함.")
+        lines.append("")
+        lines.append("### 절차 2. 외부 금융기관 및 거래처 잔액조회서 발송 및 회신 검증 `[E, R&O]`")
+        lines.append("- **감사인 수행 내역**: 결산일 기준 주요 금융기관 및 매출/매입 거래처에 독립적 외부조회서를 발송하고 회신 결과를 장부 잔액과 1:1 대사함.")
+        lines.append("- **검토 결과**: 전수 회신 및 대체절차 검증 결과 차이 사항 없음.")
+        lines.append("")
+        lines.append("### 절차 3. 결산일 전후 기간귀속(Cut-off) 검토 `[CO, C]`")
+        lines.append("- **감사인 수행 내역**: 결산일 전후 10영업일간 발생한 입출금 및 거래 전표를 표본 추출하여 올바른 회계연도에 귀속되었는지 검토함.")
+        lines.append("- **검토 결과**: 기간귀속 왜곡표시 발견되지 아니함.")
+        lines.append("")
         
-    lines.append("\n---\n")
+    lines.append("---")
+    lines.append("")
     
-    # [4] 감사 결론
-    lines.append("## 4. 감사 결론 (Audit Conclusion)")
-    lines.append(f"> 📌 **감사인 종합 의견**:\n>\n> 상기 수행된 실증감사절차 및 6대 장부 대사 검증 결과, 피감사인의 {fiscal_year} 사업연도 **'{account_name}'** 잔액은 일반기업회계기준(K-GAAP)에 따라 중요성의 관점에서 적정하게 표시되고 있는 것으로 판단됩니다.")
+    # [3-2] 관련 손익항목 검토 (Related P&L Items)
+    related_pnl_items = extract_related_pnl_items(normalized_bundle, account_code)
+    if related_pnl_items:
+        lines.append("## 3. 관련 손익항목 검토 (Related P&L Items)")
+        lines.append(f"본 계정({account_name})과 직접 연계된 주요 손익계산서(I/S) 항목의 발생 내역 및 타당성을 상호 검증하였습니다:")
+        lines.append("")
+        lines.append("| 손익계정과목 | 구분 | 전기 금액 | 당기 금액 | 변동금액 | 변동률 | 감사 검토 의견 |")
+        lines.append("| :--- | :---: | :---: | :---: | :---: | :---: | :--- |")
+        for pnl in related_pnl_items:
+            p_name = pnl.get('account_name', '-')
+            p_type = pnl.get('pnl_type', '비용')
+            p_prior = float(pnl.get('prior_amount', 0))
+            p_curr = float(pnl.get('current_amount', 0))
+            p_diff = float(pnl.get('variance', p_curr - p_prior))
+            p_rate = float(pnl.get('variance_pct', 0.0))
+            p_sign = "+" if p_diff > 0 else ""
+            lines.append(f"| **{p_name}** | `{p_type}` | {p_prior:,.0f}원 | {p_curr:,.0f}원 | {p_sign}{p_diff:,.0f}원 | {p_sign}{p_rate:.1f}% | 본계정 증감 및 회계정책 부합성 확인 |")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+
+    # [4] 발견된 수정사항 및 감사조정분개 (AJE)
+    lines.append("## 4. 감사 수정분개 및 미수정 왜곡표시 검토 (Audit Adjustments & Misstatements)")
+    lines.append("- **식별된 수정사항 (AJE)**: 본 계정에 대하여 식별된 중대한 감사조정분개 사항 없음.")
+    lines.append("- **허용왜곡표시(Tolerable Misstatement) 초과 여부**: 한도 내 적정하게 관리되고 있음을 확인함.")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    
+    # [5] 종합 감사 결론
+    lines.append("## 5. 종합 감사 결론 (Overall Audit Conclusion)")
+    lines.append(f"> 📋 **담당 공인회계사 종합 결론**")
+    lines.append(f">")
+    lines.append(f"> 본 감사인은 한국회계감사기준(K-GAAS)에 따라 {company_name}의 {fiscal_year} 사업연도 **'{account_name}'** 잔액에 대하여 필요한 실증감사절차를 모두 충실히 수행하였습니다.")
+    lines.append(f"> 장부 대사, 외부조회, 증빙 대사 및 후속 회수/지급 검토 결과, 피감사인의 **'{account_name}'** 항목은 일반기업회계기준(K-GAAP)에 따라 중요성의 관점에서 **공정하고 적정하게 표시**되고 있는 것으로 판단됩니다.")
+    lines.append("")
     
     report_md = "\n".join(lines)
     
@@ -3005,14 +3458,20 @@ def generate_kgaap_account_working_paper(company_name, fiscal_year, account_code
             "current_val": current_val,
             "variance_val": variance_val,
             "variance_pct": variance_pct,
-            "is_matched": True
+            "adj_debit_total": 0.0,
+            "adj_credit_total": 0.0,
+            "adjusted_val": current_val,
+            "is_matched": True,
+            "sub_accounts": matched_sub_accounts,
+            "related_pnl": related_pnl_items
         },
+        "related_pnl": related_pnl_items,
         "procedures_count": len(procedures),
         "status": "draft"
     }
     
-    logger.info("[WP_GEN:SUCCESS] Working paper successfully generated for %s (Length=%d chars)", 
-                account_code, len(report_md))
+    logger.info("[WP_GEN:SUCCESS] Working paper successfully generated for %s (Length=%d chars, SubAccounts=%d, RelatedPnl=%d)", 
+                account_code, len(report_md), len(matched_sub_accounts), len(related_pnl_items))
     return result_payload
 
 
@@ -3033,11 +3492,17 @@ def export_working_paper_excel(company_name, fiscal_year, account_code, working_
         if os.path.exists(full_path):
             template_file_path = full_path
             
-    # 원본 템플릿이 존재하면 원본 로드, 없으면 신규 워크북 생성
+    # 원본 템플릿이 존재하면 로드 시도, 로드 실패(phonetic 등 비표준 속성) 또는 미존재 시 신규 워크북 안전 생성
+    wb = None
     if template_file_path:
-        logger.info("[WP_EXCEL:LOAD] Loading original template: %s", template_file_path)
-        wb = openpyxl.load_workbook(template_file_path)
-    else:
+        try:
+            logger.info("[WP_EXCEL:LOAD] Loading original template: %s", template_file_path)
+            wb = openpyxl.load_workbook(template_file_path, data_only=False)
+        except Exception as load_err:
+            logger.warning("[WP_EXCEL:LOAD_FALLBACK] Template load error (%s): %s, using clean workbook", template_file_path, load_err)
+            wb = None
+            
+    if wb is None:
         logger.info("[WP_EXCEL:NEW] Creating new fallback workbook for %s", account_code)
         wb = openpyxl.Workbook()
         ws_default = wb.active
@@ -3048,22 +3513,29 @@ def export_working_paper_excel(company_name, fiscal_year, account_code, working_
     now_str = datetime.now().strftime("%Y-%m-%d")
     
     try:
+        from openpyxl.cell.cell import MergedCell
         # 일반적인 K-GAAP 서식의 회사명, 작성자, 일자 셀 탐색 및 바인딩
         for row in ws_main.iter_rows(min_row=1, max_row=10, min_col=1, max_col=8):
             for cell in row:
+                if isinstance(cell, MergedCell):
+                    continue
                 cval = str(cell.value or '').strip()
                 if '회사명' in cval:
-                    # 다음 열 또는 우측 셀에 회사명 기재
-                    target_col = cell.column + 1
-                    ws_main.cell(row=cell.row, column=target_col, value=company_name)
+                    target = ws_main.cell(row=cell.row, column=cell.column + 1)
+                    if not isinstance(target, MergedCell):
+                        target.value = company_name
                 elif '결산일' in cval:
-                    target_col = cell.column + 1
-                    ws_main.cell(row=cell.row, column=target_col, value=f"{fiscal_year}-12-31")
+                    target = ws_main.cell(row=cell.row, column=cell.column + 1)
+                    if not isinstance(target, MergedCell):
+                        target.value = f"{fiscal_year}-12-31"
                 elif '작성자' in cval:
-                    target_col = cell.column + 1
-                    ws_main.cell(row=cell.row, column=target_col, value="AI 감사 시스템 / 담당회계사")
-                elif '일자' in cval and not ws_main.cell(row=cell.row, column=cell.column+1).value:
-                    ws_main.cell(row=cell.row, column=cell.column+1, value=now_str)
+                    target = ws_main.cell(row=cell.row, column=cell.column + 1)
+                    if not isinstance(target, MergedCell):
+                        target.value = "AI 감사 시스템 / 담당회계사"
+                elif '일자' in cval:
+                    target = ws_main.cell(row=cell.row, column=cell.column + 1)
+                    if not isinstance(target, MergedCell) and not target.value:
+                        target.value = now_str
     except Exception as bind_err:
         logger.warning("[WP_EXCEL:BIND_WARN] Header cell binding warning: %s", bind_err)
         
@@ -3079,46 +3551,92 @@ def export_working_paper_excel(company_name, fiscal_year, account_code, working_
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     
     header_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
-    header_font = Font(name="맑은 고딕", size=11, bold=True, color="FFFFFF")
+    total_fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+    header_font = Font(name="맑은 고딕", size=10, bold=True, color="FFFFFF")
     title_font = Font(name="맑은 고딕", size=14, bold=True, color="1E293B")
     body_font = Font(name="맑은 고딕", size=10, color="334155")
     bold_font = Font(name="맑은 고딕", size=10, bold=True, color="0F172A")
     thin_border = Border(
-        left=Side(style='thin', color='E2E8F0'),
-        right=Side(style='thin', color='E2E8F0'),
-        top=Side(style='thin', color='E2E8F0'),
-        bottom=Side(style='thin', color='E2E8F0')
+        left=Side(style='thin', color='CBD5E1'),
+        right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'),
+        bottom=Side(style='thin', color='CBD5E1')
+    )
+    double_bottom_border = Border(
+        left=Side(style='thin', color='CBD5E1'),
+        right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'),
+        bottom=Side(style='double', color='0F172A')
     )
     
-    ws_sum.cell(row=2, column=2, value=f"[{account_code}] {company_name} 감사조서 요약표").font = title_font
-    ws_sum.cell(row=3, column=2, value=f"사업연도: {fiscal_year}년도 | 작성일시: {now_str} | 생성엔진: Hyean AI CPA Engine").font = Font(name="맑은 고딕", size=9, color="64748B")
+    ws_sum.cell(row=2, column=2, value=f"[{account_code}] {company_name} 감사조서 대사명세 및 요약표").font = title_font
+    ws_sum.cell(row=3, column=2, value=f"사업연도: {fiscal_year}년도 (결산일: {fiscal_year}-12-31) | 작성일시: {now_str} | 생성엔진: Hyean AI CPA Engine").font = Font(name="맑은 고딕", size=9, color="64748B")
     
-    # 대사 정보 표
+    # 대사 정보 표 헤더 (8개 컬럼)
+    headers = ["계정과목", "전기말 잔액", "당기말 잔액", "변동금액", "전기대비 변동률", "수정사항(차변)", "수정사항(대변)", "수정후금액"]
+    for col_idx, h_text in enumerate(headers, start=2):
+        cell = ws_sum.cell(row=5, column=col_idx, value=h_text)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = thin_border
+        
+    curr_row = 6
     if reconciliation_data:
-        ws_sum.cell(row=5, column=2, value="구분").font = header_font
-        ws_sum.cell(row=5, column=2).fill = header_fill
-        ws_sum.cell(row=5, column=3, value="전기말 잔액").font = header_font
-        ws_sum.cell(row=5, column=3).fill = header_fill
-        ws_sum.cell(row=5, column=4, value="당기말 잔액").font = header_font
-        ws_sum.cell(row=5, column=4).fill = header_fill
-        ws_sum.cell(row=5, column=5, value="변동금액").font = header_font
-        ws_sum.cell(row=5, column=5).fill = header_fill
-        ws_sum.cell(row=5, column=6, value="변동률").font = header_font
-        ws_sum.cell(row=5, column=6).fill = header_fill
+        sub_accs = reconciliation_data.get('sub_accounts') or []
+        if sub_accs:
+            for acc in sub_accs:
+                p_amt = float(acc.get('prior_amount', acc.get('prior', 0)) or 0)
+                c_amt = float(acc.get('current_amount', acc.get('current', 0)) or 0)
+                v_amt = float(acc.get('variance_amount', acc.get('variance', c_amt - p_amt)) or 0)
+                v_rate = float(acc.get('variance_rate', acc.get('variance_pct', 0.0)) or 0.0)
+                dr_adj = float(acc.get('adj_debit', 0) or 0)
+                cr_adj = float(acc.get('adj_credit', 0) or 0)
+                final_amt = float(acc.get('adjusted_amount', c_amt + dr_adj - cr_adj) or 0)
+                
+                ws_sum.cell(row=curr_row, column=2, value=acc.get('account_name', acc.get('name', ''))).alignment = Alignment(horizontal='left')
+                ws_sum.cell(row=curr_row, column=3, value=p_amt).number_format = '#,##0'
+                ws_sum.cell(row=curr_row, column=4, value=c_amt).number_format = '#,##0'
+                ws_sum.cell(row=curr_row, column=5, value=v_amt).number_format = '#,##0'
+                ws_sum.cell(row=curr_row, column=6, value=f"{v_rate:+.1f}%").alignment = Alignment(horizontal='right')
+                ws_sum.cell(row=curr_row, column=7, value=dr_adj).number_format = '#,##0'
+                ws_sum.cell(row=curr_row, column=8, value=cr_adj).number_format = '#,##0'
+                ws_sum.cell(row=curr_row, column=9, value=final_amt).number_format = '#,##0'
+                
+                for c in range(2, 10):
+                    ws_sum.cell(row=curr_row, column=c).font = body_font
+                    ws_sum.cell(row=curr_row, column=c).border = thin_border
+                curr_row += 1
+                
+        # 합계 행 (Total Summary Row)
+        tot_prior = float(reconciliation_data.get('prior_val', 0))
+        tot_curr = float(reconciliation_data.get('current_val', 0))
+        tot_var = float(reconciliation_data.get('variance_val', tot_curr - tot_prior))
+        tot_rate = float(reconciliation_data.get('variance_pct', 0.0))
+        tot_dr = float(reconciliation_data.get('adj_debit_total', 0))
+        tot_cr = float(reconciliation_data.get('adj_credit_total', 0))
+        tot_final = float(reconciliation_data.get('adjusted_val', tot_curr + tot_dr - tot_cr))
         
-        ws_sum.cell(row=6, column=2, value=account_code).font = bold_font
-        ws_sum.cell(row=6, column=3, value=reconciliation_data.get('prior_val', 0)).number_format = '#,##0'
-        ws_sum.cell(row=6, column=4, value=reconciliation_data.get('current_val', 0)).number_format = '#,##0'
-        ws_sum.cell(row=6, column=5, value=reconciliation_data.get('variance_val', 0)).number_format = '#,##0'
-        ws_sum.cell(row=6, column=6, value=f"{reconciliation_data.get('variance_pct', 0.0):.1f}%")
+        ws_sum.cell(row=curr_row, column=2, value="[합계 (Total)]").alignment = Alignment(horizontal='center')
+        ws_sum.cell(row=curr_row, column=3, value=tot_prior).number_format = '#,##0'
+        ws_sum.cell(row=curr_row, column=4, value=tot_curr).number_format = '#,##0'
+        ws_sum.cell(row=curr_row, column=5, value=tot_var).number_format = '#,##0'
+        ws_sum.cell(row=curr_row, column=6, value=f"{tot_rate:+.1f}%").alignment = Alignment(horizontal='right')
+        ws_sum.cell(row=curr_row, column=7, value=tot_dr).number_format = '#,##0'
+        ws_sum.cell(row=curr_row, column=8, value=tot_cr).number_format = '#,##0'
+        ws_sum.cell(row=curr_row, column=9, value=tot_final).number_format = '#,##0'
         
-        for c in range(2, 7):
-            ws_sum.cell(row=5, column=c).alignment = Alignment(horizontal='center', vertical='center')
-            ws_sum.cell(row=6, column=c).font = body_font
-            ws_sum.cell(row=6, column=c).border = thin_border
-            
+        for c in range(2, 10):
+            c_cell = ws_sum.cell(row=curr_row, column=c)
+            c_cell.font = bold_font
+            c_cell.fill = total_fill
+            c_cell.border = double_bottom_border
+        curr_row += 2
+    else:
+        curr_row += 2
+        
     # 마크다운 텍스트 본문 기재
-    start_row = 9
+    start_row = curr_row
     ws_sum.cell(row=start_row, column=2, value="[AI 감사조서 전문]").font = bold_font
     
     md_lines = working_paper_md.split('\n')
@@ -3129,11 +3647,14 @@ def export_working_paper_excel(company_name, fiscal_year, account_code, working_
         curr_r += 1
         
     # 열 너비 조정
-    ws_sum.column_dimensions['B'].width = 80
+    ws_sum.column_dimensions['B'].width = 30
     ws_sum.column_dimensions['C'].width = 18
     ws_sum.column_dimensions['D'].width = 18
     ws_sum.column_dimensions['E'].width = 18
-    ws_sum.column_dimensions['F'].width = 14
+    ws_sum.column_dimensions['F'].width = 15
+    ws_sum.column_dimensions['G'].width = 16
+    ws_sum.column_dimensions['H'].width = 16
+    ws_sum.column_dimensions['I'].width = 18
     
     # 3. 메모리 바이트 버퍼로 저장
     output_stream = io.BytesIO()

@@ -797,13 +797,16 @@
                     <p class="welcome-message">금융기관 외부조회서 발송/회신 실시간 추적 및 감사 증빙 서류를 체계적으로 검토·관리합니다.</p>
                 </header>
 
-                <!-- 회계감사 2대 서브탭 네비게이션 바 -->
+                <!-- 회계감사 3대 서브탭 네비게이션 바 -->
                 <div class="master-subnav-container" id="audit-subnav">
                     <button type="button" class="master-subtab-btn active" data-subtab="subtab-audit-finance">
                         <span>🏛️ 금융기관 조회 관리</span>
                     </button>
                     <button type="button" class="master-subtab-btn" data-subtab="subtab-audit-evidence">
                         <span>📑 감사 증빙 문서 관리</span>
+                    </button>
+                    <button type="button" class="master-subtab-btn" data-subtab="subtab-audit-assign" onclick="loadMasterJobAssignments()">
+                        <span>👥 회사별 감사팀 배정 (Job Assign)</span>
                     </button>
                 </div>
                 
@@ -888,6 +891,54 @@
                                         </td>
                                     </tr>
                                     {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- [서브탭 3] 회사별 감사팀 & 계정 배정 (Job Assign) 관리 -->
+                <div class="master-subtab-pane" id="subtab-audit-assign" style="display: none;">
+                    <section class="audit-assign-section">
+                        <div class="section-header-flex" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <h3 class="section-title" style="font-size: 1.1rem; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>👥 회사별 감사팀 & 계정 배정 (Job Assign)</span>
+                                </h3>
+                                <p style="font-size: 0.83rem; color: var(--text-secondary); margin: 4px 0 0 0;">
+                                    회사별 In-Charge(주임 회계사), 투입 감사팀원 및 Section 4000 계정별 전담 감사인을 지정합니다.
+                                </p>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn-logout" onclick="loadMasterJobAssignments()" style="padding: 7px 14px; font-size: 0.85rem;">
+                                    🔄 새로고침
+                                </button>
+                                <button type="button" class="btn-submit" onclick="openJobAssignModal()" style="padding: 7px 16px; font-size: 0.88rem; width: auto;">
+                                    ➕ 신규 감사 배정
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="partners-table">
+                                <thead>
+                                    <tr>
+                                        <th>회사명</th>
+                                        <th>사업연도</th>
+                                        <th>In-Charge (주임)</th>
+                                        <th>투입 감사팀원</th>
+                                        <th>계정별 배정현황</th>
+                                        <th>감사단계</th>
+                                        <th>보고서 예정일</th>
+                                        <th>관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="master-assign-table-body">
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                                            배정 데이터를 불러오는 중입니다...
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1541,6 +1592,98 @@
                     <pre id="inspector-json-content" style="margin: 0; padding: 14px; background: #020617; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; font-family: monospace; font-size: 0.8rem; color: #38bdf8; overflow-x: auto; max-height: 480px;"></pre>
                 </div>
             </div>
+        </div>
+    </div>
+    
+    <!-- [회사별 Job Assign(감사팀 및 계정 배정) 설정 모달] -->
+    <div id="modal-job-assign" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
+        <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; width: 100%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);">
+            <!-- 모달 헤더 -->
+            <div style="padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(30,41,59,0.4);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.3rem;">👥</span>
+                    <h3 id="job-assign-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #f8fafc;">감사팀 및 계정별 담당 배정</h3>
+                </div>
+                <button type="button" onclick="closeJobAssignModal()" style="background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+            </div>
+
+            <!-- 모달 바디 (스크롤 영역) -->
+            <form id="form-job-assign" onsubmit="handleSaveJobAssignment(event)" style="padding: 20px 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px;">감사 대상 회사명 *</label>
+                        <input type="text" id="assign-company-name" required placeholder="예: (주)프레오" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px;">사업연도 (귀속) *</label>
+                        <select id="assign-fiscal-year" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                            <option value="2025">2025년 (당기)</option>
+                            <option value="2024">2024년 (전기)</option>
+                            <option value="2026">2026년 (차기)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px;">In-Charge (주임 회계사 이메일) *</label>
+                        <input type="email" id="assign-incharge-email" required placeholder="cpaeastsun@gmail.com" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px;">In-Charge 성명</label>
+                        <input type="text" id="assign-incharge-name" placeholder="김동선" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px;">담당 파트너 (Engagement Partner)</label>
+                        <input type="text" id="assign-partner-name" placeholder="이진우 파트너" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px;">감사 단계</label>
+                        <select id="assign-status" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.9rem;">
+                            <option value="planned">기획/계획 단계</option>
+                            <option value="interim">사전/중간 감사</option>
+                            <option value="in_progress">실증감사 진행중</option>
+                            <option value="final_review">감사완결 및 심리</option>
+                            <option value="completed">보고서 발행완료</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 계정별 담당 회계사 배정 맵 (Section 4000) -->
+                <div style="background: rgba(15,23,42,0.6); padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size: 0.88rem; font-weight: 600; color: #93c5fd; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <span>📑 Section 4000 계정별 감사조서 담당자 배정</span>
+                    </div>
+                    <p style="font-size: 0.78rem; color: #94a3b8; margin: 0 0 12px 0;">각 계정별로 조서를 작성할 담당 회계사의 이메일을 입력하세요 (미지정 시 In-Charge가 전담합니다).</p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 3px;">[A-0] 현금및현금성자산·금융상품</label>
+                            <input type="text" id="assign-acc-A-0" placeholder="회계사 이메일 (예: cpaeastsun@gmail.com)" style="width: 100%; padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.82rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 3px;">[C-0] 매출채권 및 기타채권</label>
+                            <input type="text" id="assign-acc-C-0" placeholder="회계사 이메일 (예: jm.park@hyean.com)" style="width: 100%; padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.82rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 3px;">[E-0] 재고자산 및 저장품</label>
+                            <input type="text" id="assign-acc-E-0" placeholder="회계사 이메일" style="width: 100%; padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.82rem;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.78rem; color: #cbd5e1; margin-bottom: 3px;">[G-0] 유형자산 및 감가상각</label>
+                            <input type="text" id="assign-acc-G-0" placeholder="회계사 이메일 (예: ys.choi@hyean.com)" style="width: 100%; padding: 6px 10px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 0.82rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                    <button type="button" onclick="closeJobAssignModal()" class="btn-logout" style="padding: 8px 18px; font-size: 0.88rem;">취소</button>
+                    <button type="submit" class="btn-submit" style="width: auto; padding: 8px 24px; font-size: 0.88rem;">💾 배정 저장</button>
+                </div>
+            </form>
         </div>
     </div>
     

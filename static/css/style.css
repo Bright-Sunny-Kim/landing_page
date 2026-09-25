@@ -4766,9 +4766,9 @@ body.audit-portal-body {
     opacity: 1 !important;
 }
 
-/* 모바일 전용 상단 헤더 */
+/* 모바일 전용 상단 헤더 (PC/데스크톱 웹 화면에서는 숨김) */
 .audit-mobile-header {
-    display: none;
+    display: none !important;
     align-items: center;
     justify-content: space-between;
     padding: 12px 18px;
@@ -4899,7 +4899,25 @@ body.audit-portal-body {
 }
 
 .audit-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
     flex-shrink: 0;
+}
+
+.audit-loading-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    display: inline-block;
+    animation: audit-btn-spin 0.6s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes audit-btn-spin {
+    to { transform: rotate(360deg); }
 }
 
 .audit-btn-primary {
@@ -5033,13 +5051,54 @@ body.audit-portal-body {
     border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
-/* 조서 작성 2분할 레이아웃 */
+/* 조서 작성 레이아웃 (전폭 및 분할) */
 .audit-wp-layout {
     display: grid;
     grid-template-columns: 340px minmax(0, 1fr);
     gap: 20px;
     align-items: stretch;
     width: 100%;
+}
+
+.audit-wp-layout.full-width-layout {
+    display: block;
+    width: 100%;
+}
+
+.audit-wp-layout.full-width-layout .audit-wp-editor-pane {
+    width: 100%;
+    min-height: calc(100vh - 170px);
+}
+
+/* K-GAAP 조서 색인 우측 상단 드롭다운 팝오버 */
+.wp-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.wp-tree-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 380px;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
+    z-index: 1050;
+    backdrop-filter: blur(12px);
+    animation: fadeInDropdown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInDropdown {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* 좌측 조서 서식 트리 패널 */
@@ -5382,6 +5441,187 @@ body.audit-portal-body {
     width: 100%;
 }
 
+/* ==========================================================================
+   ⚖️ 감사 수정분개 (AJE / RJE) 블록 스타일
+   ========================================================================== */
+.wp-aje-container {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.wp-aje-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wp-aje-title-box {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wp-aje-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wp-aje-desc {
+    font-size: 0.78rem;
+    color: #94a3b8;
+}
+
+.wp-aje-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.aje-diff-badge {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.aje-diff-badge.balanced {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.aje-diff-badge.unbalanced {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-add-aje {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-add-aje:hover {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.wp-aje-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.wp-aje-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.wp-aje-table th {
+    background: rgba(30, 41, 59, 0.6);
+    color: #93c5fd;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.wp-aje-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    vertical-align: middle;
+}
+
+.wp-aje-table tr:hover td {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.aje-table-input {
+    width: 100%;
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #f8fafc;
+    font-size: 0.84rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.aje-table-input:focus {
+    border-color: #60a5fa;
+    background: rgba(30, 41, 59, 0.95);
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25);
+}
+
+.aje-table-input.num-input {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+}
+
+.aje-table-input.debit-val {
+    color: #60a5fa;
+}
+
+.aje-table-input.credit-val {
+    color: #f87171;
+}
+
+.btn-del-aje-row {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-del-aje-row:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.wp-aje-table tfoot td {
+    background: rgba(30, 41, 59, 0.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 9px 10px;
+}
+
 .wp-tab-btn {
     background: transparent;
     border: none;
@@ -5401,15 +5641,15 @@ body.audit-portal-body {
 
 .wp-markdown-editor {
     width: 100%;
-    min-height: 480px;
+    min-height: 520px;
     background: rgba(15, 23, 42, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
-    padding: 16px;
+    padding: 20px;
     color: #f8fafc;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.9rem;
-    line-height: 1.6;
+    line-height: 1.7;
     resize: vertical;
     outline: none;
 }
@@ -5419,8 +5659,177 @@ body.audit-portal-body {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
+/* 📄 회계감사 조서 마크다운 렌더링 뷰어 (.wp-markdown-rendered-view) */
+.wp-markdown-rendered-view {
+    min-height: 520px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 28px 32px;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    font-size: 0.94rem;
+    line-height: 1.75;
+    overflow-y: auto;
+    width: 100%;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.wp-markdown-rendered-view h1 {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-top: 0;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -0.3px;
+    text-align: left;
+}
+
+.wp-markdown-rendered-view h2 {
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: #93c5fd;
+    margin-top: 28px;
+    margin-bottom: 14px;
+    padding-left: 10px;
+    border-left: 4px solid #3b82f6;
+    letter-spacing: -0.2px;
+    text-align: left;
+}
+
+.wp-markdown-rendered-view h3 {
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    text-align: left;
+}
+
+.wp-markdown-rendered-view p {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #cbd5e1;
+    text-align: left;
+}
+
+.wp-markdown-rendered-view hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.03) 100%);
+    margin: 24px 0;
+}
+
+/* 마크다운 테이블 (Audit Grade Styling) */
+.wp-markdown-rendered-view table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px 0;
+    font-size: 0.88rem;
+    background: rgba(30, 41, 59, 0.45);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wp-markdown-rendered-view th {
+    background: linear-gradient(180deg, rgba(30, 58, 138, 0.55), rgba(15, 23, 42, 0.75));
+    color: #93c5fd;
+    font-weight: 700;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+}
+
+.wp-markdown-rendered-view td {
+    padding: 9px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+    color: #e2e8f0;
+}
+
+.wp-markdown-rendered-view tr:last-child td {
+    border-bottom: none;
+}
+
+.wp-markdown-rendered-view tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.wp-markdown-rendered-view tr:hover td {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* 숫자/원화 셀 자동 우측 정렬 */
+.wp-markdown-rendered-view td:nth-child(n+3) {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 인용구 / 감사인 결론 블록 (Callout Box) */
+.wp-markdown-rendered-view blockquote {
+    margin: 16px 0 20px 0;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 78, 59, 0.15));
+    border-left: 4px solid #10b981;
+    border-radius: 0 8px 8px 0;
+    color: #d1fae5;
+    font-size: 0.92rem;
+    line-height: 1.7;
+}
+
+.wp-markdown-rendered-view blockquote p {
+    margin: 0 0 8px 0;
+    color: #e2e8f0;
+}
+
+.wp-markdown-rendered-view blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+.wp-markdown-rendered-view blockquote strong {
+    color: #34d399;
+}
+
+/* 리스트 & 불릿 */
+.wp-markdown-rendered-view ul, 
+.wp-markdown-rendered-view ol {
+    padding-left: 20px;
+    margin: 8px 0 16px 0;
+}
+
+.wp-markdown-rendered-view li {
+    margin-bottom: 6px;
+    color: #cbd5e1;
+}
+
+.wp-markdown-rendered-view li strong {
+    color: #f8fafc;
+}
+
+/* 인라인 코드 / 배지 태그 */
+.wp-markdown-rendered-view code {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93c5fd;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
 .wp-rag-guide-view {
-    min-height: 480px;
+    min-height: 520px;
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
@@ -7447,4 +7856,532 @@ body.audit-portal-body {
 .auditor-extra-fields.hidden {
     display: none !important;
 }
+
+/* ==============================================================================
+   [AUDIT] 6대 장부 실시간 대사 & 계정과목별 수정분개(AJE) 대시보드 UI
+   ============================================================================== */
+
+.wp-reconciliation-container {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+}
+
+/* [상단] 절차 전체금액 요약 카드 바 */
+.wp-recon-top-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    align-items: center;
+}
+
+.recon-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.recon-summary-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: -0.2px;
+}
+
+.recon-summary-val {
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #f1f5f9;
+}
+
+.recon-summary-val.highlight {
+    color: #38bdf8;
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.recon-summary-item.status-col {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+/* [하단] 계정과목별 세부 대사 테이블 */
+.wp-recon-table-wrapper {
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 0;
+}
+
+.wp-recon-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    color: #cbd5e1;
+    text-align: left;
+}
+
+.wp-recon-table thead th {
+    position: sticky;
+    top: 0;
+    background: rgba(15, 23, 42, 0.95);
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.76rem;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: nowrap;
+    z-index: 2;
+}
+
+.wp-recon-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.15s ease;
+}
+
+.wp-recon-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.wp-recon-table td {
+    padding: 9px 14px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.wp-recon-table td.acc-name {
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.wp-recon-table td.num-cell {
+    text-align: right;
+    font-family: 'Outfit', monospace;
+    font-size: 0.86rem;
+}
+
+.wp-recon-table tfoot .recon-total-row {
+    position: sticky;
+    bottom: 0;
+    background: rgba(30, 41, 59, 0.95);
+    border-top: 2px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 2px solid rgba(56, 189, 248, 0.4);
+    z-index: 2;
+}
+
+.wp-recon-table tfoot td {
+    padding: 11px 14px;
+    vertical-align: middle;
+    white-space: nowrap;
+    font-family: 'Outfit', monospace;
+}
+
+/* 수정사항 입력 인풋 */
+.recon-adj-input {
+    width: 100px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    font-family: 'Outfit', monospace;
+    text-align: right;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #f8fafc;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.recon-adj-input.debit-input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.3);
+}
+
+.recon-adj-input.credit-input:focus {
+    border-color: #f87171;
+    box-shadow: 0 0 8px rgba(248, 113, 113, 0.3);
+}
+
+/* 뱃지 및 변동 스타일 */
+.var-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'Outfit', monospace;
+}
+
+.var-badge.plus {
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.var-badge.minus {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.var-badge.zero {
+    color: #94a3b8;
+    background: rgba(148, 163, 184, 0.1);
+}
+
+/* ==============================================================================
+   ⚖️ 감사 수정분개 (AJE / RJE) 인터랙티브 분개장 전용 스타일
+   ============================================================================== */
+.wp-aje-container {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(20, 30, 48, 0.8) 100%);
+    border: 1px solid rgba(96, 165, 250, 0.2);
+    border-radius: 14px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+}
+
+.wp-aje-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: rgba(96, 165, 250, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.wp-aje-title-box {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.wp-aje-title {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wp-aje-desc {
+    font-size: 0.78rem;
+    color: #94a3b8;
+}
+
+.wp-aje-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.aje-diff-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: 'Outfit', monospace;
+}
+
+.aje-diff-badge.balanced {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.aje-diff-badge.unbalanced {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    animation: pulseBadge 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseBadge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+}
+
+.btn-add-aje {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 8px;
+    color: #93c5fd;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-add-aje:hover {
+    background: rgba(59, 130, 246, 0.3);
+    color: #ffffff;
+    border-color: #60a5fa;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+}
+
+.wp-aje-table-wrapper {
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 0;
+}
+
+.wp-aje-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    color: #cbd5e1;
+    text-align: left;
+}
+
+.wp-aje-table thead th {
+    position: sticky;
+    top: 0;
+    background: rgba(15, 23, 42, 0.95);
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.76rem;
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
+    z-index: 2;
+}
+
+.wp-aje-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.wp-aje-table td {
+    padding: 8px 12px;
+    vertical-align: middle;
+}
+
+.aje-table-input {
+    width: 100%;
+    padding: 5px 8px;
+    font-size: 0.82rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #f8fafc;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.aje-table-input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+    background: rgba(15, 23, 42, 0.9);
+}
+
+.aje-table-input.num-input {
+    text-align: right;
+    font-family: 'Outfit', monospace;
+    font-weight: 600;
+}
+
+.aje-table-input.debit-val:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.35);
+}
+
+.aje-table-input.credit-val:focus {
+    border-color: #f87171;
+    box-shadow: 0 0 8px rgba(248, 113, 113, 0.35);
+}
+
+.btn-del-aje-row {
+    background: transparent;
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.btn-del-aje-row:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.wp-aje-table tfoot td {
+    background: rgba(20, 30, 48, 0.95);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 12px;
+    font-size: 0.82rem;
+    font-family: 'Outfit', monospace;
+}
+
+/* ==============================================================================
+   📊 관련 손익항목 검토 (Related P&L Items) 전용 스타일
+   ============================================================================== */
+.wp-pnl-container {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(20, 35, 55, 0.8) 100%);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 14px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+}
+
+.wp-pnl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: rgba(56, 189, 248, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.wp-pnl-title-box {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.wp-pnl-title {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wp-pnl-desc {
+    font-size: 0.78rem;
+    color: #94a3b8;
+}
+
+.wp-pnl-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pnl-count-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-family: 'Outfit', monospace;
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.wp-pnl-table-wrapper {
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 0;
+}
+
+.wp-pnl-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    color: #cbd5e1;
+    text-align: left;
+}
+
+.wp-pnl-table thead th {
+    position: sticky;
+    top: 0;
+    background: rgba(15, 23, 42, 0.95);
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.76rem;
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
+    z-index: 2;
+}
+
+.wp-pnl-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.15s ease;
+}
+
+.wp-pnl-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.wp-pnl-table td {
+    padding: 8px 12px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.wp-pnl-table td.pnl-name {
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.wp-pnl-table td.num-cell {
+    text-align: right;
+    font-family: 'Outfit', monospace;
+    font-size: 0.85rem;
+}
+
+.pnl-type-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.pnl-type-badge.expense {
+    background: rgba(248, 113, 113, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.pnl-type-badge.revenue {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.25);
+}
+
+.pnl-type-badge.other {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.wp-pnl-table tfoot .pnl-total-row {
+    position: sticky;
+    bottom: 0;
+    background: rgba(20, 35, 55, 0.95);
+    border-top: 2px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 2px solid rgba(56, 189, 248, 0.35);
+    z-index: 2;
+}
+
+.wp-pnl-table tfoot td {
+    padding: 10px 12px;
+    vertical-align: middle;
+    white-space: nowrap;
+    font-family: 'Outfit', monospace;
+}
+
+
 
