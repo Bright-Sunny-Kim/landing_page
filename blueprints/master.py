@@ -500,7 +500,7 @@ def submit_request():
         if field_name and field_name in document_labels:
             label = document_labels[field_name]
             files = request.files.getlist('file')
-            if field_name.startswith('pfile_'): year_folder = 'P-File'
+            if field_name.startswith('pfile_'): year_folder = f"P-File/{field_name}"
             elif 'finance' in field_name: year_folder = 'Ext_F'
             elif 'partner' in field_name: year_folder = 'Ext_C'
             elif 'current' in field_name: year_folder = 'Temp/Temp_P'
@@ -514,7 +514,7 @@ def submit_request():
             files = request.files.getlist(field_name)
     
             if field_name.startswith('pfile_'):
-                year_folder = 'P-File'
+                year_folder = f"P-File/{field_name}"
             elif field_name == 'finance_inquiry':
                 year_folder = 'Ext_F'
             elif field_name == 'partner_inquiry':
@@ -544,7 +544,7 @@ def submit_request():
             db_filename = f"[{label}] {original_filename}"
             timestamp = int(time.time() * 1000)
             
-            file_path = f"{company}/{year_folder}/{timestamp}_{field_name}_{original_filename}"
+            file_path = f"{company}/{year_folder}/{timestamp}_{original_filename}"
             
             file_bytes = file.read()
             file_url = None
@@ -564,7 +564,9 @@ def submit_request():
             
             if supabase:
                 try:
-                    formatted_help = f"[{label}] 상태: 제출"
+                    is_pfile_item = field_name.startswith('pfile_')
+                    tag_prefix = "[영구문서/P-File] " if is_pfile_item else ""
+                    formatted_help = f"{tag_prefix}[{label}] 상태: 제출"
                     if help_text:
                         formatted_help += f"\n추가 메시지: {help_text}"
                         

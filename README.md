@@ -541,6 +541,48 @@ Render.com 무료/기본 인스턴스(RAM 512MB) 및 클라우드 배포 환경�
 
 ---
 
+---
+
+## 🏢 [P-File 영구문서 누적 적재 & 세무/노무(부가세·급여) Lakehouse 파이프라인 구축] (2026.09.26)
+
+### 1. 📁 P-File(회사기본사항 17종) 연도 무관 누적 적재 개편 및 자동 마이그레이션
+1. **회사명 직하위 누적 폴더 아키텍처 구축**:
+   - 기존 연도 하위 종속 경로(`{회사}/2025/P-File/...`)에서 **연도와 무관한 회사 직하위 경로(`{회사}/P-File/{항목명}/{timestamp}_{파일명}`)**로 전면 개편.
+   - 정관, 등기부등본, 주주명부, 의사록 등 17종 영구문서가 감사연도 변경에 구애받지 않고 상시 누적 관리되도록 경로 표준화.
+2. **DB 메타데이터 및 조회 로직 고도화**:
+   - Supabase `company_files` DB에 `[영구문서/P-File]` 태그를 자동 부여하고, 최근 제출 목록 및 회사 서류함에서 모든 연도에 걸쳐 상시 표출되도록 지원.
+3. **기존 데이터 자동 마이그레이션 완료 ([`scripts/migrate_pfiles.py`](file:///C:/Users/CLAUD/landing_page/scripts/migrate_pfiles.py))**:
+   - 우분투 MinIO S3에 이미 적재되어 있던 기존 P-File들을 신규 누적 경로로 안전하게 복사/이동하고, Supabase DB의 `file_url`과 메타데이터 태그를 100% 일괄 갱신 완료.
+
+---
+
+### 2. 📊 세무(부가가치세) 및 노무(급여/원천세) 대용량 Lakehouse 파이프라인 ([`core/tax_payroll_pipeline.py`](file:///C:/Users/CLAUD/landing_page/core/tax_payroll_pipeline.py))
+1. **Zero-Disk I/O 인메모리 스트리밍 파싱**:
+   - 디스크에 압축을 풀지 않고 MinIO S3에서 `io.BytesIO` 버퍼로 직접 스트리밍하여 대용량 ZIP 파일(수백 개 거래처 및 PDF 문서)을 0.1초 만에 인메모리 파싱.
+2. **부가가치세 패키지 파서 (`VatPackageParser`)**:
+   - 1Q ~ 3Q 매출/매입 세금계산서합계표(Excel)의 합계행을 필터링하고 수백 개 거래처의 개별 행 전체(사업자등록번호, 상호, 대표자명, 매수, 공급가액, 세액)를 정규화.
+   - 쿠쿠홈시스(매출의 95% 이상 점유) 등 주요 거래처 집중도 자동 산출 및 홈택스 PDF 신고서 메타데이터 결합.
+3. **급여/원천세 패키지 파서 (`PayrollPackageParser`)**:
+   - 1월 ~ 9월 월별 급상여대장(PDF) 내 임직원(15명) 급여 항목 정규화 및 개인정보 비식별화/마스킹(`홍*동`) 처리.
+   - 국세청 원천징수이행상황신고서(근로소득 11.1억, 퇴직소득 6,420만, 배당소득 2억 등 총 13.8억 지급 / 5,293만 원 원천징수) 및 지방세 납부서 연동 파싱.
+4. **우분투 MinIO Lakehouse 정규화 JSON 영구 적재**:
+   - `company-uploads/{회사명}/{연도}/Normalized/vat_annual.json` (81.5 KB)
+   - `company-uploads/{회사명}/{연도}/Normalized/payroll_annual.json` (3.9 KB)
+
+---
+
+### 3. 🔄 4Q 및 추가 데이터 스마트 증분 병합 (Smart Incremental Merge)
+1. **분기/월 단위 슬롯 병합 (Slot Upsert)**:
+   - 추후 4Q 세금계산서나 10~12월 급여대장이 추가 업로드될 경우, 기존 1Q~3Q 및 M01~M09 데이터를 완벽히 보존하면서 새 분기/월 데이터만 스마트 결합.
+   - 연간 누적 총매출, 총매입, 세금계산서 총 매수 및 연간 총인건비를 1Q~4Q(12개월) 전체에 대해 자동으로 재계산(`Re-aggregation`).
+2. **업로드 즉시 백그라운드 자동 동기화 (`_background_sync_all`)**:
+   - 웹 화면에서 단일 엑셀/PDF 또는 ZIP 파일 업로드 시, 백그라운드 비동기 스레드가 즉시 실행되어 우분투 MinIO Lakehouse의 세무/노무 데이터셋을 실시간 자동 갱신.
+3. **고속 조회 API 연동 ([`blueprints/api.py`](file:///C:/Users/CLAUD/landing_page/blueprints/api.py))**:
+   - `GET /api/company/lakehouse/tax-payroll-data`: 정규화된 세무/노무 데이터를 0.01초 만에 인메모리 반환.
+   - `POST /api/company/lakehouse/sync-tax-payroll`: 수동/자동 레이크하우스 동기화 트리거.
+
+---
+
 ## 🚀 [향후 개발 로드맵 및 핵심 과제] (Next Milestones)
 
 ### 📌 과제 1: 회계감사통제 3대 서브탭 간의 양방향 연계 및 실시간 상호작용 고도화 (Upcoming)

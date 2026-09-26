@@ -1110,5 +1110,76 @@ class HybridStorageManager:
             }
 
 
+    def list_company_pfiles(self, company_name: str) -> list:
+        """
+        사내 우분투 MinIO 서버 및 로컬 스토리지의 {company_name}/P-File/ 경로를 스캔하여
+        연도와 무관하게 누적 보관된 회사 기본사항(P-File) 목록을 조회합니다.
+        """
+        safe_company = re.sub(r'[\\/:*?"<>|]', "_", company_name).strip()
+        pfiles = []
+        seen_keys = set()
+        bucket_name = "company-uploads"
+        pfile_prefix = f"{safe_company}/P-File/"
+
+        logger.info("[STORAGE:LIST_PFILES_REQ] Listing P-Files for company: %s (Prefix: %s)", safe_company, pfile_prefix)
+
+        # 1. MinIO S3 오브젝트 스토리지 스캔
+        if self.s3_client:
+            try:
+                res = self.s3_client.list_objects_v2(Bucket=bucket_name, Prefix=pfile_prefix)
+                contents = res.get("Contents", [])
+                for obj in contents:
+                    key = obj.get("Key", "")
+                    if not key or key.endswith("/"):
+                        continue
+                    seen_keys.add(key)
+                    # {company}/P-File/{pfile_item}/{timestamp}_{filename} 구조 파싱
+                    rel_path = key.replace(pfile_prefix, "")
+                    parts = rel_path.split("/")
+                    pfile_category = parts[0] if len(parts) > 1 else "general"
+                    filename = parts[-1]
+                    
+                    pfiles.append({
+                        "key": key,
+                        "category": pfile_category,
+                        "filename": filename,
+                        "size_bytes": obj.get("Size", 0),
+                        "last_modified": obj.get("LastModified").strftime("%Y-%m-%d %H:%M:%S") if obj.get("LastModified") else "",
+                        "url": f"{self.minio_endpoint}/{bucket_name}/{key}",
+                        "source": "minio_s3"
+                    })
+                logger.info("[STORAGE:LIST_PFILES_OK] Found %d P-Files in MinIO for %s", len(pfiles), safe_company)
+            except Exception as se:
+                logger.error("[STORAGE:LIST_PFILES_ERROR] MinIO S3 P-File scan failed for %s: %s", safe_company, se, exc_info=True)
+
+        # 2. 로컬/Ubuntu 마운트 디렉토리 스캔 (보조)
+        candidate_base_dirs = [self.local_base_dir]
+        if self.ubuntu_mount_path and os.path.exists(self.ubuntu_mount_path):
+            candidate_base_dirs.insert(0, self.ubuntu_mount_path)
+
+        for bdir in candidate_base_dirs:
+            local_pfile_dir = os.path.join(bdir, safe_company, "P-File")
+            if os.path.exists(local_pfile_dir) and os.path.isdir(local_pfile_dir):
+                for root, _, files in os.walk(local_pfile_dir):
+                    for fn in files:
+                        full_path = os.path.join(root, fn)
+                        rel_sub = os.path.relpath(full_path, local_pfile_dir).replace("\\", "/")
+                        s3_style_key = f"{safe_company}/P-File/{rel_sub}"
+                        if s3_style_key not in seen_keys:
+                            seen_keys.add(s3_style_key)
+                            sub_parts = rel_sub.split("/")
+                            pfiles.append({
+                                "key": s3_style_key,
+                                "category": sub_parts[0] if len(sub_parts) > 1 else "general",
+                                "filename": fn,
+                                "size_bytes": os.path.getsize(full_path),
+                                "last_modified": datetime.datetime.fromtimestamp(os.path.getmtime(full_path)).strftime("%Y-%m-%d %H:%M:%S"),
+                                "url": None,
+                                "source": "local_storage"
+                            })
+
+        return sorted(pfiles, key=lambda x: x.get("last_modified", ""), reverse=True)
+
+
 # 전역 싱글톤 인스턴스
 storage_manager = HybridStorageManager()

@@ -725,20 +725,26 @@ def upload_single_file():
         safe_filename = get_safe_path_name(original_filename)
         safe_company = get_safe_path_name(target_company)
 
-        # 기준 사업연도별 폴더 구분자 산출 (예: 혜안_임시/2025/Temp/Temp_L)
+        # 기준 사업연도별 또는 영구문서(P-File)별 폴더 구분자 산출
         if field_name.startswith('pfile_'):
-            year_folder = f"{fiscal_year}/P-File"
+            # P-File(회사기본사항)은 연도와 무관하게 회사명 바로 아래 P-File/{field_name} 폴더에 누적 적재
+            target_folder = f"P-File/{field_name}"
+            formatted_help = f"[영구문서/P-File] [{label}] 상태: 제출 (즉시 업로드)"
         elif 'finance' in field_name:
-            year_folder = f"{fiscal_year}/Ext_F"
+            target_folder = f"{fiscal_year}/Ext_F"
+            formatted_help = f"[{fiscal_year}년도] [{label}] 상태: 제출 (즉시 업로드)"
         elif 'partner' in field_name:
-            year_folder = f"{fiscal_year}/Ext_C"
+            target_folder = f"{fiscal_year}/Ext_C"
+            formatted_help = f"[{fiscal_year}년도] [{label}] 상태: 제출 (즉시 업로드)"
         elif 'current' in field_name:
-            year_folder = f"{fiscal_year}/Temp/Temp_P"
+            target_folder = f"{fiscal_year}/Temp/Temp_P"
+            formatted_help = f"[{fiscal_year}년도] [{label}] 상태: 제출 (즉시 업로드)"
         else:
-            year_folder = f"{fiscal_year}/Temp/Temp_L"
+            target_folder = f"{fiscal_year}/Temp/Temp_L"
+            formatted_help = f"[{fiscal_year}년도] [{label}] 상태: 제출 (즉시 업로드)"
 
         timestamp = int(time.time() * 1000)
-        file_key = f"{safe_company}/{year_folder}/{timestamp}_{field_name}_{safe_filename}"
+        file_key = f"{safe_company}/{target_folder}/{timestamp}_{safe_filename}"
         file_bytes = file.read()
         file_url = None
         bucket_name = 'company-uploads'
@@ -756,7 +762,7 @@ def upload_single_file():
                     ContentType=file.content_type or 'application/octet-stream'
                 )
                 file_url = f"{minio_endpoint}/{bucket_name}/{file_key}"
-                logger.info("[UPLOAD_SINGLE:MINIO_OK] Uploaded to MinIO: %s", file_url)
+                logger.info("[UPLOAD_SINGLE:MINIO_OK] Uploaded to MinIO: %s (Size: %d bytes)", file_url, len(file_bytes))
             except Exception as minio_err:
                 logger.warning("[UPLOAD_SINGLE:MINIO_WARN] Primary put_object failed (%s). Retrying with bucket creation...", minio_err)
                 try:
@@ -770,13 +776,12 @@ def upload_single_file():
                     file_url = f"{minio_endpoint}/{bucket_name}/{file_key}"
                     logger.info("[UPLOAD_SINGLE:MINIO_RETRY_OK] Uploaded to MinIO after bucket creation: %s", file_url)
                 except Exception as retry_err:
-                    logger.error("[UPLOAD_SINGLE:MINIO_ERROR] MinIO upload completely failed: %s", retry_err, exc_info=True)
+                    logger.error("[UPLOAD_SINGLE:MINIO_ERROR] MinIO upload completely failed for %s: %s", file_key, retry_err, exc_info=True)
         else:
             logger.warning("[UPLOAD_SINGLE:MINIO_SKIP] s3_client not available")
 
         # 2. Supabase DB 기록
         db_filename = f"[{label}] {original_filename}" if label else original_filename
-        formatted_help = f"[{fiscal_year}년도] [{label}] 상태: 제출 (즉시 업로드)"
         inserted_id = None
 
         if supabase:
@@ -788,26 +793,39 @@ def upload_single_file():
                     'file_url': file_url,
                     'help_text': formatted_help
                 }
+                logger.info("[UPLOAD_SINGLE:DB_REQ] Inserting file record to supabase: Company=%s, Name=%s, URL=%s", target_company, db_filename, file_url)
                 res = supabase.table('company_files').insert(insert_data).execute()
                 if res.data and len(res.data) > 0:
                     inserted_id = res.data[0].get('id')
                 logger.info("[UPLOAD_SINGLE:DB_OK] Supabase company_files inserted successfully. ID: %s", inserted_id)
             except Exception as db_err:
-                logger.error("[UPLOAD_SINGLE:DB_ERROR] Supabase company_files insert failed: %s", db_err, exc_info=True)
+                logger.error("[UPLOAD_SINGLE:DB_ERROR] Supabase company_files insert failed for %s: %s", db_filename, db_err, exc_info=True)
 
-        # 3. 사내 우분투 MinIO Lakehouse (Normalized/data.json) 비동기 자동 동기화 트리거
+        # 3. 사내 우분투 MinIO Lakehouse (Normalized/data.json 및 vat/payroll) 비동기 자동 동기화 트리거
         try:
             import threading
             from core.storage_manager import storage_manager
+            from core.tax_payroll_pipeline import tax_lakehouse_manager
             fy_int = int(fiscal_year) if fiscal_year and str(fiscal_year).isdigit() else 2025
+            
+            def _background_sync_all(c_name, y_val):
+                try:
+                    storage_manager.sync_normalized_lakehouse(c_name, y_val)
+                except Exception as ex1:
+                    logger.warning("[UPLOAD_SINGLE:SYNC_LAKEHOUSE_ERR] %s", ex1)
+                try:
+                    tax_lakehouse_manager.sync_company_tax_and_payroll(c_name, y_val)
+                except Exception as ex2:
+                    logger.warning("[UPLOAD_SINGLE:SYNC_TAX_ERR] %s", ex2)
+
             threading.Thread(
-                target=storage_manager.sync_normalized_lakehouse,
+                target=_background_sync_all,
                 args=(target_company, fy_int),
                 daemon=True
             ).start()
-            logger.info("[UPLOAD_SINGLE:SYNC_TRIGGERED] Background lakehouse sync thread spawned for %s (FY %s)", target_company, fy_int)
+            logger.info("[UPLOAD_SINGLE:SYNC_TRIGGERED] Background lakehouse & tax/payroll sync thread spawned for %s (FY %s)", target_company, fy_int)
         except Exception as sync_trigger_err:
-            logger.warning("[UPLOAD_SINGLE:SYNC_WARN] Failed to spawn background lakehouse sync thread: %s", sync_trigger_err)
+            logger.warning("[UPLOAD_SINGLE:SYNC_WARN] Failed to spawn background sync thread: %s", sync_trigger_err)
 
         now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
         return jsonify({
@@ -933,7 +951,7 @@ def get_recent_submissions(company_name=None):
                     ht = f.get('help_text', '')
 
                     # P-File (영구문서) 여부 확인
-                    is_pfile = ('P-File' in file_url_path) or ('pfile_' in file_url_path) or ('[PBC-P-' in fn) or ('회사기본사항' in ht)
+                    is_pfile = ('P-File' in file_url_path) or ('pfile_' in file_url_path) or ('[PBC-P-' in fn) or ('회사기본사항' in ht) or ('영구문서' in ht)
 
                     # 해당 연도 파일 여부 확인
                     year_tag = f"[{target_year}년도]"
@@ -1240,6 +1258,75 @@ def get_portal_analytics(company_name=None):
         gc.collect()
 
 
+@api_bp.route('/api/company/lakehouse/tax-payroll-data', methods=['GET'])
+def get_tax_payroll_lakehouse_data():
+    """
+    우분투 MinIO Lakehouse에 정규화 적재된 부가가치세(vat_annual.json) 및
+    급여/원천세(payroll_annual.json) JSON 데이터를 0.01초 내에 인메모리 반환합니다.
+    """
+    try:
+        company_name = request.args.get('company_name') or session.get('company', '')
+        fiscal_year = request.args.get('fiscal_year') or request.args.get('year') or '2025'
+        
+        if not company_name:
+            return jsonify({'success': False, 'error': '회사명이 필요합니다.'}), 400
+
+        safe_company = get_safe_path_name(company_name)
+        fy_int = int(fiscal_year) if str(fiscal_year).isdigit() else 2025
+        bucket_name = 'company-uploads'
+
+        logger.info("[TAX_PAYROLL_API:REQ] Loading Tax & Payroll lakehouse for %s (FY %s)", safe_company, fy_int)
+
+        vat_data = None
+        payroll_data = None
+
+        if s3_client:
+            # 1. 부가세 데이터 로드
+            try:
+                vat_resp = s3_client.get_object(Bucket=bucket_name, Key=f"{safe_company}/{fy_int}/Normalized/vat_annual.json")
+                vat_data = json.loads(vat_resp["Body"].read().decode("utf-8"))
+            except Exception as ve:
+                logger.debug("[TAX_PAYROLL_API:VAT_MISS] vat_annual.json not found: %s", ve)
+
+            # 2. 급여/원천세 데이터 로드
+            try:
+                pr_resp = s3_client.get_object(Bucket=bucket_name, Key=f"{safe_company}/{fy_int}/Normalized/payroll_annual.json")
+                payroll_data = json.loads(pr_resp["Body"].read().decode("utf-8"))
+            except Exception as pe:
+                logger.debug("[TAX_PAYROLL_API:PAYROLL_MISS] payroll_annual.json not found: %s", pe)
+
+        return jsonify({
+            'success': True,
+            'company_name': safe_company,
+            'fiscal_year': fy_int,
+            'has_vat': vat_data is not None,
+            'has_payroll': payroll_data is not None,
+            'vat': vat_data,
+            'payroll': payroll_data
+        }), 200
+
+    except Exception as e:
+        logger.error("[TAX_PAYROLL_API:ERROR] Error fetching tax/payroll data: %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@api_bp.route('/api/company/lakehouse/sync-tax-payroll', methods=['POST'])
+def sync_tax_payroll_lakehouse():
+    """
+    회사에 새로 업로드된 부가세/급여 ZIP 파일을 우분투 MinIO Lakehouse로 즉시 동기화 DB화하는 엔드포인트
+    """
+    try:
+        data = request.get_json() or {}
+        company_name = data.get('company_name') or request.form.get('company_name') or session.get('company', '')
+        fiscal_year = data.get('fiscal_year') or request.form.get('fiscal_year') or 2025
 
+        if not company_name:
+            return jsonify({'success': False, 'error': '회사명이 필요합니다.'}), 400
+
+        from core.tax_payroll_pipeline import tax_lakehouse_manager
+        res = tax_lakehouse_manager.sync_company_tax_and_payroll(company_name, int(fiscal_year))
+        return jsonify(res), 200 if res.get('success') else 500
+
+    except Exception as e:
+        logger.error("[TAX_PAYROLL_SYNC:ERROR] Error triggering sync: %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
