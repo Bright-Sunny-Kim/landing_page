@@ -576,20 +576,25 @@ Render.com 무료/기본 인스턴스(RAM 512MB) 및 클라우드 배포 환경�
 ---
 
 ### 3. 🏛️ P-File 거버넌스 Master Lakehouse 파이프라인 ([`core/pfile_pipeline.py`](file:///C:/Users/CLAUD/landing_page/core/pfile_pipeline.py))
-1. **영구문서 17종 통합 정규화 파서 (`PFilePackageParser`)**:
+1. **17종 영구문서 슬롯 인벤토리 & 커버리지 자동 산출**:
+   - `PFILE_17_CATEGORIES` (pfile_01: 정관 ~ pfile_17: 기타) 17개 표준 슬롯 체계 구축.
+   - 업로드된 파일의 카테고리별 제출 여부(`is_submitted`), 제출 문서 수(`count`), 문서 목록(`files`)을 추적하여 **제출 현황(제출건수/17) 및 커버리지(%)**를 자동 산출.
+2. **영구문서 통합 정규화 파서 (`PFilePackageParser`)**:
    - **정관 (pfile_01)**: 사업목적 8개호, 수권주식수(200,000주), 액면가(5,000원), CB한도(100억) 파싱.
    - **법인등기부등본 (pfile_02)**: 법인등록번호, 본점주소, 발행주식수(80,000주), 자본금(400,000,000원), 대표이사 파싱.
    - **주주명부 (pfile_03)**: 주주별 주식수, 납입금액, 지분율(최대주주 82.5%, 특수관계인 포함 100%) 및 주민번호 마스킹 파싱.
    - **전사 조직도 (pfile_05)**: 총 임직원 수(15명) 및 부서별 인원 구성 파싱.
    - **사업자등록증 (pfile_08)**: 사업자등록번호, 개업연월일, 업태/종목 파싱.
-2. **3자 교차 대사 검증 (Cross-Validation)**:
+3. **3자 교차 대사 검증 (Cross-Validation)**:
    - `자본금 일치(4억)`: 등기부등본 자본금 == 주주명부 납입총액
    - `주식수 일치(80,000주)`: 등기부등본 발행주식수 == 주주명부 총 주식수
    - `인원수 일치(15명)`: 조직도 총원 == 월별 급여대장 임직원 수
    - `대표자 일치`: 등기부등본 대표자 == 사업자등록증/주주명부 대표자
-3. **우분투 MinIO S3 Lakehouse Master 적재**:
-   - `company-uploads/{회사명}/P-File/Normalized/pfile_master.json` (4.1 KB) 영구 적재.
-4. **P-File 조회 및 동기화 API ([`blueprints/api.py`](file:///C:/Users/CLAUD/landing_page/blueprints/api.py))**:
+4. **추후 추가 업로드 문서 스마트 증분 병합 (`merge_pfile_masters`)**:
+   - 향후 이사회 의사록(pfile_04), 인감증명서(pfile_06), 금융기관조회서(pfile_09) 등이 추가 업로드될 경우, 기존 마스터 프로필(기업정보, 주주, 조직도)을 안전하게 보존하면서 신규 문서 슬롯만 즉시 병합 및 커버리지(%) 재계산.
+5. **우분투 MinIO S3 Lakehouse Master 적재**:
+   - `company-uploads/{회사명}/P-File/Normalized/pfile_master.json` (9.19 KB, 커버리지 35.3%) 영구 적재.
+6. **P-File 조회 및 동기화 API ([`blueprints/api.py`](file:///C:/Users/CLAUD/landing_page/blueprints/api.py))**:
    - `GET /api/company/lakehouse/pfile-data`: 0.01초 만에 기업 Master Profile JSON 반환.
    - `POST /api/company/lakehouse/sync-pfiles`: P-File 자동 동기화 트리거.
 
