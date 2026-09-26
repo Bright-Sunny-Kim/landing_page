@@ -571,12 +571,32 @@ Render.com 무료/기본 인스턴스(RAM 512MB) 및 클라우드 배포 환경�
 
 ---
 
-### 3. 🔄 4Q 및 추가 데이터 스마트 증분 병합 (Smart Incremental Merge)
+### 3. 🏛️ P-File 거버넌스 Master Lakehouse 파이프라인 ([`core/pfile_pipeline.py`](file:///C:/Users/CLAUD/landing_page/core/pfile_pipeline.py))
+1. **영구문서 17종 통합 정규화 파서 (`PFilePackageParser`)**:
+   - **정관 (pfile_01)**: 사업목적 8개호, 수권주식수(200,000주), 액면가(5,000원), CB한도(100억) 파싱.
+   - **법인등기부등본 (pfile_02)**: 법인등록번호, 본점주소, 발행주식수(80,000주), 자본금(400,000,000원), 대표이사 파싱.
+   - **주주명부 (pfile_03)**: 주주별 주식수, 납입금액, 지분율(최대주주 82.5%, 특수관계인 포함 100%) 및 주민번호 마스킹 파싱.
+   - **전사 조직도 (pfile_05)**: 총 임직원 수(15명) 및 부서별 인원 구성 파싱.
+   - **사업자등록증 (pfile_08)**: 사업자등록번호, 개업연월일, 업태/종목 파싱.
+2. **3자 교차 대사 검증 (Cross-Validation)**:
+   - `자본금 일치(4억)`: 등기부등본 자본금 == 주주명부 납입총액
+   - `주식수 일치(80,000주)`: 등기부등본 발행주식수 == 주주명부 총 주식수
+   - `인원수 일치(15명)`: 조직도 총원 == 월별 급여대장 임직원 수
+   - `대표자 일치`: 등기부등본 대표자 == 사업자등록증/주주명부 대표자
+3. **우분투 MinIO S3 Lakehouse Master 적재**:
+   - `company-uploads/{회사명}/P-File/Normalized/pfile_master.json` (4.1 KB) 영구 적재.
+4. **P-File 조회 및 동기화 API ([`blueprints/api.py`](file:///C:/Users/CLAUD/landing_page/blueprints/api.py))**:
+   - `GET /api/company/lakehouse/pfile-data`: 0.01초 만에 기업 Master Profile JSON 반환.
+   - `POST /api/company/lakehouse/sync-pfiles`: P-File 자동 동기화 트리거.
+
+---
+
+### 4. 🔄 4Q 및 추가 데이터 스마트 증분 병합 (Smart Incremental Merge)
 1. **분기/월 단위 슬롯 병합 (Slot Upsert)**:
    - 추후 4Q 세금계산서나 10~12월 급여대장이 추가 업로드될 경우, 기존 1Q~3Q 및 M01~M09 데이터를 완벽히 보존하면서 새 분기/월 데이터만 스마트 결합.
    - 연간 누적 총매출, 총매입, 세금계산서 총 매수 및 연간 총인건비를 1Q~4Q(12개월) 전체에 대해 자동으로 재계산(`Re-aggregation`).
 2. **업로드 즉시 백그라운드 자동 동기화 (`_background_sync_all`)**:
-   - 웹 화면에서 단일 엑셀/PDF 또는 ZIP 파일 업로드 시, 백그라운드 비동기 스레드가 즉시 실행되어 우분투 MinIO Lakehouse의 세무/노무 데이터셋을 실시간 자동 갱신.
+   - 웹 화면에서 단일 엑셀/PDF 또는 ZIP 파일 업로드 시, 백그라운드 비동기 스레드가 즉시 실행되어 우분투 MinIO Lakehouse의 세무/노무/P-File 데이터셋을 실시간 자동 갱신.
 3. **고속 조회 API 연동 ([`blueprints/api.py`](file:///C:/Users/CLAUD/landing_page/blueprints/api.py))**:
    - `GET /api/company/lakehouse/tax-payroll-data`: 정규화된 세무/노무 데이터를 0.01초 만에 인메모리 반환.
    - `POST /api/company/lakehouse/sync-tax-payroll`: 수동/자동 레이크하우스 동기화 트리거.

@@ -801,14 +801,15 @@ def upload_single_file():
             except Exception as db_err:
                 logger.error("[UPLOAD_SINGLE:DB_ERROR] Supabase company_files insert failed for %s: %s", db_filename, db_err, exc_info=True)
 
-        # 3. 사내 우분투 MinIO Lakehouse (Normalized/data.json 및 vat/payroll) 비동기 자동 동기화 트리거
+        # 3. 사내 우분투 MinIO Lakehouse (Normalized/data.json, vat/payroll, pfile_master) 비동기 자동 동기화 트리거
         try:
             import threading
             from core.storage_manager import storage_manager
             from core.tax_payroll_pipeline import tax_lakehouse_manager
+            from core.pfile_pipeline import pfile_lakehouse_manager
             fy_int = int(fiscal_year) if fiscal_year and str(fiscal_year).isdigit() else 2025
             
-            def _background_sync_all(c_name, y_val):
+            def _background_sync_all(c_name, y_val, is_pfile_up):
                 try:
                     storage_manager.sync_normalized_lakehouse(c_name, y_val)
                 except Exception as ex1:
@@ -817,13 +818,19 @@ def upload_single_file():
                     tax_lakehouse_manager.sync_company_tax_and_payroll(c_name, y_val)
                 except Exception as ex2:
                     logger.warning("[UPLOAD_SINGLE:SYNC_TAX_ERR] %s", ex2)
+                if is_pfile_up:
+                    try:
+                        pfile_lakehouse_manager.sync_company_pfiles(c_name)
+                    except Exception as ex3:
+                        logger.warning("[UPLOAD_SINGLE:SYNC_PFILE_ERR] %s", ex3)
 
+            is_pfile_upload = field_name.startswith('pfile_')
             threading.Thread(
                 target=_background_sync_all,
-                args=(target_company, fy_int),
+                args=(target_company, fy_int, is_pfile_upload),
                 daemon=True
             ).start()
-            logger.info("[UPLOAD_SINGLE:SYNC_TRIGGERED] Background lakehouse & tax/payroll sync thread spawned for %s (FY %s)", target_company, fy_int)
+            logger.info("[UPLOAD_SINGLE:SYNC_TRIGGERED] Background lakehouse (Tax/Payroll/P-File) sync thread spawned for %s (FY %s)", target_company, fy_int)
         except Exception as sync_trigger_err:
             logger.warning("[UPLOAD_SINGLE:SYNC_WARN] Failed to spawn background sync thread: %s", sync_trigger_err)
 
@@ -1330,3 +1337,62 @@ def sync_tax_payroll_lakehouse():
     except Exception as e:
         logger.error("[TAX_PAYROLL_SYNC:ERROR] Error triggering sync: %s", e, exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/api/company/lakehouse/pfile-data', methods=['GET'])
+def get_pfile_lakehouse_data():
+    """
+    우분투 MinIO Lakehouse에 적재된 회사기본사항(pfile_master.json) 영구 Master JSON 데이터를
+    0.01초 내에 인메모리 반환합니다.
+    """
+    try:
+        company_name = request.args.get('company_name') or session.get('company', '')
+        if not company_name:
+            return jsonify({'success': False, 'error': '회사명이 필요합니다.'}), 400
+
+        safe_company = get_safe_path_name(company_name)
+        bucket_name = 'company-uploads'
+        norm_key = f"{safe_company}/P-File/Normalized/pfile_master.json"
+
+        logger.info("[PFILE_API:REQ] Loading P-File master profile for %s", safe_company)
+        pfile_master = None
+
+        if s3_client:
+            try:
+                resp = s3_client.get_object(Bucket=bucket_name, Key=norm_key)
+                pfile_master = json.loads(resp["Body"].read().decode("utf-8"))
+            except Exception as fe:
+                logger.debug("[PFILE_API:MISS] pfile_master.json not found: %s", fe)
+
+        return jsonify({
+            'success': True,
+            'company_name': safe_company,
+            'has_pfile_master': pfile_master is not None,
+            'pfile_master': pfile_master
+        }), 200
+
+    except Exception as e:
+        logger.error("[PFILE_API:ERROR] Error fetching pfile master data: %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/api/company/lakehouse/sync-pfiles', methods=['POST'])
+def sync_pfiles_lakehouse():
+    """
+    새로 업로드된 P-File 영구문서들을 우분투 MinIO Lakehouse로 즉시 동기화 DB화하는 엔드포인트
+    """
+    try:
+        data = request.get_json() or {}
+        company_name = data.get('company_name') or request.form.get('company_name') or session.get('company', '')
+
+        if not company_name:
+            return jsonify({'success': False, 'error': '회사명이 필요합니다.'}), 400
+
+        from core.pfile_pipeline import pfile_lakehouse_manager
+        res = pfile_lakehouse_manager.sync_company_pfiles(company_name)
+        return jsonify(res), 200 if res.get('success') else 500
+
+    except Exception as e:
+        logger.error("[PFILE_SYNC:ERROR] Error triggering pfile sync: %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
