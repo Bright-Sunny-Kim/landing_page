@@ -1,0 +1,1793 @@
+[
+  {
+    "id": 18,
+    "created_at": "2026-09-26 11:27:21",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 17,
+    "created_at": "2026-09-26 11:23:12",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 16,
+    "created_at": "2026-09-26 11:19:32",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 15,
+    "created_at": "2026-09-26 11:15:47",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 14,
+    "created_at": "2026-09-26 11:13:30",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 13,
+    "created_at": "2026-09-26 11:09:07",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "cpaeastsun@naver.com",
+          "name": "김동선(CPA)",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 12,
+    "created_at": "2026-09-26 10:52:56",
+    "company_name": "혜안_임시",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "마스터관리자",
+    "diff_summary": "주임 변경: 꼴통 ➔ 감사인",
+    "before_data": {
+      "id": 1,
+      "company_name": "혜안_임시",
+      "fiscal_year": 2025,
+      "in_charge_name": "꼴통",
+      "in_charge_email": "cpakds@naver.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "꼴통",
+          "email": "cpakds@naver.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "감사인",
+          "email": "cpaeastsun@naver.com",
+          "role": "Staff CPA"
+        },
+        {
+          "name": "마스터관리자",
+          "email": "cpaeastsun@gmail.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "A-0": "cpaeastsun@naver.com",
+        "B-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com",
+        "D-0": "cpaeastsun@gmail.com",
+        "DER-0": "cpaeastsun@gmail.com",
+        "DL-0": "cpaeastsun@gmail.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "E10": "cpaeastsun@gmail.com",
+        "F-0": "cpaeastsun@gmail.com",
+        "G-0": "cpaeastsun@gmail.com",
+        "H-0": "cpaeastsun@gmail.com",
+        "I-0": "cpaeastsun@gmail.com",
+        "J-0": "cpaeastsun@gmail.com",
+        "JV-0": "cpaeastsun@gmail.com",
+        "SAJ-0": "cpaeastsun@gmail.com",
+        "AA-0": "cpaeastsun@gmail.com",
+        "BBDD-0": "cpaeastsun@gmail.com",
+        "CC-0": "cpaeastsun@gmail.com",
+        "EE-0": "cpaeastsun@gmail.com",
+        "FF-0": "cpaeastsun@gmail.com",
+        "FFF-0": "cpaeastsun@gmail.com",
+        "TUL-0": "cpaeastsun@gmail.com",
+        "GG-0": "cpaeastsun@gmail.com",
+        "CL-0": "cpaeastsun@gmail.com",
+        "P-0": "cpaeastsun@gmail.com",
+        "Q-0": "cpaeastsun@gmail.com",
+        "R-0": "cpaeastsun@gmail.com",
+        "S-0": "cpaeastsun@gmail.com",
+        "T-0": "cpaeastsun@gmail.com",
+        "U-0": "cpaeastsun@gmail.com",
+        "IOC-0": "cpaeastsun@gmail.com",
+        "EST-0": "cpaeastsun@gmail.com",
+        "CF-0": "cpaeastsun@gmail.com"
+      },
+      "status": "planned",
+      "status_label": "기획/계획 단계",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "company_name": "혜안_임시",
+      "fiscal_year": 2025,
+      "in_charge_name": "감사인",
+      "in_charge_email": "cpaeastsun@naver.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "감사인",
+          "email": "cpaeastsun@naver.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "마스터관리자",
+          "email": "cpaeastsun@gmail.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100": "cpaeastsun@gmail.com",
+        "1200": "cpaeastsun@gmail.com",
+        "1300": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@gmail.com",
+        "2110": "cpaeastsun@gmail.com",
+        "2120": "cpaeastsun@gmail.com",
+        "2131": "cpaeastsun@gmail.com",
+        "2132": "cpaeastsun@gmail.com",
+        "2133": "cpaeastsun@gmail.com",
+        "2301": "cpaeastsun@gmail.com",
+        "2302": "cpaeastsun@gmail.com",
+        "2511": "cpaeastsun@gmail.com",
+        "2512": "cpaeastsun@gmail.com",
+        "2513": "cpaeastsun@gmail.com",
+        "2520": "cpaeastsun@gmail.com",
+        "2530": "cpaeastsun@gmail.com",
+        "2531": "cpaeastsun@gmail.com",
+        "2532": "cpaeastsun@gmail.com",
+        "2600": "cpaeastsun@gmail.com",
+        "2700": "cpaeastsun@gmail.com",
+        "3100": "cpaeastsun@gmail.com",
+        "3150": "cpaeastsun@gmail.com",
+        "3200": "cpaeastsun@gmail.com",
+        "3300": "cpaeastsun@gmail.com",
+        "3400": "cpaeastsun@gmail.com",
+        "3500": "cpaeastsun@gmail.com",
+        "3600": "cpaeastsun@gmail.com",
+        "3650": "cpaeastsun@gmail.com",
+        "3700": "cpaeastsun@gmail.com",
+        "3800": "cpaeastsun@gmail.com",
+        "3910": "cpaeastsun@gmail.com",
+        "7000": "cpaeastsun@gmail.com",
+        "7100": "cpaeastsun@gmail.com",
+        "7200": "cpaeastsun@gmail.com",
+        "7300": "cpaeastsun@gmail.com",
+        "7400": "cpaeastsun@gmail.com",
+        "7410": "cpaeastsun@gmail.com",
+        "7510": "cpaeastsun@gmail.com",
+        "7530": "cpaeastsun@gmail.com",
+        "7555": "cpaeastsun@gmail.com",
+        "7560": "cpaeastsun@gmail.com",
+        "7570": "cpaeastsun@gmail.com",
+        "8100": "cpaeastsun@gmail.com",
+        "8110": "cpaeastsun@gmail.com",
+        "8200": "cpaeastsun@gmail.com",
+        "8300": "cpaeastsun@gmail.com",
+        "8400": "cpaeastsun@gmail.com",
+        "8500": "cpaeastsun@gmail.com",
+        "8550": "cpaeastsun@gmail.com",
+        "8600": "cpaeastsun@gmail.com",
+        "8700": "cpaeastsun@gmail.com",
+        "1100A": "cpaeastsun@gmail.com",
+        "1101A": "cpaeastsun@gmail.com",
+        "1300A": "cpaeastsun@gmail.com",
+        "1300B": "cpaeastsun@gmail.com",
+        "2100A": "cpaeastsun@gmail.com",
+        "2110-02": "cpaeastsun@gmail.com",
+        "2110A": "cpaeastsun@gmail.com",
+        "2110B": "cpaeastsun@gmail.com",
+        "2120A": "cpaeastsun@gmail.com",
+        "2531A": "cpaeastsun@gmail.com",
+        "2700A": "cpaeastsun@gmail.com",
+        "3300A": "cpaeastsun@gmail.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "B-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@gmail.com",
+        "D-0": "cpaeastsun@gmail.com",
+        "DER-0": "cpaeastsun@gmail.com",
+        "DL-0": "cpaeastsun@gmail.com",
+        "E-0": "cpaeastsun@naver.com",
+        "E10": "cpaeastsun@gmail.com",
+        "F-0": "cpaeastsun@gmail.com",
+        "G-0": "cpaeastsun@gmail.com",
+        "H-0": "cpaeastsun@gmail.com",
+        "I-0": "cpaeastsun@gmail.com",
+        "J-0": "cpaeastsun@gmail.com",
+        "JV-0": "cpaeastsun@gmail.com",
+        "SAJ-0": "cpaeastsun@gmail.com",
+        "AA-0": "cpaeastsun@gmail.com",
+        "BBDD-0": "cpaeastsun@gmail.com",
+        "CC-0": "cpaeastsun@gmail.com",
+        "EE-0": "cpaeastsun@gmail.com",
+        "FF-0": "cpaeastsun@gmail.com",
+        "FFF-0": "cpaeastsun@gmail.com",
+        "TUL-0": "cpaeastsun@gmail.com",
+        "GG-0": "cpaeastsun@gmail.com",
+        "CL-0": "cpaeastsun@gmail.com",
+        "P-0": "cpaeastsun@gmail.com",
+        "Q-0": "cpaeastsun@gmail.com",
+        "R-0": "cpaeastsun@gmail.com",
+        "S-0": "cpaeastsun@gmail.com",
+        "T-0": "cpaeastsun@gmail.com",
+        "U-0": "cpaeastsun@gmail.com",
+        "IOC-0": "cpaeastsun@gmail.com",
+        "EST-0": "cpaeastsun@gmail.com",
+        "CF-0": "cpaeastsun@gmail.com",
+        "7100A": "cpaeastsun@gmail.com",
+        "7200A": "cpaeastsun@gmail.com",
+        "7400-01": "cpaeastsun@gmail.com",
+        "7410E": "cpaeastsun@gmail.com",
+        "7510A": "cpaeastsun@gmail.com",
+        "7560A": "cpaeastsun@gmail.com",
+        "8100A": "cpaeastsun@gmail.com",
+        "8110A": "cpaeastsun@gmail.com",
+        "8600A": "cpaeastsun@gmail.com"
+      },
+      "status": "planned",
+      "status_label": "기획/계획 단계",
+      "inventory_date": "2025-12-31",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 11,
+    "created_at": "2026-09-26 10:51:14",
+    "company_name": "혜안_임시",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "마스터관리자",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 1,
+      "company_name": "혜안_임시",
+      "fiscal_year": 2025,
+      "in_charge_name": "꼴통",
+      "in_charge_email": "cpakds@naver.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "꼴통",
+          "email": "cpakds@naver.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "마스터관리자",
+          "email": "cpaeastsun@gmail.com",
+          "role": "Staff CPA"
+        },
+        {
+          "name": "감사인",
+          "email": "cpaeastsun@naver.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100": "cpaeastsun@gmail.com",
+        "1200": "cpaeastsun@gmail.com",
+        "1300": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@gmail.com",
+        "2110": "cpaeastsun@gmail.com",
+        "2120": "cpaeastsun@gmail.com",
+        "2131": "cpaeastsun@gmail.com",
+        "2132": "cpaeastsun@gmail.com",
+        "2133": "cpaeastsun@gmail.com",
+        "2301": "cpaeastsun@gmail.com",
+        "2302": "cpaeastsun@gmail.com",
+        "2511": "cpaeastsun@gmail.com",
+        "2512": "cpaeastsun@gmail.com",
+        "2513": "cpaeastsun@gmail.com",
+        "2520": "cpaeastsun@gmail.com",
+        "2530": "cpaeastsun@gmail.com",
+        "2531": "cpaeastsun@gmail.com",
+        "2532": "cpaeastsun@gmail.com",
+        "2600": "cpaeastsun@gmail.com",
+        "2700": "cpaeastsun@gmail.com",
+        "3100": "cpaeastsun@gmail.com",
+        "3150": "cpaeastsun@gmail.com",
+        "3200": "cpaeastsun@gmail.com",
+        "3300": "cpaeastsun@gmail.com",
+        "3400": "cpaeastsun@gmail.com",
+        "3500": "cpaeastsun@gmail.com",
+        "3600": "cpaeastsun@gmail.com",
+        "3650": "cpaeastsun@gmail.com",
+        "3700": "cpaeastsun@gmail.com",
+        "3800": "cpaeastsun@gmail.com",
+        "3910": "cpaeastsun@gmail.com",
+        "7000": "cpaeastsun@gmail.com",
+        "7100": "cpaeastsun@gmail.com",
+        "7200": "cpaeastsun@gmail.com",
+        "7300": "cpaeastsun@gmail.com",
+        "7400": "cpaeastsun@gmail.com",
+        "7410": "cpaeastsun@gmail.com",
+        "7510": "cpaeastsun@gmail.com",
+        "7530": "cpaeastsun@gmail.com",
+        "7555": "cpaeastsun@gmail.com",
+        "7560": "cpaeastsun@gmail.com",
+        "7570": "cpaeastsun@gmail.com",
+        "8100": "cpaeastsun@gmail.com",
+        "8110": "cpaeastsun@gmail.com",
+        "8200": "cpaeastsun@gmail.com",
+        "8300": "cpaeastsun@gmail.com",
+        "8400": "cpaeastsun@gmail.com",
+        "8500": "cpaeastsun@gmail.com",
+        "8550": "cpaeastsun@gmail.com",
+        "8600": "cpaeastsun@gmail.com",
+        "8700": "cpaeastsun@gmail.com",
+        "1100A": "cpaeastsun@gmail.com",
+        "1101A": "cpaeastsun@gmail.com",
+        "1300A": "cpaeastsun@gmail.com",
+        "1300B": "cpaeastsun@gmail.com",
+        "2100A": "cpaeastsun@gmail.com",
+        "2110-02": "cpaeastsun@gmail.com",
+        "2110A": "cpaeastsun@gmail.com",
+        "2110B": "cpaeastsun@gmail.com",
+        "2120A": "cpaeastsun@gmail.com",
+        "2531A": "cpaeastsun@gmail.com",
+        "2700A": "cpaeastsun@gmail.com",
+        "3300A": "cpaeastsun@gmail.com",
+        "A-0": "cpaeastsun@naver.com",
+        "B-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@gmail.com",
+        "D-0": "cpaeastsun@gmail.com",
+        "DER-0": "cpaeastsun@gmail.com",
+        "DL-0": "cpaeastsun@gmail.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "E10": "cpaeastsun@gmail.com",
+        "F-0": "cpaeastsun@gmail.com",
+        "G-0": "cpaeastsun@gmail.com",
+        "H-0": "cpaeastsun@gmail.com",
+        "I-0": "cpaeastsun@gmail.com",
+        "J-0": "cpaeastsun@gmail.com",
+        "JV-0": "cpaeastsun@gmail.com",
+        "SAJ-0": "cpaeastsun@gmail.com",
+        "AA-0": "cpaeastsun@gmail.com",
+        "BBDD-0": "cpaeastsun@gmail.com",
+        "CC-0": "cpaeastsun@gmail.com",
+        "EE-0": "cpaeastsun@gmail.com",
+        "FF-0": "cpaeastsun@gmail.com",
+        "FFF-0": "cpaeastsun@gmail.com",
+        "TUL-0": "cpaeastsun@gmail.com",
+        "GG-0": "cpaeastsun@gmail.com",
+        "CL-0": "cpaeastsun@gmail.com",
+        "P-0": "cpaeastsun@gmail.com",
+        "Q-0": "cpaeastsun@gmail.com",
+        "R-0": "cpaeastsun@gmail.com",
+        "S-0": "cpaeastsun@gmail.com",
+        "T-0": "cpaeastsun@gmail.com",
+        "U-0": "cpaeastsun@gmail.com",
+        "IOC-0": "cpaeastsun@gmail.com",
+        "EST-0": "cpaeastsun@gmail.com",
+        "CF-0": "cpaeastsun@gmail.com",
+        "7100A": "cpaeastsun@gmail.com",
+        "7200A": "cpaeastsun@gmail.com",
+        "7400-01": "cpaeastsun@gmail.com",
+        "7410E": "cpaeastsun@gmail.com",
+        "7510A": "cpaeastsun@gmail.com",
+        "7560A": "cpaeastsun@gmail.com",
+        "8100A": "cpaeastsun@gmail.com",
+        "8110A": "cpaeastsun@gmail.com",
+        "8600A": "cpaeastsun@gmail.com"
+      },
+      "status": "planned",
+      "status_label": "기획/계획 단계",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "company_name": "혜안_임시",
+      "fiscal_year": 2025,
+      "in_charge_name": "꼴통",
+      "in_charge_email": "cpakds@naver.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "꼴통",
+          "email": "cpakds@naver.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "감사인",
+          "email": "cpaeastsun@naver.com",
+          "role": "Staff CPA"
+        },
+        {
+          "name": "마스터관리자",
+          "email": "cpaeastsun@gmail.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "A-0": "cpaeastsun@naver.com",
+        "B-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com",
+        "D-0": "cpaeastsun@gmail.com",
+        "DER-0": "cpaeastsun@gmail.com",
+        "DL-0": "cpaeastsun@gmail.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "E10": "cpaeastsun@gmail.com",
+        "F-0": "cpaeastsun@gmail.com",
+        "G-0": "cpaeastsun@gmail.com",
+        "H-0": "cpaeastsun@gmail.com",
+        "I-0": "cpaeastsun@gmail.com",
+        "J-0": "cpaeastsun@gmail.com",
+        "JV-0": "cpaeastsun@gmail.com",
+        "SAJ-0": "cpaeastsun@gmail.com",
+        "AA-0": "cpaeastsun@gmail.com",
+        "BBDD-0": "cpaeastsun@gmail.com",
+        "CC-0": "cpaeastsun@gmail.com",
+        "EE-0": "cpaeastsun@gmail.com",
+        "FF-0": "cpaeastsun@gmail.com",
+        "FFF-0": "cpaeastsun@gmail.com",
+        "TUL-0": "cpaeastsun@gmail.com",
+        "GG-0": "cpaeastsun@gmail.com",
+        "CL-0": "cpaeastsun@gmail.com",
+        "P-0": "cpaeastsun@gmail.com",
+        "Q-0": "cpaeastsun@gmail.com",
+        "R-0": "cpaeastsun@gmail.com",
+        "S-0": "cpaeastsun@gmail.com",
+        "T-0": "cpaeastsun@gmail.com",
+        "U-0": "cpaeastsun@gmail.com",
+        "IOC-0": "cpaeastsun@gmail.com",
+        "EST-0": "cpaeastsun@gmail.com",
+        "CF-0": "cpaeastsun@gmail.com"
+      },
+      "status": "planned",
+      "status_label": "기획/계획 단계",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 10,
+    "created_at": "2026-09-26 10:48:03",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 9,
+    "created_at": "2026-09-26 10:39:02",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 8,
+    "created_at": "2026-09-26 10:31:51",
+    "company_name": "혜안_임시",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "마스터관리자",
+    "diff_summary": "주임 변경: 김동선 ➔ 꼴통, 단계 변경: 실증감사 진행중 ➔ 기획/계획 단계",
+    "before_data": {
+      "id": 1,
+      "company_name": "혜안_임시",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "김동선",
+          "email": "cpaeastsun@gmail.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "꼴통",
+          "email": "cpakds@naver.com",
+          "role": "Staff CPA"
+        },
+        {
+          "name": "감사인",
+          "email": "cpaeastsun@naver.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100": "cpaeastsun@gmail.com",
+        "1200": "cpaeastsun@gmail.com",
+        "1300": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@gmail.com",
+        "2110": "cpaeastsun@gmail.com",
+        "2120": "cpaeastsun@gmail.com",
+        "2131": "cpaeastsun@gmail.com",
+        "2132": "cpaeastsun@gmail.com",
+        "2133": "cpaeastsun@gmail.com",
+        "2301": "cpaeastsun@gmail.com",
+        "2302": "cpaeastsun@gmail.com",
+        "2511": "cpaeastsun@gmail.com",
+        "2512": "cpaeastsun@gmail.com",
+        "2513": "cpaeastsun@gmail.com",
+        "2520": "cpaeastsun@gmail.com",
+        "2530": "cpaeastsun@gmail.com",
+        "2531": "cpaeastsun@gmail.com",
+        "2532": "cpaeastsun@gmail.com",
+        "2600": "cpaeastsun@gmail.com",
+        "2700": "cpaeastsun@gmail.com",
+        "3100": "cpaeastsun@gmail.com",
+        "3150": "cpaeastsun@gmail.com",
+        "3200": "cpaeastsun@gmail.com",
+        "3300": "cpaeastsun@gmail.com",
+        "3400": "cpaeastsun@gmail.com",
+        "3500": "cpaeastsun@gmail.com",
+        "3600": "cpaeastsun@gmail.com",
+        "3650": "cpaeastsun@gmail.com",
+        "3700": "cpaeastsun@gmail.com",
+        "3800": "cpaeastsun@gmail.com",
+        "3910": "cpaeastsun@gmail.com",
+        "7000": "cpaeastsun@gmail.com",
+        "7100": "cpaeastsun@gmail.com",
+        "7200": "cpaeastsun@gmail.com",
+        "7300": "cpaeastsun@gmail.com",
+        "7400": "cpaeastsun@gmail.com",
+        "7410": "cpaeastsun@gmail.com",
+        "7510": "cpaeastsun@gmail.com",
+        "7530": "cpaeastsun@gmail.com",
+        "7555": "cpaeastsun@gmail.com",
+        "7560": "cpaeastsun@gmail.com",
+        "7570": "cpaeastsun@gmail.com",
+        "8100": "cpaeastsun@gmail.com",
+        "8110": "cpaeastsun@gmail.com",
+        "8200": "cpaeastsun@gmail.com",
+        "8300": "cpaeastsun@gmail.com",
+        "8400": "cpaeastsun@gmail.com",
+        "8500": "cpaeastsun@gmail.com",
+        "8550": "cpaeastsun@gmail.com",
+        "8600": "cpaeastsun@gmail.com",
+        "8700": "cpaeastsun@gmail.com",
+        "1100A": "cpaeastsun@gmail.com",
+        "1101A": "cpaeastsun@gmail.com",
+        "1300A": "cpaeastsun@gmail.com",
+        "1300B": "cpaeastsun@gmail.com",
+        "2100A": "cpaeastsun@gmail.com",
+        "2110-02": "cpaeastsun@gmail.com",
+        "2110A": "cpaeastsun@gmail.com",
+        "2110B": "cpaeastsun@gmail.com",
+        "2120A": "cpaeastsun@gmail.com",
+        "2531A": "cpaeastsun@gmail.com",
+        "2700A": "cpaeastsun@gmail.com",
+        "3300A": "cpaeastsun@gmail.com",
+        "A-0": "cpaeastsun@naver.com",
+        "B-0": "cpaeastsun@gmail.com",
+        "C-0": "cpakds@naver.com",
+        "D-0": "cpaeastsun@gmail.com",
+        "DER-0": "cpaeastsun@gmail.com",
+        "DL-0": "cpaeastsun@gmail.com",
+        "E-0": "cpaeastsun@naver.com",
+        "E10": "cpaeastsun@gmail.com",
+        "F-0": "cpaeastsun@gmail.com",
+        "G-0": "cpakds@naver.com",
+        "H-0": "cpaeastsun@gmail.com",
+        "I-0": "cpaeastsun@gmail.com",
+        "J-0": "cpaeastsun@gmail.com",
+        "JV-0": "cpaeastsun@gmail.com",
+        "SAJ-0": "cpaeastsun@gmail.com",
+        "AA-0": "cpaeastsun@gmail.com",
+        "BBDD-0": "cpaeastsun@gmail.com",
+        "CC-0": "cpaeastsun@gmail.com",
+        "EE-0": "cpaeastsun@gmail.com",
+        "FF-0": "cpaeastsun@gmail.com",
+        "FFF-0": "cpaeastsun@gmail.com",
+        "TUL-0": "cpaeastsun@gmail.com",
+        "GG-0": "cpaeastsun@gmail.com",
+        "CL-0": "cpaeastsun@gmail.com",
+        "P-0": "cpaeastsun@gmail.com",
+        "Q-0": "cpaeastsun@gmail.com",
+        "R-0": "cpaeastsun@gmail.com",
+        "S-0": "cpaeastsun@gmail.com",
+        "T-0": "cpaeastsun@gmail.com",
+        "U-0": "cpaeastsun@gmail.com",
+        "IOC-0": "cpaeastsun@gmail.com",
+        "EST-0": "cpaeastsun@gmail.com",
+        "CF-0": "cpaeastsun@gmail.com",
+        "7100A": "cpaeastsun@gmail.com",
+        "7200A": "cpaeastsun@gmail.com",
+        "7400-01": "cpaeastsun@gmail.com",
+        "7410E": "cpaeastsun@gmail.com",
+        "7510A": "cpaeastsun@gmail.com",
+        "7560A": "cpaeastsun@gmail.com",
+        "8100A": "cpaeastsun@gmail.com",
+        "8110A": "cpaeastsun@gmail.com",
+        "8600A": "cpaeastsun@gmail.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": ""
+    },
+    "after_data": {
+      "company_name": "혜안_임시",
+      "fiscal_year": 2025,
+      "in_charge_name": "꼴통",
+      "in_charge_email": "cpakds@naver.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "꼴통",
+          "email": "cpakds@naver.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "마스터관리자",
+          "email": "cpaeastsun@gmail.com",
+          "role": "Staff CPA"
+        },
+        {
+          "name": "감사인",
+          "email": "cpaeastsun@naver.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100": "cpaeastsun@gmail.com",
+        "1200": "cpaeastsun@gmail.com",
+        "1300": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@gmail.com",
+        "2110": "cpaeastsun@gmail.com",
+        "2120": "cpaeastsun@gmail.com",
+        "2131": "cpaeastsun@gmail.com",
+        "2132": "cpaeastsun@gmail.com",
+        "2133": "cpaeastsun@gmail.com",
+        "2301": "cpaeastsun@gmail.com",
+        "2302": "cpaeastsun@gmail.com",
+        "2511": "cpaeastsun@gmail.com",
+        "2512": "cpaeastsun@gmail.com",
+        "2513": "cpaeastsun@gmail.com",
+        "2520": "cpaeastsun@gmail.com",
+        "2530": "cpaeastsun@gmail.com",
+        "2531": "cpaeastsun@gmail.com",
+        "2532": "cpaeastsun@gmail.com",
+        "2600": "cpaeastsun@gmail.com",
+        "2700": "cpaeastsun@gmail.com",
+        "3100": "cpaeastsun@gmail.com",
+        "3150": "cpaeastsun@gmail.com",
+        "3200": "cpaeastsun@gmail.com",
+        "3300": "cpaeastsun@gmail.com",
+        "3400": "cpaeastsun@gmail.com",
+        "3500": "cpaeastsun@gmail.com",
+        "3600": "cpaeastsun@gmail.com",
+        "3650": "cpaeastsun@gmail.com",
+        "3700": "cpaeastsun@gmail.com",
+        "3800": "cpaeastsun@gmail.com",
+        "3910": "cpaeastsun@gmail.com",
+        "7000": "cpaeastsun@gmail.com",
+        "7100": "cpaeastsun@gmail.com",
+        "7200": "cpaeastsun@gmail.com",
+        "7300": "cpaeastsun@gmail.com",
+        "7400": "cpaeastsun@gmail.com",
+        "7410": "cpaeastsun@gmail.com",
+        "7510": "cpaeastsun@gmail.com",
+        "7530": "cpaeastsun@gmail.com",
+        "7555": "cpaeastsun@gmail.com",
+        "7560": "cpaeastsun@gmail.com",
+        "7570": "cpaeastsun@gmail.com",
+        "8100": "cpaeastsun@gmail.com",
+        "8110": "cpaeastsun@gmail.com",
+        "8200": "cpaeastsun@gmail.com",
+        "8300": "cpaeastsun@gmail.com",
+        "8400": "cpaeastsun@gmail.com",
+        "8500": "cpaeastsun@gmail.com",
+        "8550": "cpaeastsun@gmail.com",
+        "8600": "cpaeastsun@gmail.com",
+        "8700": "cpaeastsun@gmail.com",
+        "1100A": "cpaeastsun@gmail.com",
+        "1101A": "cpaeastsun@gmail.com",
+        "1300A": "cpaeastsun@gmail.com",
+        "1300B": "cpaeastsun@gmail.com",
+        "2100A": "cpaeastsun@gmail.com",
+        "2110-02": "cpaeastsun@gmail.com",
+        "2110A": "cpaeastsun@gmail.com",
+        "2110B": "cpaeastsun@gmail.com",
+        "2120A": "cpaeastsun@gmail.com",
+        "2531A": "cpaeastsun@gmail.com",
+        "2700A": "cpaeastsun@gmail.com",
+        "3300A": "cpaeastsun@gmail.com",
+        "A-0": "cpaeastsun@naver.com",
+        "B-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@gmail.com",
+        "D-0": "cpaeastsun@gmail.com",
+        "DER-0": "cpaeastsun@gmail.com",
+        "DL-0": "cpaeastsun@gmail.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "E10": "cpaeastsun@gmail.com",
+        "F-0": "cpaeastsun@gmail.com",
+        "G-0": "cpaeastsun@gmail.com",
+        "H-0": "cpaeastsun@gmail.com",
+        "I-0": "cpaeastsun@gmail.com",
+        "J-0": "cpaeastsun@gmail.com",
+        "JV-0": "cpaeastsun@gmail.com",
+        "SAJ-0": "cpaeastsun@gmail.com",
+        "AA-0": "cpaeastsun@gmail.com",
+        "BBDD-0": "cpaeastsun@gmail.com",
+        "CC-0": "cpaeastsun@gmail.com",
+        "EE-0": "cpaeastsun@gmail.com",
+        "FF-0": "cpaeastsun@gmail.com",
+        "FFF-0": "cpaeastsun@gmail.com",
+        "TUL-0": "cpaeastsun@gmail.com",
+        "GG-0": "cpaeastsun@gmail.com",
+        "CL-0": "cpaeastsun@gmail.com",
+        "P-0": "cpaeastsun@gmail.com",
+        "Q-0": "cpaeastsun@gmail.com",
+        "R-0": "cpaeastsun@gmail.com",
+        "S-0": "cpaeastsun@gmail.com",
+        "T-0": "cpaeastsun@gmail.com",
+        "U-0": "cpaeastsun@gmail.com",
+        "IOC-0": "cpaeastsun@gmail.com",
+        "EST-0": "cpaeastsun@gmail.com",
+        "CF-0": "cpaeastsun@gmail.com",
+        "7100A": "cpaeastsun@gmail.com",
+        "7200A": "cpaeastsun@gmail.com",
+        "7400-01": "cpaeastsun@gmail.com",
+        "7410E": "cpaeastsun@gmail.com",
+        "7510A": "cpaeastsun@gmail.com",
+        "7560A": "cpaeastsun@gmail.com",
+        "8100A": "cpaeastsun@gmail.com",
+        "8110A": "cpaeastsun@gmail.com",
+        "8600A": "cpaeastsun@gmail.com"
+      },
+      "status": "planned",
+      "status_label": "기획/계획 단계",
+      "inventory_date": "2025-12-31",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 7,
+    "created_at": "2026-09-26 10:16:04",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 6,
+    "created_at": "2026-09-26 10:06:11",
+    "company_name": "혜안_임시",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "마스터관리자",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 1,
+      "company_name": "혜안_임시",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "김동선",
+          "email": "cpaeastsun@gmail.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "cpakds",
+          "email": "cpakds@naver.com",
+          "role": "Staff CPA"
+        },
+        {
+          "name": "cpaeastsun",
+          "email": "cpaeastsun@naver.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpakds@naver.com",
+        "E-0": "cpaeastsun@naver.com",
+        "G-0": "cpakds@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    },
+    "after_data": {
+      "company_name": "혜안_임시",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "김동선",
+          "email": "cpaeastsun@gmail.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "꼴통",
+          "email": "cpakds@naver.com",
+          "role": "Staff CPA"
+        },
+        {
+          "name": "감사인",
+          "email": "cpaeastsun@naver.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "1100": "cpaeastsun@gmail.com",
+        "1200": "cpaeastsun@gmail.com",
+        "1300": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@gmail.com",
+        "2110": "cpaeastsun@gmail.com",
+        "2120": "cpaeastsun@gmail.com",
+        "2131": "cpaeastsun@gmail.com",
+        "2132": "cpaeastsun@gmail.com",
+        "2133": "cpaeastsun@gmail.com",
+        "2301": "cpaeastsun@gmail.com",
+        "2302": "cpaeastsun@gmail.com",
+        "2511": "cpaeastsun@gmail.com",
+        "2512": "cpaeastsun@gmail.com",
+        "2513": "cpaeastsun@gmail.com",
+        "2520": "cpaeastsun@gmail.com",
+        "2530": "cpaeastsun@gmail.com",
+        "2531": "cpaeastsun@gmail.com",
+        "2532": "cpaeastsun@gmail.com",
+        "2600": "cpaeastsun@gmail.com",
+        "2700": "cpaeastsun@gmail.com",
+        "3100": "cpaeastsun@gmail.com",
+        "3150": "cpaeastsun@gmail.com",
+        "3200": "cpaeastsun@gmail.com",
+        "3300": "cpaeastsun@gmail.com",
+        "3400": "cpaeastsun@gmail.com",
+        "3500": "cpaeastsun@gmail.com",
+        "3600": "cpaeastsun@gmail.com",
+        "3650": "cpaeastsun@gmail.com",
+        "3700": "cpaeastsun@gmail.com",
+        "3800": "cpaeastsun@gmail.com",
+        "3910": "cpaeastsun@gmail.com",
+        "7000": "cpaeastsun@gmail.com",
+        "7100": "cpaeastsun@gmail.com",
+        "7200": "cpaeastsun@gmail.com",
+        "7300": "cpaeastsun@gmail.com",
+        "7400": "cpaeastsun@gmail.com",
+        "7410": "cpaeastsun@gmail.com",
+        "7510": "cpaeastsun@gmail.com",
+        "7530": "cpaeastsun@gmail.com",
+        "7555": "cpaeastsun@gmail.com",
+        "7560": "cpaeastsun@gmail.com",
+        "7570": "cpaeastsun@gmail.com",
+        "8100": "cpaeastsun@gmail.com",
+        "8110": "cpaeastsun@gmail.com",
+        "8200": "cpaeastsun@gmail.com",
+        "8300": "cpaeastsun@gmail.com",
+        "8400": "cpaeastsun@gmail.com",
+        "8500": "cpaeastsun@gmail.com",
+        "8550": "cpaeastsun@gmail.com",
+        "8600": "cpaeastsun@gmail.com",
+        "8700": "cpaeastsun@gmail.com",
+        "1100A": "cpaeastsun@gmail.com",
+        "1101A": "cpaeastsun@gmail.com",
+        "1300A": "cpaeastsun@gmail.com",
+        "1300B": "cpaeastsun@gmail.com",
+        "2100A": "cpaeastsun@gmail.com",
+        "2110-02": "cpaeastsun@gmail.com",
+        "2110A": "cpaeastsun@gmail.com",
+        "2110B": "cpaeastsun@gmail.com",
+        "2120A": "cpaeastsun@gmail.com",
+        "2531A": "cpaeastsun@gmail.com",
+        "2700A": "cpaeastsun@gmail.com",
+        "3300A": "cpaeastsun@gmail.com",
+        "A-0": "cpaeastsun@naver.com",
+        "B-0": "cpaeastsun@gmail.com",
+        "C-0": "cpakds@naver.com",
+        "D-0": "cpaeastsun@gmail.com",
+        "DER-0": "cpaeastsun@gmail.com",
+        "DL-0": "cpaeastsun@gmail.com",
+        "E-0": "cpaeastsun@naver.com",
+        "E10": "cpaeastsun@gmail.com",
+        "F-0": "cpaeastsun@gmail.com",
+        "G-0": "cpakds@naver.com",
+        "H-0": "cpaeastsun@gmail.com",
+        "I-0": "cpaeastsun@gmail.com",
+        "J-0": "cpaeastsun@gmail.com",
+        "JV-0": "cpaeastsun@gmail.com",
+        "SAJ-0": "cpaeastsun@gmail.com",
+        "AA-0": "cpaeastsun@gmail.com",
+        "BBDD-0": "cpaeastsun@gmail.com",
+        "CC-0": "cpaeastsun@gmail.com",
+        "EE-0": "cpaeastsun@gmail.com",
+        "FF-0": "cpaeastsun@gmail.com",
+        "FFF-0": "cpaeastsun@gmail.com",
+        "TUL-0": "cpaeastsun@gmail.com",
+        "GG-0": "cpaeastsun@gmail.com",
+        "CL-0": "cpaeastsun@gmail.com",
+        "P-0": "cpaeastsun@gmail.com",
+        "Q-0": "cpaeastsun@gmail.com",
+        "R-0": "cpaeastsun@gmail.com",
+        "S-0": "cpaeastsun@gmail.com",
+        "T-0": "cpaeastsun@gmail.com",
+        "U-0": "cpaeastsun@gmail.com",
+        "IOC-0": "cpaeastsun@gmail.com",
+        "EST-0": "cpaeastsun@gmail.com",
+        "CF-0": "cpaeastsun@gmail.com",
+        "7100A": "cpaeastsun@gmail.com",
+        "7200A": "cpaeastsun@gmail.com",
+        "7400-01": "cpaeastsun@gmail.com",
+        "7410E": "cpaeastsun@gmail.com",
+        "7510A": "cpaeastsun@gmail.com",
+        "7560A": "cpaeastsun@gmail.com",
+        "8100A": "cpaeastsun@gmail.com",
+        "8110A": "cpaeastsun@gmail.com",
+        "8600A": "cpaeastsun@gmail.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "inventory_date": "",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 5,
+    "created_at": "2026-09-26 10:02:41",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 4,
+    "created_at": "2026-09-26 09:54:14",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "jm.park@hyean.com",
+          "name": "박지민",
+          "role": "Staff CPA"
+        },
+        {
+          "email": "ys.choi@hyean.com",
+          "name": "최영수",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "jm.park@hyean.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "G-0": "ys.choi@hyean.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-25",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "1100A": "cpaeastsun@gmail.com",
+        "2100": "cpaeastsun@naver.com",
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "cpaeastsun@naver.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    }
+  },
+  {
+    "id": 3,
+    "created_at": "2026-09-26 09:33:54",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선 대표회계사",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "jm.park@hyean.com",
+          "name": "박지민",
+          "role": "Staff CPA"
+        },
+        {
+          "email": "ys.choi@hyean.com",
+          "name": "최영수",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "jm.park@hyean.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "G-0": "ys.choi@hyean.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-25",
+      "inventory_date": "2025-12-31"
+    },
+    "after_data": {
+      "account_assignments": {
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "jm.park@hyean.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "G-0": "ys.choi@hyean.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "inventory_date": "2025-12-31",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "jm.park@hyean.com",
+          "name": "박지민",
+          "role": "Staff CPA"
+        },
+        {
+          "email": "ys.choi@hyean.com",
+          "name": "최영수",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-25"
+    }
+  },
+  {
+    "id": 2,
+    "created_at": "2026-09-26 09:33:07",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선 대표회계사",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "jm.park@hyean.com",
+          "name": "박지민",
+          "role": "Staff CPA"
+        },
+        {
+          "email": "ys.choi@hyean.com",
+          "name": "최영수",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "jm.park@hyean.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "G-0": "ys.choi@hyean.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-25"
+    },
+    "after_data": {
+      "account_assignments": {
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "jm.park@hyean.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "G-0": "ys.choi@hyean.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "inventory_date": "2025-12-31",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "jm.park@hyean.com",
+          "name": "박지민",
+          "role": "Staff CPA"
+        },
+        {
+          "email": "ys.choi@hyean.com",
+          "name": "최영수",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-25"
+    }
+  },
+  {
+    "id": 1,
+    "created_at": "2026-09-26 09:26:31",
+    "company_name": "(주)프레오",
+    "fiscal_year": 2025,
+    "action_type": "UPDATE_TEAM",
+    "changed_by": "김동선 대표회계사",
+    "diff_summary": "감사팀 배정 정보 갱신",
+    "before_data": {
+      "id": 2,
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_name": "김동선",
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "partner_name": "이진우 파트너",
+      "members": [
+        {
+          "name": "김동선",
+          "email": "cpaeastsun@gmail.com",
+          "role": "In-charge"
+        },
+        {
+          "name": "박지민",
+          "email": "jm.park@hyean.com",
+          "role": "Staff CPA"
+        },
+        {
+          "name": "최영수",
+          "email": "ys.choi@hyean.com",
+          "role": "Staff CPA"
+        }
+      ],
+      "account_assignments": {
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "jm.park@hyean.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "G-0": "ys.choi@hyean.com"
+      },
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-20"
+    },
+    "after_data": {
+      "account_assignments": {
+        "A-0": "cpaeastsun@gmail.com",
+        "C-0": "jm.park@hyean.com",
+        "E-0": "cpaeastsun@gmail.com",
+        "G-0": "ys.choi@hyean.com"
+      },
+      "company_name": "(주)프레오",
+      "fiscal_year": 2025,
+      "in_charge_email": "cpaeastsun@gmail.com",
+      "in_charge_name": "김동선",
+      "members": [
+        {
+          "email": "cpaeastsun@gmail.com",
+          "name": "김동선",
+          "role": "In-charge"
+        },
+        {
+          "email": "jm.park@hyean.com",
+          "name": "박지민",
+          "role": "Staff CPA"
+        },
+        {
+          "email": "ys.choi@hyean.com",
+          "name": "최영수",
+          "role": "Staff CPA"
+        }
+      ],
+      "partner_name": "이진우 파트너",
+      "status": "in_progress",
+      "status_label": "실증감사 진행중",
+      "target_report_date": "2026-03-25"
+    }
+  }
+]

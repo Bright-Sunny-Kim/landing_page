@@ -1871,82 +1871,145 @@
     };
 
     // =========================================================================
-    // 🏢 마스터 포털: 회사별 Job Assign(감사팀 및 계정 배정) 관리 모듈
+    // 🏛️ 마스터 포털: 회계감사통제 (감수인 풀 / 감사대상회사 / 전 절차 Job Assign) 모듈
     // =========================================================================
     let masterAssignmentsCache = [];
+    let masterAuditorPoolCache = [];
+    let masterTargetCompaniesCache = [];
+    let allAuditProceduresCache = [];
 
-    window.loadMasterJobAssignments = async function () {
-        const tbody = document.getElementById('master-assign-table-body');
-        if (!tbody) return;
+    // -------------------------------------------------------------------------
+    // 1. 감사인 인력 풀(Auditor Pool) 관리
+    // -------------------------------------------------------------------------
+    window.loadAuditorPoolTable = async function (forceRefresh = false) {
+        const tbody = document.getElementById('auditor-pool-table-body');
 
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" style="text-align: center; padding: 25px; color: var(--text-secondary);">
-                    ⏳ 배정 데이터를 불러오는 중입니다...
-                </td>
-            </tr>
-        `;
+        // 1. 이미 인메모리 캐시가 있고 강제 새로고침이 아닌 경우 0ms 즉시 렌더링 (서버 부하 0건)
+        if (!forceRefresh && masterAuditorPoolCache && masterAuditorPoolCache.length > 0) {
+            renderAuditorPoolTable(masterAuditorPoolCache);
+            renderAuditorPoolDatalist(masterAuditorPoolCache);
+            renderStaffCheckboxes(masterAuditorPoolCache);
+            return masterAuditorPoolCache;
+        }
+
+        // 2. 브라우저 localStorage 캐시 확인 (Stale-While-Revalidate: 즉시 0ms 렌더링 후 백그라운드 갱신)
+        if (!masterAuditorPoolCache || masterAuditorPoolCache.length === 0) {
+            try {
+                const localCached = localStorage.getItem('master_auditor_pool_cache');
+                if (localCached) {
+                    const parsed = JSON.parse(localCached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        masterAuditorPoolCache = parsed;
+                        renderAuditorPoolTable(parsed);
+                        renderAuditorPoolDatalist(parsed);
+                        renderStaffCheckboxes(parsed);
+                    }
+                }
+            } catch (e) {
+                console.warn('[AUDITOR_POOL:CACHE_PARSE_WARN]', e);
+            }
+        }
+
+        // 로컬 캐시조차 없을 때만 안내 행 표시
+        if (!masterAuditorPoolCache || masterAuditorPoolCache.length === 0) {
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                            ⏳ 감사인 인력 풀 데이터를 동기화 중입니다...
+                        </td>
+                    </tr>
+                `;
+            }
+        }
 
         try {
-            const data = await safeFetchJson('/api/audit/assignments');
-            if (data.success && data.assignments) {
-                masterAssignmentsCache = data.assignments;
-                renderJobAssignTable(data.assignments);
+            const url = forceRefresh ? '/api/audit/auditor-pool?refresh=true' : '/api/audit/auditor-pool';
+            const res = await safeFetchJson(url);
+            if (res.success && res.auditors) {
+                masterAuditorPoolCache = res.auditors;
+                try {
+                    localStorage.setItem('master_auditor_pool_cache', JSON.stringify(res.auditors));
+                } catch (e) {}
+                renderAuditorPoolDatalist(res.auditors);
+                renderStaffCheckboxes(res.auditors);
+                renderAuditorPoolTable(res.auditors);
+                return res.auditors;
             }
         } catch (err) {
-            console.error('[ASSIGN:LOAD_ERR]', err);
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" style="text-align: center; padding: 25px; color: #f87171;">
-                        ❌ 배정 목록 로드 실패: ${err.message}
-                    </td>
-                </tr>
-            `;
+            console.error('[AUDITOR_POOL:LOAD_ERR]', err);
+            if (!masterAuditorPoolCache || masterAuditorPoolCache.length === 0) {
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 25px; color: #f87171;">
+                                ❌ 감사인 풀 로드 실패: ${err.message}
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
         }
+        return masterAuditorPoolCache || [];
     };
 
-    function renderJobAssignTable(assignments) {
-        const tbody = document.getElementById('master-assign-table-body');
+    // 하위 호환 별칭
+    window.loadAuditorPool = window.loadAuditorPoolTable;
+
+    function renderAuditorPoolTable(auditors) {
+        const tbody = document.getElementById('auditor-pool-table-body');
         if (!tbody) return;
 
-        if (!assignments || assignments.length === 0) {
+        if (!auditors || auditors.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-secondary);">
-                        등록된 감사 배정 내역이 없습니다. 상단 [➕ 신규 감사 배정] 버튼으로 등록하세요.
+                    <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                        등록된 감사인(CPA/Auditor) 정보가 없습니다.
                     </td>
                 </tr>
             `;
             return;
         }
 
-        tbody.innerHTML = assignments.map(a => {
-            const memberNames = (a.members || []).map(m => m.name || m.email).join(', ') || '-';
-            const accCounts = Object.keys(a.account_assignments || {}).length;
-            const statusBadge = a.status === 'in_progress'
-                ? '<span style="color: #38bdf8; background: rgba(56,189,248,0.15); padding: 3px 8px; border-radius: 4px; font-size: 0.78rem;">실증감사 진행중</span>'
-                : '<span style="color: #a855f7; background: rgba(168,85,247,0.15); padding: 3px 8px; border-radius: 4px; font-size: 0.78rem;">' + (a.status_label || '기획/계획 단계') + '</span>';
+        tbody.innerHTML = auditors.map(a => {
+            const roleBadge = (a.role === 'master' || a.email === 'cpaeastsun@gmail.com')
+                ? '<span style="background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid rgba(168,85,247,0.4); padding: 2px 8px; border-radius: 4px; font-size: 0.76rem; font-weight: 600;">마스터 / 대표CPA</span>'
+                : (a.role === 'cpa'
+                    ? '<span style="background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.4); padding: 2px 8px; border-radius: 4px; font-size: 0.76rem; font-weight: 600;">공인회계사 (CPA)</span>'
+                    : '<span style="background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.76rem; font-weight: 600;">감사팀원 (Staff)</span>');
 
-            const safeComp = (a.company_name || '').replace(/'/g, "\\'");
+            const safeEmail = (a.email || '').replace(/'/g, "\\'");
+            const assignCount = (a.assigned_companies && a.assigned_companies.length > 0) 
+                ? a.assigned_companies.length 
+                : (a.assigned_count || 0);
+
+            // 인터랙티브 클릭 가능 뱃지 (2개 수임사)
+            const assignBadge = (assignCount > 0)
+                ? `<button type="button" onclick="openAuditorAssignedDetailModal('${safeEmail}')" class="btn-auditor-assign-badge" style="background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(139,92,246,0.25)); color: #c7d2fe; font-weight: 700; padding: 5px 12px; border-radius: 20px; font-size: 0.82rem; border: 1px solid rgba(129,140,248,0.6); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(99,102,241,0.3); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);" title="클릭하여 배정 수임사 및 105개 절차 상세를 조회하고 원클릭 이동합니다.">
+                    <span>🏢 ${assignCount}개 수임사</span>
+                    <span style="font-size: 0.85rem; color: #a5b4fc; font-weight: 900;">›</span>
+                   </button>`
+                : `<span style="color: #94a3b8; font-size: 0.8rem; background: rgba(255,255,255,0.04); padding: 3px 8px; border-radius: 4px;">미배정</span>`;
+
             return `
                 <tr>
-                    <td class="col-company"><strong>${a.company_name}</strong></td>
-                    <td><span class="badge" style="background: rgba(99,102,241,0.2); color: #a5b4fc; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">${a.fiscal_year}년</span></td>
-                    <td>
-                        <div style="font-weight: 600; color: #f8fafc; font-size: 0.88rem;">${a.in_charge_name || '미지정'}</div>
-                        <div style="font-size: 0.75rem; color: #94a3b8;">${a.in_charge_email || ''}</div>
+                    <td class="col-company">
+                        <strong style="color: #f8fafc; font-size: 0.9rem;">${a.name}</strong>
                     </td>
-                    <td style="font-size: 0.84rem; color: #cbd5e1;">${memberNames}</td>
+                    <td style="color: #93c5fd; font-size: 0.85rem;">${a.email}</td>
+                    <td style="color: #cbd5e1; font-size: 0.85rem;">${a.company || '회계법인 혜안'}</td>
+                    <td style="font-family: monospace; color: #fde047; font-size: 0.82rem;">${a.cpa_number || '-'}</td>
+                    <td>${roleBadge}</td>
                     <td>
-                        <span class="badge-tag" style="background: rgba(16,185,129,0.15); color: #34d399; font-size: 0.8rem; padding: 3px 8px; border-radius: 4px;">
-                            ${accCounts}개 계정 지정
+                        <span style="background: rgba(255,255,255,0.06); color: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem;">
+                            ${a.task_type || '회계감사'}
                         </span>
                     </td>
-                    <td>${statusBadge}</td>
-                    <td style="font-size: 0.82rem; color: #94a3b8;">${a.target_report_date || '-'}</td>
+                    <td>${assignBadge}</td>
+                    <td style="color: #94a3b8; font-size: 0.82rem;">${a.created_at || '2025-01-01'}</td>
                     <td>
-                        <button type="button" onclick="openJobAssignModal('${safeComp}')" class="btn-submit" style="padding: 4px 12px; font-size: 0.8rem; width: auto;">
-                            ✏️ 배정 수정
+                        <button type="button" onclick="openJobAssignModal('', '${safeEmail}')" class="btn-submit" style="padding: 4px 10px; font-size: 0.78rem; width: auto;">
+                            📋 감사 배정
                         </button>
                     </td>
                 </tr>
@@ -1954,7 +2017,1143 @@
         }).join('');
     }
 
-    window.openJobAssignModal = function (companyName = '') {
+    // -------------------------------------------------------------------------
+    // [신규] 감사인별 배정 상세 팝오버 모달 & 딥링크 핸들러
+    // -------------------------------------------------------------------------
+    window.openAuditorAssignedDetailModal = async function (email) {
+        const modal = document.getElementById('modal-auditor-assigned-detail');
+        const titleEl = document.getElementById('auditor-detail-modal-title');
+        const subEl = document.getElementById('auditor-detail-modal-sub');
+        const bodyEl = document.getElementById('auditor-detail-modal-body');
+        if (!modal || !bodyEl) return;
+
+        modal.style.display = 'flex';
+        bodyEl.innerHTML = `
+            <div style="text-align: center; padding: 35px 20px; color: #94a3b8;">
+                <div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>
+                <div>${email} 님의 감사 배정 및 절차 데이터를 실시간 동기화 중입니다...</div>
+            </div>
+        `;
+
+        let aud = (masterAuditorPoolCache || []).find(a => a.email === email);
+        let companies = (aud && aud.assigned_companies && aud.assigned_companies.length > 0) 
+            ? aud.assigned_companies 
+            : [];
+
+        // 캐시에 상세가 없거나 부족한 경우 실시간 Workload API 비동기 조회
+        if (companies.length === 0) {
+            try {
+                const res = await safeFetchJson(`/api/audit/auditor-workload/${encodeURIComponent(email)}`);
+                if (res.success && res.companies && res.companies.length > 0) {
+                    companies = res.companies;
+                    if (aud) aud.assigned_companies = companies;
+                }
+            } catch (err) {
+                console.warn('[WORKLOAD_FETCH_WARN]', err);
+            }
+        }
+
+        const name = aud ? aud.name : email.split('@')[0];
+        const title = aud ? (aud.title || aud.role || '감사인') : '공인회계사';
+
+        if (titleEl) titleEl.textContent = `${name} (${title}) 감사 배정 현황`;
+        if (subEl) subEl.textContent = `${email} 님에게 배정된 총 ${companies.length}개 감사 수임사 및 세부 절차 목록입니다.`;
+
+        if (companies.length === 0) {
+            bodyEl.innerHTML = `
+                <div style="text-align: center; padding: 35px 20px; color: #94a3b8; background: rgba(0,0,0,0.25); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">📂</div>
+                    <div style="font-size: 0.95rem; font-weight: 600; color: #cbd5e1;">현재 배정된 감사 수임사가 없습니다.</div>
+                    <p style="font-size: 0.82rem; color: #64748b; margin-top: 4px;">회사별 감사팀 배정(Job Assign) 탭에서 해당 감사인을 수임사 팀원 또는 절차 담당자로 지정할 수 있습니다.</p>
+                </div>
+            `;
+        } else {
+            const safeEmail = (email || '').replace(/'/g, "\\'");
+            bodyEl.innerHTML = companies.map(c => {
+                const safeCompName = (c.company_name || '').replace(/'/g, "\\'");
+                const year = c.fiscal_year || 2025;
+                const roleBadge = c.role.includes('In-charge') 
+                    ? '<span style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.4); padding: 2px 8px; border-radius: 4px; font-size: 0.74rem; font-weight: 600;">주관 In-charge</span>'
+                    : '<span style="background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.74rem;">' + c.role + '</span>';
+                
+                const procedures = c.procedures || [];
+                const procListHtml = procedures.length > 0 
+                    ? procedures.map(p => `
+                        <div style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; font-size: 0.76rem;">
+                            <span style="font-family: monospace; color: #38bdf8; font-weight: 700;">[${p.code}]</span>
+                            <span style="color: #e2e8f0;">${p.name}</span>
+                        </div>
+                    `).join('')
+                    : '<span style="font-size: 0.78rem; color: #94a3b8;">주관 관리 담당 (개별 절차 배정 없음)</span>';
+
+                return `
+                    <div style="background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <strong style="font-size: 1.05rem; color: #f8fafc;">${c.company_name}</strong>
+                                <span class="badge" style="background: rgba(56,189,248,0.15); color: #7dd3fc; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">${year}년</span>
+                                ${roleBadge}
+                                <span style="background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 7px; border-radius: 4px; font-size: 0.74rem; font-weight: 600;">${c.status || '진행중'}</span>
+                            </div>
+                            <button type="button" onclick="jumpToJobAssign('${safeCompName}', ${year}, '${safeEmail}')" class="btn-primary" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 600; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 6px; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(99,102,241,0.4);">
+                                <span>🏢 ${c.company_name} 배정 관리로 이동 ›</span>
+                            </button>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 6px; font-weight: 600;">
+                                배정 절차 (${procedures.length}개):
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                ${procListHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    };
+
+    window.closeAuditorAssignedDetailModal = function () {
+        const modal = document.getElementById('modal-auditor-assigned-detail');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    // 팝오버에서 회사별 배정(Job Assign) 탭으로 원클릭 딥링크 전환
+    window.jumpToJobAssign = async function (companyName, fiscalYear, auditorEmail) {
+        // 1. 팝오버 모달 닫기
+        if (typeof window.closeAuditorAssignedDetailModal === 'function') {
+            window.closeAuditorAssignedDetailModal();
+        } else {
+            const modal = document.getElementById('modal-auditor-assigned-detail');
+            if (modal) modal.style.display = 'none';
+        }
+
+        // 2. '회사별 감사팀 배정 (Job Assign)' 서브탭 버튼 및 패널 활성화
+        const assignTabBtn = document.querySelector('.master-subtab-btn[data-subtab="subtab-audit-assign"]') ||
+                             document.querySelector('#audit-subnav [data-subtab="subtab-audit-assign"]');
+        
+        const navContainer = document.getElementById('audit-subnav') || document.querySelector('.master-subnav-container');
+        if (navContainer) {
+            navContainer.querySelectorAll('.master-subtab-btn').forEach(b => b.classList.remove('active'));
+        }
+        if (assignTabBtn) {
+            assignTabBtn.classList.add('active');
+        }
+
+        // 모든 서브탭 패널 숨기고 'subtab-audit-assign' 활성화
+        document.querySelectorAll('#tab-audit .master-subtab-pane').forEach(p => {
+            if (p.id === 'subtab-audit-assign') {
+                p.classList.add('active');
+                p.style.display = 'block';
+            } else {
+                p.classList.remove('active');
+                p.style.display = 'none';
+            }
+        });
+
+        // 3. 배정 데이터 캐시 확인 및 로드
+        if (!masterAssignmentsCache || masterAssignmentsCache.length === 0 || !allAuditProceduresCache || allAuditProceduresCache.length === 0) {
+            await window.loadMasterJobAssignments();
+        }
+
+        // 4. 선택 회사 및 연도 설정
+        currentSelectedAssignCompany = companyName;
+        currentSelectedAssignYear = String(fiscalYear || 2025);
+
+        // 5. 상단 Dropdown UI 값 동기화 (옵션이 없으면 자동 추가)
+        const compSelect = document.getElementById('assign-view-company-select');
+        const yearSelect = document.getElementById('assign-view-year-select');
+
+        if (compSelect) {
+            let hasOption = false;
+            for (let i = 0; i < compSelect.options.length; i++) {
+                if (compSelect.options[i].value === companyName) {
+                    compSelect.selectedIndex = i;
+                    hasOption = true;
+                    break;
+                }
+            }
+            if (!hasOption && companyName) {
+                const opt = document.createElement('option');
+                opt.value = companyName;
+                opt.textContent = companyName;
+                opt.selected = true;
+                compSelect.appendChild(opt);
+                compSelect.value = companyName;
+            }
+        }
+
+        if (yearSelect) {
+            yearSelect.value = String(fiscalYear || 2025);
+        }
+
+        // 6. 배정 상세 뷰 렌더링 (헤더 In-charge, 진행률 블럭, 절차 목록)
+        renderCurrentCompanyAssignView();
+
+        // 7. 특정 감사인의 담당 절차 포커스 (Focus View) 및 테이블로 스크롤
+        if (auditorEmail) {
+            setTimeout(() => {
+                focusAuditorProcedures(auditorEmail);
+                const tableSection = document.getElementById('assign-view-procedures-tbody')?.closest('.table-responsive') || 
+                                     document.getElementById('subtab-audit-assign');
+                if (tableSection) {
+                    tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 120);
+        }
+    };
+
+    window.filterAuditorPoolTable = function () {
+        const query = (document.getElementById('filter-auditor-search')?.value || '').trim().toLowerCase();
+        if (!query) {
+            renderAuditorPoolTable(masterAuditorPoolCache);
+            return;
+        }
+
+        const filtered = masterAuditorPoolCache.filter(a => 
+            (a.name && a.name.toLowerCase().includes(query)) ||
+            (a.email && a.email.toLowerCase().includes(query)) ||
+            (a.company && a.company.toLowerCase().includes(query)) ||
+            (a.cpa_number && a.cpa_number.toLowerCase().includes(query)) ||
+            (a.title && a.title.toLowerCase().includes(query))
+        );
+        renderAuditorPoolTable(filtered);
+    };
+
+    function renderAuditorPoolDatalist(auditors) {
+        const datalist = document.getElementById('auditor-pool-datalist');
+        if (!datalist) return;
+        datalist.innerHTML = auditors.map(a => 
+            `<option value="${a.email}">${a.name} (${a.title || a.role || 'CPA'}) - ${a.company || '혜안'}</option>`
+        ).join('');
+    }
+
+    function renderStaffCheckboxes(auditors, selectedEmails = []) {
+        const container = document.getElementById('assign-staff-checkboxes-container');
+        if (!container) return;
+        if (!auditors || auditors.length === 0) {
+            container.innerHTML = '<span style="font-size: 0.8rem; color: #94a3b8;">등록된 감사인 풀이 없습니다.</span>';
+            return;
+        }
+
+        container.innerHTML = auditors.map(a => {
+            const isChecked = selectedEmails.includes(a.email) ? 'checked' : '';
+            return `
+                <label style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; cursor: pointer; font-size: 0.82rem; color: #e2e8f0;">
+                    <input type="checkbox" class="assign-staff-checkbox" value="${a.email}" data-name="${a.name}" ${isChecked} style="accent-color: #6366f1;">
+                    <span>${a.name} <small style="color: #a5b4fc;">(${a.title || 'CPA'})</small></span>
+                </label>
+            `;
+        }).join('');
+    }
+
+    window.handleInchargeEmailChange = function (emailVal) {
+        if (!emailVal) return;
+        const found = masterAuditorPoolCache.find(a => a.email.toLowerCase() === emailVal.toLowerCase().trim());
+        const nameInput = document.getElementById('assign-incharge-name');
+        if (found && nameInput && !nameInput.value) {
+            nameInput.value = found.name;
+        }
+    };
+
+    // -------------------------------------------------------------------------
+    // 2. 감사대상회사현황 (Target Companies) 관리
+    // -------------------------------------------------------------------------
+    window.loadAuditTargetCompanies = async function (year) {
+        const tbody = document.getElementById('audit-target-companies-tbody');
+        const yearSelect = document.getElementById('target-company-year-select');
+        const fiscalYear = year || (yearSelect ? yearSelect.value : '2025');
+        if (!tbody) return;
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                    ⏳ ${fiscalYear === 'all' ? '전체' : fiscalYear + '년'} 감사대상회사 데이터를 불러오는 중입니다...
+                </td>
+            </tr>
+        `;
+
+        try {
+            const res = await safeFetchJson(`/api/audit/target-companies?fiscal_year=${fiscalYear}`);
+            if (res.success && res.companies) {
+                masterTargetCompaniesCache = res.companies;
+                renderAuditTargetCompaniesTable(res.companies);
+                populateAssignCompanySelect(res.companies);
+            }
+        } catch (err) {
+            console.error('[TARGET_COMPANIES:LOAD_ERR]', err);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 25px; color: #f87171;">
+                        ❌ 감사대상회사 데이터 로드 실패: ${err.message}
+                    </td>
+                </tr>
+            `;
+        }
+    };
+
+    function renderAuditTargetCompaniesTable(companies) {
+        const tbody = document.getElementById('audit-target-companies-tbody');
+        if (!tbody) return;
+
+        if (!companies || companies.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                        조회된 감사대상회사가 없습니다.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = companies.map(c => {
+            const rate = c.upload_rate || 0;
+            const rateColor = rate >= 80 ? '#34d399' : (rate >= 40 ? '#38bdf8' : '#fbbf24');
+            const uploadBar = `
+                <div style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                    <div style="width: 50px; height: 5px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; display: inline-block;">
+                        <div style="width: ${rate}%; height: 100%; background: ${rateColor};"></div>
+                    </div>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: ${rateColor};">${rate}%</span>
+                </div>
+            `;
+
+            const ledgerBadge = (c.ledger_status && c.ledger_status.includes('완비'))
+                ? `<span style="background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; font-weight: 600; white-space: nowrap;">${c.ledger_status}</span>`
+                : `<span style="background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); padding: 2px 7px; border-radius: 4px; font-size: 0.76rem; white-space: nowrap;">${c.ledger_status || '미수집 (0/6)'}</span>`;
+
+            const auditBadge = `<span style="background: rgba(99,102,241,0.2); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.76rem; font-weight: 600; white-space: nowrap;">${c.audit_status || '실증감사 진행중'}</span>`;
+
+            const safeComp = (c.company_name || '').replace(/'/g, "\\'");
+            const contactDisplay = c.email 
+                ? `<span style="color: #e2e8f0; font-size: 0.81rem; white-space: nowrap;">${c.contact_name || '-'} <small style="color: #94a3b8; font-size: 0.75rem;">(${c.email})</small></span>` 
+                : `<span style="color: #e2e8f0; font-size: 0.81rem; white-space: nowrap;">${c.contact_name || '-'}</span>`;
+
+            const inchargeDisplay = c.in_charge_email 
+                ? `<span style="color: #f8fafc; font-size: 0.81rem; font-weight: 600; white-space: nowrap;">${c.in_charge_name || '김동선'} <small style="color: #94a3b8; font-size: 0.75rem; font-weight: 400;">(${c.in_charge_email})</small></span>` 
+                : `<span style="color: #f8fafc; font-size: 0.81rem; font-weight: 600; white-space: nowrap;">${c.in_charge_name || '김동선'}</span>`;
+
+            return `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                    <td class="col-company" style="padding: 10px 12px; white-space: nowrap;">
+                        <strong style="color: #f8fafc; font-size: 0.85rem;">${c.company_name}</strong>
+                    </td>
+                    <td style="padding: 10px 12px; font-family: monospace; color: #94a3b8; font-size: 0.78rem; white-space: nowrap;">${c.corporate_number || '-'}</td>
+                    <td style="padding: 10px 12px; white-space: nowrap;">${contactDisplay}</td>
+                    <td style="padding: 10px 12px; text-align: center; white-space: nowrap;">
+                        <span class="badge" style="background: rgba(56,189,248,0.15); color: #7dd3fc; padding: 2px 6px; border-radius: 4px; font-size: 0.76rem; font-weight: 600;">
+                            ${c.fiscal_year}년
+                        </span>
+                    </td>
+                    <td style="padding: 10px 12px; white-space: nowrap;">${uploadBar}</td>
+                    <td style="padding: 10px 12px; text-align: center; white-space: nowrap;">${ledgerBadge}</td>
+                    <td style="padding: 10px 12px; text-align: center; white-space: nowrap;">${auditBadge}</td>
+                    <td style="padding: 10px 12px; white-space: nowrap;">${inchargeDisplay}</td>
+                    <td style="padding: 10px 12px; text-align: center; white-space: nowrap;">
+                        <div style="display: inline-flex; gap: 4px; align-items: center; white-space: nowrap;">
+                            <button type="button" onclick="openJobAssignModal('${safeComp}')" class="btn-submit" style="padding: 3px 8px; font-size: 0.76rem; width: auto; white-space: nowrap;">
+                                ✏️ 배정
+                            </button>
+                            <a href="/master/${encodeURIComponent(c.company_name)}" class="btn-logout" style="padding: 3px 8px; font-size: 0.76rem; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap;">
+                                📂 폴더
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.filterAuditTargetCompanies = function () {
+        const query = (document.getElementById('filter-target-company-search')?.value || '').trim().toLowerCase();
+        if (!query) {
+            renderAuditTargetCompaniesTable(masterTargetCompaniesCache);
+            return;
+        }
+
+        const filtered = masterTargetCompaniesCache.filter(c => 
+            (c.company_name && c.company_name.toLowerCase().includes(query)) ||
+            (c.corporate_number && c.corporate_number.toLowerCase().includes(query)) ||
+            (c.contact_name && c.contact_name.toLowerCase().includes(query)) ||
+            (c.email && c.email.toLowerCase().includes(query)) ||
+            (c.in_charge_name && c.in_charge_name.toLowerCase().includes(query))
+        );
+        renderAuditTargetCompaniesTable(filtered);
+    };
+
+    function populateAssignCompanySelect(companies) {
+        const select = document.getElementById('assign-company-select');
+        if (!select) return;
+
+        const currentVal = select.value;
+        const options = ['<option value="">수임 대상 회사 선택 (Drop-down)...</option>'];
+        
+        // 유니크 회사명 목록 추출
+        const uniqueComps = Array.from(new Set(companies.map(c => c.company_name).filter(Boolean)));
+        uniqueComps.forEach(name => {
+            options.push(`<option value="${name}">${name}</option>`);
+        });
+        options.push('<option value="__custom__">직접 입력...</option>');
+        
+        select.innerHTML = options.join('');
+        if (currentVal && uniqueComps.includes(currentVal)) {
+            select.value = currentVal;
+        }
+    }
+
+    window.handleAssignCompanySelect = function (compVal) {
+        const nameInput = document.getElementById('assign-company-name');
+        if (!nameInput) return;
+
+        if (compVal === '__custom__') {
+            nameInput.value = '';
+            nameInput.focus();
+            nameInput.readOnly = false;
+        } else if (compVal) {
+            nameInput.value = compVal;
+            nameInput.readOnly = true;
+            // 만약 기존 배정이 있으면 해당 정보 자동 세팅
+            const found = masterAssignmentsCache.find(a => a.company_name === compVal);
+            if (found) {
+                populateAssignmentFields(found);
+            }
+        }
+    };
+
+    // -------------------------------------------------------------------------
+    // 3. 전체 감사 절차 (Section 1000~8000, 105개) 로드 & 아코디언 렌더링
+    // -------------------------------------------------------------------------
+    window.loadAllAuditProcedures = async function () {
+        if (allAuditProceduresCache && allAuditProceduresCache.length > 0) {
+            return allAuditProceduresCache;
+        }
+        try {
+            const res = await safeFetchJson('/api/audit/procedures/all');
+            if (res.success && res.sections) {
+                allAuditProceduresCache = res.sections;
+                return res.sections;
+            }
+        } catch (err) {
+            console.error('[PROCEDURES:LOAD_ERR]', err);
+        }
+        return [];
+    };
+
+    function renderAssignProceduresAccordion(sections, currentAccountAssignments = {}) {
+        const container = document.getElementById('assign-procedures-container');
+        if (!container) return;
+
+        if (!sections || sections.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #94a3b8;">감사 절차 목록을 불러올 수 없습니다.</div>';
+            return;
+        }
+
+        const auditorOptions = (masterAuditorPoolCache || []).map(a => 
+            `<option value="${a.email}">${a.name} (${a.title || 'CPA'}) - ${a.email}</option>`
+        ).join('');
+
+        container.innerHTML = sections.map((sec, secIdx) => {
+            const items = sec.items || [];
+            const secCode = sec.section_code;
+            const secTitle = sec.section_title || `Section ${secCode}`;
+
+            const rows = items.map(p => {
+                const code = p.account_code;
+                const name = p.account_name;
+                const assignedEmail = currentAccountAssignments[code] || p.default_assignee || 'cpaeastsun@gmail.com';
+
+                return `
+                    <div class="assign-procedure-row" data-code="${code}" data-name="${name}" data-sec="${secCode}" style="display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.04); gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 260px;">
+                            <span style="font-family: monospace; font-weight: 700; color: #38bdf8; font-size: 0.8rem; background: rgba(56,189,248,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 6px;">
+                                [${code}]
+                            </span>
+                            <span style="color: #e2e8f0; font-size: 0.82rem;">${name}</span>
+                        </div>
+                        <div style="width: 240px;">
+                            <select class="assign-procedure-select" data-code="${code}" style="width: 100%; padding: 4px 8px; border-radius: 5px; background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-size: 0.78rem;">
+                                <option value="cpaeastsun@gmail.com" ${assignedEmail === 'cpaeastsun@gmail.com' ? 'selected' : ''}>김동선 (대표CPA) - cpaeastsun@gmail.com</option>
+                                ${auditorOptions}
+                                <option value="${assignedEmail}" ${!auditorOptions.includes(assignedEmail) && assignedEmail !== 'cpaeastsun@gmail.com' ? 'selected' : ''}>${assignedEmail}</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 기본적으로 Section 4000만 펼치고 나머지는 닫힘
+            const isInitialOpen = (secCode === '4000');
+
+            return `
+                <div class="assign-section-box" style="border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; background: rgba(15,23,42,0.4); margin-bottom: 6px;">
+                    <div onclick="toggleSectionAccordion(this)" style="padding: 10px 14px; background: rgba(30,41,59,0.5); cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; transition: background 0.2s ease;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="accordion-arrow" style="font-size: 0.85rem; color: #fde047;">${isInitialOpen ? '▼' : '▶'}</span>
+                            <strong style="font-size: 0.86rem; color: #f8fafc;">${secTitle}</strong>
+                        </div>
+                        <span style="font-size: 0.75rem; color: #94a3b8; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 10px;">${items.length}개 절차</span>
+                    </div>
+                    <div class="assign-section-body" style="display: ${isInitialOpen ? 'block' : 'none'}; max-height: 280px; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid rgba(255,255,255,0.06); padding: 2px 0;">
+                        ${rows}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.toggleSectionAccordion = function (headerEl) {
+        const body = headerEl.nextElementSibling;
+        const arrow = headerEl.querySelector('.accordion-arrow');
+        if (!body) return;
+
+        const container = headerEl.closest('#assign-procedures-container') || document.getElementById('assign-procedures-container');
+        const isCurrentlyOpen = (body.style.display === 'block');
+
+        // 다른 모든 Section 자동 닫기 (Single-open Accordion)
+        if (container) {
+            container.querySelectorAll('.assign-section-box').forEach(box => {
+                const bBody = box.querySelector('.assign-section-body');
+                const bArrow = box.querySelector('.accordion-arrow');
+                const bHead = box.firstElementChild;
+                if (bBody && bHead !== headerEl) {
+                    bBody.style.display = 'none';
+                    if (bArrow) bArrow.textContent = '▶';
+                }
+            });
+        }
+
+        if (isCurrentlyOpen) {
+            body.style.display = 'none';
+            if (arrow) arrow.textContent = '▶';
+        } else {
+            body.style.display = 'block';
+            if (arrow) arrow.textContent = '▼';
+            setTimeout(() => {
+                headerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 60);
+        }
+    };
+
+    window.filterAssignProcedures = function (query) {
+        const q = (query || '').trim().toLowerCase();
+        const rows = document.querySelectorAll('.assign-procedure-row');
+        const sections = document.querySelectorAll('.assign-section-box');
+
+        sections.forEach(secBox => {
+            let hasVisibleRow = false;
+            const secRows = secBox.querySelectorAll('.assign-procedure-row');
+            secRows.forEach(r => {
+                const code = (r.getAttribute('data-code') || '').toLowerCase();
+                const name = (r.getAttribute('data-name') || '').toLowerCase();
+                if (!q || code.includes(q) || name.includes(q)) {
+                    r.style.display = 'flex';
+                    hasVisibleRow = true;
+                } else {
+                    r.style.display = 'none';
+                }
+            });
+
+            const body = secBox.querySelector('.assign-section-body');
+            const arrow = secBox.querySelector('span');
+            if (q) {
+                if (hasVisibleRow) {
+                    secBox.style.display = 'block';
+                    if (body) body.style.display = 'block';
+                    if (arrow) arrow.textContent = '▼';
+                } else {
+                    secBox.style.display = 'none';
+                }
+            } else {
+                secBox.style.display = 'block';
+            }
+        });
+    };
+
+    window.batchAssignDefaultAuditor = function () {
+        const selects = document.querySelectorAll('.assign-procedure-select');
+        let changed = 0;
+        selects.forEach(sel => {
+            if (!sel.value || sel.value === '') {
+                sel.value = 'cpaeastsun@gmail.com';
+                changed++;
+            }
+        });
+        alert(`✓ 미지정된 ${changed}개 절차의 담당자가 cpaeastsun@gmail.com으로 자동 지정되었습니다.`);
+    };
+
+    // -------------------------------------------------------------------------
+    // 4. 회사별 감사팀 편성 & Job Assign 관리 (새 3대 통합 뷰: 드롭다운 + 진행률 + 5행 스크롤 절차)
+    // -------------------------------------------------------------------------
+    let currentSelectedAssignCompany = '';
+    let currentSelectedAssignYear = '2025';
+
+    window.loadMasterJobAssignments = async function () {
+        const tbody = document.getElementById('assign-view-procedures-tbody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                        ⏳ 감사 배정 및 절차 데이터를 불러오는 중입니다...
+                    </td>
+                </tr>
+            `;
+        }
+
+        try {
+            // 1. 배정 데이터 로드
+            const data = await safeFetchJson('/api/audit/assignments');
+            if (data.success && data.assignments) {
+                masterAssignmentsCache = data.assignments;
+            }
+
+            // 2. 감사인 풀, 수임 대상 회사, 105개 전체 절차 병렬 확인
+            if (!masterAuditorPoolCache || masterAuditorPoolCache.length === 0) {
+                await window.loadAuditorPoolTable();
+            }
+            if (!allAuditProceduresCache || allAuditProceduresCache.length === 0) {
+                await window.loadAllAuditProcedures();
+            }
+            if (!masterTargetCompaniesCache || masterTargetCompaniesCache.length === 0) {
+                const compRes = await safeFetchJson('/api/audit/target-companies?fiscal_year=all');
+                if (compRes.success && compRes.companies) {
+                    masterTargetCompaniesCache = compRes.companies;
+                }
+            }
+
+            // 3. 상단 회사명 및 연도 Dropdown 목록 구성
+            populateAssignTopDropdowns();
+
+            // 4. 현재 선택된 회사/연도 기준 통합 렌더링 (진행률 + 5행 절차 테이블)
+            renderCurrentCompanyAssignView();
+
+        } catch (err) {
+            console.error('[ASSIGN:LOAD_ERR]', err);
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 25px; color: #f87171;">
+                            ❌ 배정 목록 로드 실패: ${err.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    };
+
+    function populateAssignTopDropdowns() {
+        const compSelect = document.getElementById('assign-view-company-select');
+        const yearSelect = document.getElementById('assign-view-year-select');
+        if (!compSelect) return;
+
+        // 회사 목록 수집 (배정된 회사 + 타겟 회사 합집합)
+        const compSet = new Set();
+        (masterAssignmentsCache || []).forEach(a => { if (a.company_name) compSet.add(a.company_name); });
+        (masterTargetCompaniesCache || []).forEach(c => { if (c.company_name) compSet.add(c.company_name); });
+
+        const compList = Array.from(compSet);
+        if (compList.length === 0) {
+            compList.push('혜안_임시', '(주)프레오', '(주)더존비즈온');
+        }
+
+        const currentVal = compSelect.value || currentSelectedAssignCompany || compList[0];
+        compSelect.innerHTML = compList.map(name => 
+            `<option value="${name}" ${name === currentVal ? 'selected' : ''}>${name}</option>`
+        ).join('');
+
+        currentSelectedAssignCompany = compSelect.value;
+        if (yearSelect) {
+            currentSelectedAssignYear = yearSelect.value || '2025';
+        }
+    }
+
+    window.onAssignCompanyYearChange = function () {
+        const compSelect = document.getElementById('assign-view-company-select');
+        const yearSelect = document.getElementById('assign-view-year-select');
+        if (compSelect) currentSelectedAssignCompany = compSelect.value;
+        if (yearSelect) currentSelectedAssignYear = yearSelect.value;
+
+        renderCurrentCompanyAssignView();
+    };
+
+    window.renderCurrentCompanyAssignView = function () {
+        const compName = currentSelectedAssignCompany || document.getElementById('assign-view-company-select')?.value;
+        const fiscalYear = parseInt(currentSelectedAssignYear || document.getElementById('assign-view-year-select')?.value || '2025', 10);
+
+        if (!compName) return;
+
+        // 1. 해당 회사/연도 배정 객체 탐색 또는 가상 기본값 생성
+        let assignment = (masterAssignmentsCache || []).find(a => 
+            a.company_name === compName && parseInt(a.fiscal_year || 2025, 10) === fiscalYear
+        );
+
+        if (!assignment) {
+            assignment = {
+                company_name: compName,
+                fiscal_year: fiscalYear,
+                in_charge_name: '김동선',
+                in_charge_email: 'cpaeastsun@gmail.com',
+                partner_name: '이진우 파트너',
+                members: [
+                    { name: '김동선', email: 'cpaeastsun@gmail.com', role: 'In-charge' }
+                ],
+                account_assignments: {},
+                status: 'in_progress',
+                status_label: '실증감사 진행중'
+            };
+        }
+
+        // 2. 상단 헤더 In-Charge 셀렉트 박스 및 상태 뱃지 갱신
+        const inchargeSelect = document.getElementById('assign-view-incharge-select');
+        const inchargeNameEl = document.getElementById('assign-view-incharge-name');
+        const statusBadgeEl = document.getElementById('assign-view-status-badge');
+
+        const inchargeEmail = assignment.in_charge_email || 'cpaeastsun@gmail.com';
+
+        if (inchargeSelect) {
+            const audOptions = (masterAuditorPoolCache || []).map(a => 
+                `<option value="${a.email}" ${a.email === inchargeEmail ? 'selected' : ''}>${a.name} (${a.title || 'CPA'}) - ${a.email}</option>`
+            ).join('');
+            inchargeSelect.innerHTML = audOptions || `<option value="${inchargeEmail}" selected>${assignment.in_charge_name || '김동선'} - ${inchargeEmail}</option>`;
+        }
+
+        if (inchargeNameEl) {
+            inchargeNameEl.textContent = `${assignment.in_charge_name || '김동선'} (${inchargeEmail})`;
+        }
+        if (statusBadgeEl) {
+            statusBadgeEl.textContent = assignment.status_label || '실증감사 진행중';
+        }
+
+        // 3. 감사인별 배정 절차 집계 및 업무진행률 블럭 렌더링
+        renderAuditorProgressBlock(assignment);
+
+        // 4. 감사 절차 목록 (5개 행 뷰포트 + 스크롤) 렌더링
+        renderViewProceduresTable(assignment);
+    };
+
+    window.onAssignInchargeChange = async function (newInchargeEmail) {
+        const compName = currentSelectedAssignCompany || document.getElementById('assign-view-company-select')?.value;
+        const fiscalYear = parseInt(currentSelectedAssignYear || document.getElementById('assign-view-year-select')?.value || '2025', 10);
+        if (!compName || !newInchargeEmail) return;
+
+        const aud = (masterAuditorPoolCache || []).find(a => a.email === newInchargeEmail);
+        const inchargeName = aud ? aud.name : newInchargeEmail.split('@')[0];
+
+        let assignment = (masterAssignmentsCache || []).find(a => 
+            a.company_name === compName && parseInt(a.fiscal_year || 2025, 10) === fiscalYear
+        );
+
+        if (assignment) {
+            assignment.in_charge_email = newInchargeEmail;
+            assignment.in_charge_name = inchargeName;
+            if (!assignment.members) assignment.members = [];
+            if (!assignment.members.some(m => m.email === newInchargeEmail)) {
+                assignment.members.unshift({ name: inchargeName, email: newInchargeEmail, role: 'In-charge' });
+            }
+        }
+
+        // 즉시 백엔드 저장 및 3개 탭 실시간 동기화
+        await window.saveViewProceduresDirectly(true);
+    };
+
+    function renderAuditorProgressBlock(assignment) {
+        const grid = document.getElementById('assign-auditor-progress-grid');
+        const audCountEl = document.getElementById('assign-auditor-count-label');
+        const totalProcEl = document.getElementById('assign-total-proc-count-label');
+        if (!grid) return;
+
+        const accMap = assignment.account_assignments || {};
+        const inchargeEmail = assignment.in_charge_email || 'cpaeastsun@gmail.com';
+        
+        // 전체 절차 평탄화
+        const allProcs = [];
+        (allAuditProceduresCache || []).forEach(sec => {
+            (sec.items || []).forEach(it => {
+                allProcs.push({
+                    code: it.account_code,
+                    name: it.account_name,
+                    section: sec.section_title || `Section ${sec.section_code}`,
+                    secCode: sec.section_code,
+                    assignee: accMap[it.account_code] || it.default_assignee || inchargeEmail
+                });
+            });
+        });
+
+        // 감사인별 배정 수량 집계
+        const auditorStats = {};
+
+        // 먼저 등록된 감사인 풀을 맵에 시딩
+        (masterAuditorPoolCache || []).forEach(aud => {
+            auditorStats[aud.email] = {
+                name: aud.name,
+                email: aud.email,
+                role: (aud.email === inchargeEmail) ? 'In-charge (주임 CPA)' : (aud.title || aud.role || 'Staff CPA'),
+                company: aud.company || '회계법인 혜안',
+                assignedCount: 0,
+                completedCount: 0,
+                isInTeam: false
+            };
+        });
+
+        // 기본 In-Charge 보장
+        if (!auditorStats[inchargeEmail]) {
+            auditorStats[inchargeEmail] = {
+                name: assignment.in_charge_name || '김동선',
+                email: inchargeEmail,
+                role: 'In-charge (주임 CPA)',
+                company: '회계법인 혜안',
+                assignedCount: 0,
+                completedCount: 0,
+                isInTeam: true
+            };
+        } else {
+            auditorStats[inchargeEmail].isInTeam = true;
+            auditorStats[inchargeEmail].role = 'In-charge (주임 CPA)';
+        }
+
+        // 멤버로 명시된 감사인 표시
+        (assignment.members || []).forEach(m => {
+            if (m.email) {
+                if (!auditorStats[m.email]) {
+                    auditorStats[m.email] = {
+                        name: m.name || m.email,
+                        email: m.email,
+                        role: m.role || 'Staff CPA',
+                        company: '회계법인 혜안',
+                        assignedCount: 0,
+                        completedCount: 0,
+                        isInTeam: true
+                    };
+                } else {
+                    auditorStats[m.email].isInTeam = true;
+                }
+            }
+        });
+
+        // 절차별 배정 카운트 분배
+        allProcs.forEach(p => {
+            const assignee = p.assignee;
+            if (!auditorStats[assignee]) {
+                auditorStats[assignee] = {
+                    name: assignee.split('@')[0],
+                    email: assignee,
+                    role: 'Staff CPA',
+                    company: '회계법인 혜안',
+                    assignedCount: 0,
+                    completedCount: 0,
+                    isInTeam: true
+                };
+            }
+            auditorStats[assignee].assignedCount += 1;
+            auditorStats[assignee].isInTeam = true;
+            
+            // 완료율 산정을 위한 로직 (예: 기본 60~75% 실증 진행 또는 1000/2000번 계획 완료)
+            if (p.secCode === '1000' || p.secCode === '2000' || p.code.includes('A')) {
+                auditorStats[assignee].completedCount += 1;
+            }
+        });
+
+        // 팀에 참여 중이거나 배정된 절차가 1개 이상인 감사인만 필터링
+        const activeAuditors = Object.values(auditorStats).filter(a => a.isInTeam || a.assignedCount > 0);
+
+        // 상단 요약 카운트 갱신
+        if (audCountEl) audCountEl.textContent = `${activeAuditors.length}명`;
+        if (totalProcEl) totalProcEl.textContent = `${allProcs.length}개 전체 절차 관리 중`;
+
+        if (activeAuditors.length === 0) {
+            grid.innerHTML = `
+                <div style="color: #94a3b8; font-size: 0.85rem; padding: 20px; text-align: center; grid-column: 1 / -1;">
+                    배정된 감사인이 없습니다. 상단 [✏️ 배정 설정/수정] 버튼을 눌러 감사팀을 배정해주세요.
+                </div>
+            `;
+            return;
+        }
+
+        // 감사인별 진행률 카드 렌더링
+        grid.innerHTML = activeAuditors.map(aud => {
+            const count = aud.assignedCount;
+            const completed = Math.min(count, aud.completedCount);
+            const rate = count > 0 ? Math.round((completed / count) * 100) : 0;
+            
+            // 진행률에 따른 색상 테마
+            const barColor = rate >= 80 ? 'linear-gradient(90deg, #10b981, #059669)' : (rate >= 40 ? 'linear-gradient(90deg, #6366f1, #38bdf8)' : 'linear-gradient(90deg, #f59e0b, #d97706)');
+            const badgeColor = rate >= 80 ? '#34d399' : (rate >= 40 ? '#38bdf8' : '#fbbf24');
+            const isIncharge = aud.email === inchargeEmail;
+            const safeAudEmail = (aud.email || '').replace(/'/g, "\\'");
+
+            return `
+                <div class="auditor-progress-card" onclick="focusAuditorProcedures('${safeAudEmail}')" style="background: rgba(0,0,0,0.35); border: 1px solid ${isIncharge ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)'}; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden; cursor: pointer; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;" title="클릭하여 하단 테이블에서 ${aud.name}님의 담당 절차만 집중 필터링(Focus View)합니다.">
+                    ${isIncharge ? '<div style="position: absolute; top: 0; right: 0; background: rgba(99,102,241,0.3); color: #c7d2fe; font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-bottom-left-radius: 6px;">주관 In-Charge</div>' : ''}
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <strong style="color: #f8fafc; font-size: 0.92rem;">${aud.name}</strong>
+                                <span style="font-size: 0.72rem; color: #a5b4fc; background: rgba(99,102,241,0.15); padding: 1px 6px; border-radius: 4px;">${aud.role}</span>
+                            </div>
+                            <div style="font-size: 0.76rem; color: #94a3b8; margin-top: 2px;">${aud.email}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 1.15rem; font-weight: 800; color: ${badgeColor};">${rate}%</span>
+                        </div>
+                    </div>
+
+                    <!-- 프로그레스 바 영역 -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.76rem; color: #cbd5e1; margin-bottom: 4px;">
+                            <span>배정 절차: <strong style="color: #fff;">${count}개</strong> (${completed}건 완료)</span>
+                            <span style="color: #94a3b8;">${count - completed}건 실증 진행중</span>
+                        </div>
+                        <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                            <div style="width: ${rate}%; height: 100%; background: ${barColor}; border-radius: 4px; transition: width 0.4s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 0.73rem; color: #818cf8; margin-top: -2px;">
+                        <span>🔍 담당 절차 포커스</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    let currentViewProceduresList = [];
+    let currentFocusedAuditor = null;
+
+    function renderViewProceduresTable(assignment) {
+        const tbody = document.getElementById('assign-view-procedures-tbody');
+        const countBadge = document.getElementById('assign-proc-list-count');
+        if (!tbody) return;
+
+        const accMap = assignment.account_assignments || {};
+        const inchargeEmail = assignment.in_charge_email || 'cpaeastsun@gmail.com';
+
+        // 105개 전체 절차 목록 평탄화
+        const flatList = [];
+        (allAuditProceduresCache || []).forEach(sec => {
+            (sec.items || []).forEach(it => {
+                flatList.push({
+                    code: it.account_code,
+                    name: it.account_name,
+                    secCode: sec.section_code,
+                    section: sec.section_title || `Section ${sec.section_code}`,
+                    assignedEmail: accMap[it.account_code] || it.default_assignee || inchargeEmail,
+                    status: (sec.section_code === '1000' || sec.section_code === '2000') ? '완료' : '진행중'
+                });
+            });
+        });
+
+        currentViewProceduresList = flatList;
+        if (countBadge) countBadge.textContent = `총 ${flatList.length}개 절차`;
+
+        renderFilteredProceduresTbody(flatList);
+    }
+
+    // [신규] 특정 감사인의 담당 절차 집중 보기 (Focus View)
+    window.focusAuditorProcedures = function (auditorEmail) {
+        currentFocusedAuditor = auditorEmail;
+        const countBadge = document.getElementById('assign-proc-list-count');
+        
+        const filtered = currentViewProceduresList.filter(p => p.assignedEmail === auditorEmail);
+        
+        if (countBadge) {
+            const aud = (masterAuditorPoolCache || []).find(a => a.email === auditorEmail);
+            const audName = aud ? aud.name : auditorEmail.split('@')[0];
+            countBadge.innerHTML = `
+                <span>🔍 ${audName} 담당 (${filtered.length}/${currentViewProceduresList.length}개)</span>
+                <button type="button" onclick="resetProcedureFocus(event)" style="background: rgba(239,68,68,0.25); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; font-size: 0.72rem; padding: 1px 6px; border-radius: 4px; margin-left: 6px; cursor: pointer;">✕ 전체 해제</button>
+            `;
+        }
+
+        renderFilteredProceduresTbody(filtered);
+
+        // 절차 테이블로 부드럽게 스크롤 이동
+        const tableHeader = document.querySelector('#subtab-audit-assign .table-responsive');
+        if (tableHeader) {
+            tableHeader.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    };
+
+    window.resetProcedureFocus = function (event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        currentFocusedAuditor = null;
+        const countBadge = document.getElementById('assign-proc-list-count');
+        if (countBadge) {
+            countBadge.textContent = `총 ${currentViewProceduresList.length}개 절차`;
+        }
+        filterViewProceduresTable();
+    };
+
+    function renderFilteredProceduresTbody(procs) {
+        const tbody = document.getElementById('assign-view-procedures-tbody');
+        if (!tbody) return;
+
+        if (!procs || procs.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 25px; color: var(--text-secondary);">
+                        ${currentFocusedAuditor ? `해당 감사인(${currentFocusedAuditor})에게 배정된 절차가 없습니다. <button type="button" onclick="resetProcedureFocus(event)" style="background: none; border: none; color: #818cf8; text-decoration: underline; cursor: pointer;">전체 절차 보기</button>` : '검색 조건과 일치하는 감사 절차가 없습니다.'}
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        // 감사인 셀렉트 박스 옵션 생성
+        const auditorOptionsHtml = (masterAuditorPoolCache || []).map(a => 
+            `<option value="${a.email}">${a.name} (${a.title || 'CPA'}) - ${a.email}</option>`
+        ).join('');
+
+        tbody.innerHTML = procs.map(p => {
+            const isCompleted = p.status === '완료';
+            const statusBadge = isCompleted 
+                ? '<span style="background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.74rem; font-weight: 600;">완료</span>'
+                : '<span style="background: rgba(56,189,248,0.2); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.74rem; font-weight: 600;">진행중</span>';
+
+            const defaultIncharge = p.assignedEmail === 'cpaeastsun@gmail.com' ? 'selected' : '';
+
+            return `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);" data-code="${p.code}" data-sec="${p.secCode}">
+                    <td style="padding: 8px 12px; white-space: nowrap;">
+                        <span style="font-family: monospace; font-weight: 700; color: #38bdf8; font-size: 0.82rem; background: rgba(56,189,248,0.1); padding: 2px 6px; border-radius: 4px;">
+                            ${p.code}
+                        </span>
+                    </td>
+                    <td style="padding: 8px 12px; white-space: nowrap;">
+                        <strong style="color: #f8fafc; font-size: 0.84rem;">${p.name}</strong>
+                    </td>
+                    <td style="padding: 8px 12px; white-space: nowrap;">
+                        <span style="color: #cbd5e1; font-size: 0.78rem; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">
+                            ${p.section}
+                        </span>
+                    </td>
+                    <td style="padding: 8px 12px; white-space: nowrap;">
+                        <select class="view-proc-assignee-select" data-code="${p.code}" onchange="markProcedureRowChanged(this)" style="padding: 4px 8px; border-radius: 6px; background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 0.78rem; width: 220px; cursor: pointer;">
+                            <option value="cpaeastsun@gmail.com" ${defaultIncharge}>김동선 (대표CPA) - cpaeastsun@gmail.com</option>
+                            ${auditorOptionsHtml}
+                            <option value="${p.assignedEmail}" ${!auditorOptionsHtml.includes(p.assignedEmail) && p.assignedEmail !== 'cpaeastsun@gmail.com' ? 'selected' : ''}>${p.assignedEmail}</option>
+                        </select>
+                    </td>
+                    <td style="padding: 8px 12px; text-align: center; white-space: nowrap;">
+                        ${statusBadge}
+                    </td>
+                    <td style="padding: 8px 12px; text-align: center; white-space: nowrap;">
+                        <button type="button" onclick="openJobAssignModalCurrent()" class="btn-logout" style="padding: 3px 8px; font-size: 0.74rem; background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3); color: #a5b4fc;">
+                            상세설정
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    window.markProcedureRowChanged = function (selectEl) {
+        const tr = selectEl.closest('tr');
+        if (tr) {
+            tr.style.background = 'rgba(99,102,241,0.15)';
+            selectEl.style.borderColor = '#34d399';
+        }
+    };
+
+    window.filterViewProceduresTable = function () {
+        const query = (document.getElementById('filter-view-procedure-search')?.value || '').trim().toLowerCase();
+        const secFilter = document.getElementById('filter-view-section-select')?.value || 'all';
+
+        const filtered = currentViewProceduresList.filter(p => {
+            const matchQuery = !query || p.code.toLowerCase().includes(query) || p.name.toLowerCase().includes(query);
+            const matchSec = (secFilter === 'all') || (p.secCode === secFilter);
+            const matchAuditor = !currentFocusedAuditor || (p.assignedEmail === currentFocusedAuditor);
+            return matchQuery && matchSec && matchAuditor;
+        });
+
+        renderFilteredProceduresTbody(filtered);
+    };
+
+    window.saveViewProceduresDirectly = async function (silent = false) {
+        const compName = currentSelectedAssignCompany || document.getElementById('assign-view-company-select')?.value;
+        const fiscalYear = parseInt(currentSelectedAssignYear || document.getElementById('assign-view-year-select')?.value || '2025', 10);
+        const inchargeEmail = document.getElementById('assign-view-incharge-select')?.value || 'cpaeastsun@gmail.com';
+
+        if (!compName) {
+            if (!silent) alert('감사 대상 회사를 선택해주세요.');
+            return;
+        }
+
+        const aud = (masterAuditorPoolCache || []).find(a => a.email === inchargeEmail);
+        const inchargeName = aud ? aud.name : (inchargeEmail === 'cpaeastsun@gmail.com' ? '김동선' : inchargeEmail.split('@')[0]);
+
+        // 모든 절차 셀렉트 박스에서 값 수집
+        const accMap = {};
+        document.querySelectorAll('.view-proc-assignee-select').forEach(sel => {
+            const code = sel.getAttribute('data-code');
+            const email = sel.value || 'cpaeastsun@gmail.com';
+            if (code) accMap[code] = email;
+        });
+
+        let currentAssignment = (masterAssignmentsCache || []).find(a => 
+            a.company_name === compName && parseInt(a.fiscal_year || 2025, 10) === fiscalYear
+        );
+
+        // 멤버 리스트에 In-Charge 및 배정된 감사인 자동 구성
+        const members = [{ name: inchargeName, email: inchargeEmail, role: 'In-charge' }];
+        Object.values(accMap).forEach(em => {
+            if (em && !members.some(m => m.email === em)) {
+                const memberAud = (masterAuditorPoolCache || []).find(a => a.email === em);
+                members.push({
+                    name: memberAud ? memberAud.name : em.split('@')[0],
+                    email: em,
+                    role: 'Staff CPA'
+                });
+            }
+        });
+
+        const payload = {
+            company_name: compName,
+            fiscal_year: fiscalYear,
+            in_charge_name: inchargeName,
+            in_charge_email: inchargeEmail,
+            partner_name: currentAssignment?.partner_name || '이진우 파트너',
+            members: members,
+            account_assignments: accMap,
+            status: currentAssignment?.status || 'in_progress',
+            status_label: currentAssignment?.status_label || '실증감사 진행중',
+            target_report_date: currentAssignment?.target_report_date || '2026-03-20'
+        };
+
+        try {
+            const res = await safeFetchJson('/api/audit/assignments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.success) {
+                if (!silent) {
+                    alert(`✓ [${compName} (${fiscalYear}년)] 감사 절차 배정이 성공적으로 저장되었습니다.`);
+                }
+                // 3대 탭(배정 탭, 감사인 인력 풀, 감사대상회사) 실시간 동기화 리프레시 (forceRefresh=true)
+                await window.loadMasterJobAssignments();
+                await window.loadAuditorPoolTable(true);
+                await window.loadAuditTargetCompanies();
+            } else {
+                if (!silent) alert(`❌ 저장 실패: ${res.error || '알 수 없는 오류'}`);
+            }
+        } catch (err) {
+            console.error('[ASSIGN_SAVE_ERR]', err);
+            if (!silent) alert(`❌ 네트워크 저장 오류: ${err.message}`);
+        }
+    };
+
+    window.openJobAssignModalCurrent = function () {
+        const compName = currentSelectedAssignCompany || document.getElementById('assign-view-company-select')?.value;
+        window.openJobAssignModal(compName);
+    };
+
+    window.openJobAssignModal = async function (companyName = '', initialAuditorEmail = '') {
         const modal = document.getElementById('modal-job-assign');
         if (!modal) return;
 
@@ -1962,46 +3161,65 @@
         if (form) form.reset();
 
         const titleEl = document.getElementById('job-assign-modal-title');
+        const compSelect = document.getElementById('assign-company-select');
         const compInput = document.getElementById('assign-company-name');
         const yearSelect = document.getElementById('assign-fiscal-year');
         const inchargeEmail = document.getElementById('assign-incharge-email');
         const inchargeName = document.getElementById('assign-incharge-name');
         const partnerName = document.getElementById('assign-partner-name');
         const statusSelect = document.getElementById('assign-status');
+        const invDateInput = document.getElementById('assign-inventory-date');
+        const repDateInput = document.getElementById('assign-target-report-date');
 
-        if (companyName) {
-            titleEl.textContent = `[${companyName}] 감사팀 및 계정 배정 수정`;
-            const found = masterAssignmentsCache.find(a => a.company_name === companyName);
-            if (found) {
-                compInput.value = found.company_name || '';
-                compInput.readOnly = true;
-                yearSelect.value = String(found.fiscal_year || 2025);
-                inchargeEmail.value = found.in_charge_email || '';
-                inchargeName.value = found.in_charge_name || '';
-                partnerName.value = found.partner_name || '';
-                statusSelect.value = found.status || 'in_progress';
-
-                const accMap = found.account_assignments || {};
-                const accA = document.getElementById('assign-acc-A-0');
-                const accC = document.getElementById('assign-acc-C-0');
-                const accE = document.getElementById('assign-acc-E-0');
-                const accG = document.getElementById('assign-acc-G-0');
-                if (accA) accA.value = accMap['A-0'] || '';
-                if (accC) accC.value = accMap['C-0'] || '';
-                if (accE) accE.value = accMap['E-0'] || '';
-                if (accG) accG.value = accMap['G-0'] || '';
-            }
+        // 전체 절차 및 감사인 풀 비동기 확인
+        const sections = await window.loadAllAuditProcedures();
+        if (masterAuditorPoolCache.length === 0) {
+            await window.loadAuditorPoolTable();
+        }
+        if (masterTargetCompaniesCache.length === 0) {
+            await window.loadAuditTargetCompanies();
         } else {
-            titleEl.textContent = '➕ 신규 감사팀 및 계정 배정 등록';
-            compInput.readOnly = false;
-            compInput.value = '';
-            yearSelect.value = '2025';
-            inchargeEmail.value = 'cpaeastsun@gmail.com';
-            inchargeName.value = '김동선';
-            partnerName.value = '이진우 파트너';
-            statusSelect.value = 'planned';
+            populateAssignCompanySelect(masterTargetCompaniesCache);
         }
 
+        let selectedStaffEmails = [];
+        let currentAccMap = {};
+
+        if (companyName) {
+            titleEl.textContent = `[${companyName}] 감사팀 편성 및 전체 절차 배정`;
+            const found = masterAssignmentsCache.find(a => a.company_name === companyName);
+            if (found) {
+                currentAccMap = found.account_assignments || {};
+                selectedStaffEmails = (found.members || []).map(m => m.email).filter(em => em && em !== found.in_charge_email);
+                populateAssignmentFields(found);
+            } else {
+                if (compSelect) compSelect.value = companyName;
+                if (compInput) {
+                    compInput.value = companyName;
+                    compInput.readOnly = true;
+                }
+            }
+        } else {
+            titleEl.textContent = '➕ 신규 감사팀 편성 및 전체 감사 절차 배정';
+            if (compInput) {
+                compInput.readOnly = false;
+                compInput.value = '';
+            }
+            if (compSelect) compSelect.value = '';
+            if (yearSelect) yearSelect.value = '2025';
+            if (inchargeEmail) inchargeEmail.value = initialAuditorEmail || 'cpaeastsun@gmail.com';
+            if (inchargeName) {
+                const aud = masterAuditorPoolCache.find(a => a.email === inchargeEmail.value);
+                inchargeName.value = aud ? aud.name : '김동선';
+            }
+            if (partnerName) partnerName.value = '이진우 파트너';
+            if (statusSelect) statusSelect.value = 'planned';
+            if (invDateInput) invDateInput.value = '2025-12-31';
+            if (repDateInput) repDateInput.value = '2026-03-20';
+        }
+
+        renderStaffCheckboxes(masterAuditorPoolCache, selectedStaffEmails);
+        renderAssignProceduresAccordion(sections, currentAccMap);
         modal.style.display = 'flex';
     };
 
@@ -2012,12 +3230,21 @@
 
     window.handleSaveJobAssignment = async function (e) {
         e.preventDefault();
-        const compName = document.getElementById('assign-company-name').value.trim();
-        const fiscalYear = parseInt(document.getElementById('assign-fiscal-year').value, 10) || 2025;
-        const inchargeEmail = document.getElementById('assign-incharge-email').value.trim();
-        const inchargeName = document.getElementById('assign-incharge-name').value.trim();
-        const partnerName = document.getElementById('assign-partner-name').value.trim();
-        const status = document.getElementById('assign-status').value;
+        const compSelect = document.getElementById('assign-company-select');
+        const compInput = document.getElementById('assign-company-name');
+        const compName = (compInput?.value || compSelect?.value || '').trim();
+        const fiscalYear = parseInt(document.getElementById('assign-fiscal-year')?.value, 10) || 2025;
+        const inchargeEmail = (document.getElementById('assign-incharge-email')?.value || 'cpaeastsun@gmail.com').trim();
+        const inchargeName = (document.getElementById('assign-incharge-name')?.value || '김동선').trim();
+        const partnerName = (document.getElementById('assign-partner-name')?.value || '이진우 파트너').trim();
+        const status = document.getElementById('assign-status')?.value || 'planned';
+        const invDate = document.getElementById('assign-inventory-date')?.value || '';
+        const repDate = document.getElementById('assign-target-report-date')?.value || '2026-03-20';
+
+        if (!compName) {
+            alert('감사 대상 회사명을 선택하거나 입력해주세요.');
+            return;
+        }
 
         const statusLabels = {
             'planned': '기획/계획 단계',
@@ -2027,24 +3254,35 @@
             'completed': '보고서 발행완료'
         };
 
+        // 105개 전체 절차에 대해 담당자 수집 (미선택 시 cpaeastsun@gmail.com 자동 지정)
         const accMap = {};
-        const accA = document.getElementById('assign-acc-A-0')?.value.trim();
-        const accC = document.getElementById('assign-acc-C-0')?.value.trim();
-        const accE = document.getElementById('assign-acc-E-0')?.value.trim();
-        const accG = document.getElementById('assign-acc-G-0')?.value.trim();
-
-        if (accA) accMap['A-0'] = accA;
-        if (accC) accMap['C-0'] = accC;
-        if (accE) accMap['E-0'] = accE;
-        if (accG) accMap['G-0'] = accG;
+        const procSelects = document.querySelectorAll('.assign-procedure-select');
+        procSelects.forEach(sel => {
+            const code = sel.getAttribute('data-code');
+            const val = sel.value.trim();
+            accMap[code] = val || 'cpaeastsun@gmail.com';
+        });
 
         const members = [];
         if (inchargeEmail) {
             members.push({ name: inchargeName || 'In-Charge', email: inchargeEmail, role: 'In-charge' });
         }
-        [accA, accC, accE, accG].forEach(em => {
+
+        // 체크박스로 선택된 Staff 감사인 추가
+        const checkedStaff = document.querySelectorAll('.assign-staff-checkbox:checked');
+        checkedStaff.forEach(cb => {
+            const em = cb.value;
+            const nm = cb.getAttribute('data-name') || em.split('@')[0];
+            if (em && em !== inchargeEmail && !members.some(m => m.email === em)) {
+                members.push({ name: nm, email: em, role: 'Staff CPA' });
+            }
+        });
+
+        // 절차별 담당자 중 중복 없는 참여 인원 자동 보강
+        Object.values(accMap).forEach(em => {
             if (em && !members.some(m => m.email === em)) {
-                members.push({ name: em.split('@')[0], email: em, role: 'Staff CPA' });
+                const aud = masterAuditorPoolCache.find(a => a.email === em);
+                members.push({ name: aud ? aud.name : em.split('@')[0], email: em, role: 'Staff CPA' });
             }
         });
 
@@ -2058,7 +3296,8 @@
             account_assignments: accMap,
             status: status,
             status_label: statusLabels[status] || '진행중',
-            target_report_date: '2026-03-20'
+            inventory_date: invDate,
+            target_report_date: repDate
         };
 
         try {
@@ -2069,9 +3308,17 @@
             });
 
             if (res.success) {
-                alert(`✓ [${compName}] 감사팀 및 계정 배정이 성공적으로 저장되었습니다.`);
+                alert(`✓ [${compName}] 감사팀 편성 및 ${Object.keys(accMap).length}개 감사 절차 배정이 성공적으로 저장되었습니다.`);
                 closeJobAssignModal();
-                loadMasterJobAssignments();
+
+                // 선택된 회사 및 연도 동기화 갱신
+                currentSelectedAssignCompany = compName;
+                currentSelectedAssignYear = String(fiscalYear);
+
+                // 3대 탭 실시간 동기화 (forceRefresh=true)
+                await window.loadMasterJobAssignments();
+                await window.loadAuditorPoolTable(true);
+                await window.loadAuditTargetCompanies();
             } else {
                 alert(`배정 저장 실패: ${res.error || '알 수 없는 오류'}`);
             }
@@ -2081,10 +3328,67 @@
         }
     };
 
+    // -------------------------------------------------------------------------
+    // 5. 감사팀 배정 변경 이력 모달
+    // -------------------------------------------------------------------------
+    window.openAssignmentLogsModal = async function () {
+        const modal = document.getElementById('modal-assignment-logs');
+        const tbody = document.getElementById('assignment-logs-tbody');
+        const badge = document.getElementById('assignment-logs-count-badge');
+        if (!modal || !tbody) return;
+
+        modal.style.display = 'flex';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: #94a3b8;">⏳ 변경 이력 로그를 불러오는 중입니다...</td></tr>';
+
+        try {
+            const res = await safeFetchJson('/api/audit/assignment-logs');
+            if (res.success && res.logs) {
+                const logs = res.logs;
+                if (badge) badge.textContent = `${logs.length}건`;
+
+                if (logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 28px; color: #94a3b8;">기록된 배정 변경 이력이 없습니다.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = logs.map(lg => {
+                    const actionBadge = lg.action_type === 'CREATE'
+                        ? '<span style="background: rgba(16,185,129,0.2); color: #34d399; padding: 2px 6px; border-radius: 4px; font-size: 0.74rem;">신규 배정</span>'
+                        : '<span style="background: rgba(99,102,241,0.2); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-size: 0.74rem;">정보 변경</span>';
+
+                    return `
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                            <td style="padding: 10px 12px; font-size: 0.8rem; color: #94a3b8; white-space: nowrap;">${lg.created_at}</td>
+                            <td style="padding: 10px 12px; font-weight: 600; color: #f8fafc;">${lg.company_name} <small style="color: #94a3b8;">(${lg.fiscal_year}년)</small></td>
+                            <td style="padding: 10px 12px; color: #cbd5e1;">${lg.changed_by || '-'}</td>
+                            <td style="padding: 10px 12px; white-space: nowrap;">${actionBadge}</td>
+                            <td style="padding: 10px 12px; color: #e2e8f0;">${lg.diff_summary || '감사팀 배정 갱신'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        } catch (err) {
+            console.error('[ASSIGN_LOGS:FETCH_ERR]', err);
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 24px; color: #f87171;">❌ 로그 조회 오류: ${err.message}</td></tr>`;
+        }
+    };
+
+    window.closeAssignmentLogsModal = function () {
+        const modal = document.getElementById('modal-assignment-logs');
+        if (modal) modal.style.display = 'none';
+    };
+
     // DOM 로드 완료 시 기본 초기화
     document.addEventListener('DOMContentLoaded', () => {
         window.initDataIngestion();
         window.initAnalyticsHub();
+        
+        // 회계감사통제 탭 진입 시 자동 로드
+        if (window.location.hash === '#tab-audit') {
+            window.loadAuditorPoolTable();
+            window.loadAuditTargetCompanies();
+            window.loadMasterJobAssignments();
+        }
     });
 
 })();

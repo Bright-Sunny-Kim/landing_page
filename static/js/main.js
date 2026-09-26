@@ -915,11 +915,19 @@ window.updateMasterRequestStatus = async function(requestId, newStatus) {
     }
 };
 
-// 파트너사 관리 탭 진입 시 초기 요청 목록 로드 트리거
+// 파트너사 및 회계감사통제 관리 탭 진입 시 초기 요청 목록 로드 트리거
 document.addEventListener('click', (e) => {
     const subtabBtn = e.target.closest('.master-subtab-btn[data-subtab="subtab-partner-requests"]');
     if (subtabBtn) {
         window.loadMasterRequests();
+    }
+    const auditorPoolSubtabBtn = e.target.closest('.master-subtab-btn[data-subtab="subtab-auditor-pool"]');
+    if (auditorPoolSubtabBtn && typeof window.loadAuditorPoolTable === 'function') {
+        window.loadAuditorPoolTable();
+    }
+    const targetCompSubtabBtn = e.target.closest('.master-subtab-btn[data-subtab="subtab-audit-target-companies"]');
+    if (targetCompSubtabBtn && typeof window.loadAuditTargetCompanies === 'function') {
+        window.loadAuditTargetCompanies();
     }
     const assignSubtabBtn = e.target.closest('.master-subtab-btn[data-subtab="subtab-audit-assign"]');
     if (assignSubtabBtn && typeof window.loadMasterJobAssignments === 'function') {
