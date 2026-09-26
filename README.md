@@ -138,6 +138,10 @@ landing_page/
 | `GET` | `/api/audit/working-papers/export-excel` | **[감사] K-GAAP 원본 서식 엑셀(.xlsx) 스트리밍 다운로드** | Query: `?company_name=...&fiscal_year=...&account_code=...` | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
 | `GET` | `/api/audit/schedules` | **[감사] FullCalendar v6 감사일정 목록 조회** | Query: `?company_name=...&type=...` | `{ "success": true, "schedules": [...] }` |
 | `POST` | `/api/audit/schedules` | **[감사] 신규 감사일정 등록** | JSON: `{ "company_name", "title", "schedule_type", "start_date", "end_date" }` | `{ "success": true, "schedule": {...} }` |
+| `GET` | `/api/company/lakehouse/tax-payroll-data` | **[Lakehouse] 세무(부가세) & 노무(급여/원천세) 정규화 JSON 0.01초 고속 조회** | Query: `?company_name=...&fiscal_year=...` | `{ "success": true, "vat": {...}, "payroll": {...} }` |
+| `POST` | `/api/company/lakehouse/sync-tax-payroll` | **[Lakehouse] 세무/노무 대용량 ZIP 파싱 및 증분 병합 동기화 트리거** | JSON: `{ "company_name", "fiscal_year" }` | `{ "success": true, "vat_synced": true, "payroll_synced": true }` |
+| `GET` | `/api/company/lakehouse/pfile-data` | **[Lakehouse] P-File 17종 거버넌스 Master Profile(pfile_master.json) 조회** | Query: `?company_name=...` | `{ "success": true, "pfile_master": {...} }` |
+| `POST` | `/api/company/lakehouse/sync-pfiles` | **[Lakehouse] P-File 영구문서 17종 정규화 및 Master JSON 동기화 트리거** | JSON: `{ "company_name" }` | `{ "success": true, "document_count": N, "master_bundle": {...} }` |
 
 ---
 
