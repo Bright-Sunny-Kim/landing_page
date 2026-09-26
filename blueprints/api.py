@@ -1396,3 +1396,62 @@ def sync_pfiles_lakehouse():
         logger.error("[PFILE_SYNC:ERROR] Error triggering pfile sync: %s", e, exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@api_bp.route('/api/company/<company_name>/financial-statements', methods=['GET'])
+def get_company_financial_statements_api(company_name):
+    """
+    회사별 5대 비교식 재무제표(재무상태표, 포괄손익계산서, 자본변동표, 현금흐름표, 주석) 데이터를 반환하는 API
+    """
+    fiscal_year = request.args.get('fiscal_year') or request.args.get('year') or '2025'
+    logger.info("[API_REQ] GET /api/company/%s/financial-statements - Year: %s", company_name, fiscal_year)
+
+    # 권한 확인 (세션 로그인 검증)
+    user_email = session.get('email', '')
+    user_company = session.get('company', '')
+    if not user_email:
+        logger.warning("[API_AUTH_FAIL] Unauthorized access attempt to financial statements: %s", company_name)
+        return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+
+    if user_email != MASTER_EMAIL and user_company != company_name:
+        logger.warning("[API_FORBIDDEN] Forbidden company access: UserCompany=%s, TargetCompany=%s", user_company, company_name)
+        return jsonify({'success': False, 'error': '접근 권한이 없습니다.'}), 403
+
+    try:
+        from core.financial_pipeline import get_company_full_financial_statements
+        result = get_company_full_financial_statements(company_name, fiscal_year)
+        logger.info("[API_RESP] 200 OK - Returned financial statements for %s (Year: %s)", company_name, fiscal_year)
+        return jsonify(result), 200
+
+    except Exception as e:
+        logger.error("[API_ERROR] Failed to fetch financial statements for %s: %s", company_name, e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@api_bp.route('/api/company/<company_name>/financial-statements/sync', methods=['POST'])
+def sync_company_financial_statements_api(company_name):
+    """
+    고객사 업로드 원본 자료를 기반으로 우분투 MinIO Lakehouse 재무제표 정규화 데이터를 수동/자동 재동기화하는 API
+    """
+    fiscal_year = request.form.get('fiscal_year') or (request.get_json() or {}).get('fiscal_year') or '2025'
+    logger.info("[API_REQ] POST /api/company/%s/financial-statements/sync - Year: %s", company_name, fiscal_year)
+
+    user_email = session.get('email', '')
+    user_company = session.get('company', '')
+    if not user_email:
+        return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+
+    if user_email != MASTER_EMAIL and user_company != company_name:
+        return jsonify({'success': False, 'error': '접근 권한이 없습니다.'}), 403
+
+    try:
+        from core.financial_pipeline import trigger_lakehouse_sync
+        res = trigger_lakehouse_sync(company_name, fiscal_year)
+        logger.info("[API_RESP] 200 OK - Synced Lakehouse financial statements for %s: %s", company_name, res.get('success'))
+        return jsonify(res), 200 if res.get('success') else 500
+
+    except Exception as e:
+        logger.error("[API_ERROR] Failed to sync financial statements for %s: %s", company_name, e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+

@@ -328,6 +328,11 @@
                 // 4. 우분투 서버에서 최신 5개 제출 목록 실시간 동기화
                 await loadRecentSubmissions();
 
+                // 4-1. [Auto-Sync] 재무제표 Lakehouse 자동 동기화 백그라운드 호출
+                if (typeof syncCompanyFinancialStatements === 'function') {
+                    syncCompanyFinancialStatements(true).catch(e => console.warn('Background FS auto-sync error:', e));
+                }
+
                 // 5. 성공 알림 및 드롭존 초기화
                 alert(`🎉 [${doc.category}] "${doc.name}" 파일이 MinIO 서버에 성공적으로 업로드되었습니다! (${currentFiscalYear}년도)`);
                 cancelSelectedDoc();
@@ -796,6 +801,12 @@
                         <span>자료제출</span>
                     </a>
                 </li>
+                <li class="master-menu-item" data-menu="partner-financials">
+                    <a href="#partner-financials">
+                        <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                        <span>재무제표</span>
+                    </a>
+                </li>
                 <li class="master-menu-item" data-menu="partner-external">
                     <a href="#partner-external">
                         <svg class="master-menu-icon" viewBox="0 0 24 24"><path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z"/></svg>
@@ -1137,6 +1148,191 @@
                     <span>안전하게 로그아웃</span>
                 </a>
             </footer>
+        </div>
+
+        <!-- 📊 5대 비교식 재무제표 전용 독립 뷰 -->
+        <div class="glass-card dashboard-card master-card" id="partner-financials-view" style="display: none;">
+            <header class="dashboard-header" style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                            <div class="status-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.4);">
+                                <span class="pulse-dot" style="background: #34d399;"></span>
+                                <span>Financial Statements Engine</span>
+                            </div>
+                            <span id="fs-balance-badge" class="table-chip written" style="font-size: 0.8rem; padding: 4px 10px;">검증 중...</span>
+                        </div>
+                        <h1 id="dashboard-heading" style="margin: 0; font-size: 1.6rem; display: flex; align-items: center; gap: 10px;">
+                            <span>📊 비교식 5대 재무제표</span>
+                        </h1>
+                        <p style="color: var(--text-secondary); margin-top: 8px; font-size: 0.92rem;">
+                            우분투 AI 레이크하우스에 보관된 정규화 데이터로부터 조립된 표준 비교식(당기 vs 전기) 재무제표 및 감사 주석입니다.
+                        </p>
+                    </div>
+
+                    <!-- 컨트롤 패널 (단위 변환, 엑셀 다운로드, 새로고침) -->
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                            <span style="font-size: 0.8rem; color: #94a3b8;">단위:</span>
+                            <select id="fs-unit-select" onchange="changeFsUnit(this.value)" style="background: transparent; border: none; color: #fff; font-size: 0.85rem; font-weight: 600; outline: none; cursor: pointer;">
+                                <option value="1" style="background: #1e293b; color: #fff;">원 (KRW)</option>
+                                <option value="1000" style="background: #1e293b; color: #fff;">천원</option>
+                                <option value="1000000" style="background: #1e293b; color: #fff;">백만원</option>
+                                <option value="100000000" style="background: #1e293b; color: #fff;">억원</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-table-action download" onclick="exportCurrentFsToExcel()" style="padding: 6px 14px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                            <span>📥 엑셀 다운로드</span>
+                        </button>
+                        <button type="button" class="btn-table-action view" onclick="loadCompanyFinancialStatements(true)" style="padding: 6px 14px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                            <span>🔄 새로고침</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 5대 서브탭 버튼 바 -->
+            <div class="sub-tabs-container" style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; overflow-x: auto;">
+                <button type="button" class="sub-tab-btn active" data-fstab="sub-fs-bs" onclick="switchFsSubTab('sub-fs-bs')">📑 1. 재무상태표 (BS)</button>
+                <button type="button" class="sub-tab-btn" data-fstab="sub-fs-is" onclick="switchFsSubTab('sub-fs-is')">📑 2. 포괄손익계산서 (IS)</button>
+                <button type="button" class="sub-tab-btn" data-fstab="sub-fs-ce" onclick="switchFsSubTab('sub-fs-ce')">📑 3. 자본변동표 (CE)</button>
+                <button type="button" class="sub-tab-btn" data-fstab="sub-fs-cf" onclick="switchFsSubTab('sub-fs-cf')">📑 4. 현금흐름표 (CF)</button>
+                <button type="button" class="sub-tab-btn" data-fstab="sub-fs-notes" onclick="switchFsSubTab('sub-fs-notes')">📑 5. 주석 (Notes)</button>
+            </div>
+
+            <!-- 서브탭 콘텐츠 영역 -->
+            <div class="fs-tab-contents">
+                <!-- 1. 재무상태표 패널 -->
+                <div class="fs-tab-pane" id="sub-fs-bs" style="display: block;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: #f1f5f9;">재무상태표 (Statement of Financial Position)</h3>
+                        <span id="fs-bs-period-label" style="font-size: 0.85rem; color: #94a3b8;">당기말 vs 전기말</span>
+                    </div>
+                    <div class="recent-table-wrapper" style="border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow-x: auto;">
+                        <table class="recent-submissions-table fs-table" id="table-fs-bs">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="width: 28%; text-align: left; vertical-align: middle;">계정과목</th>
+                                    <th colspan="2" style="width: 30%; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);" id="th-bs-curr-group">제 14 (당) 기</th>
+                                    <th colspan="2" style="width: 30%; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);" id="th-bs-prior-group">제 13 (전) 기</th>
+                                    <th rowspan="2" style="width: 12%; text-align: right; vertical-align: middle;">증감액 (증감률)</th>
+                                </tr>
+                                <tr>
+                                    <th style="width: 15%; text-align: right; font-size: 0.8rem; color: #94a3b8; background: rgba(255,255,255,0.02);">당기총액 (세부)</th>
+                                    <th style="width: 15%; text-align: right; font-size: 0.8rem; color: #93c5fd; background: rgba(255,255,255,0.02);">당기순액 (소계)</th>
+                                    <th style="width: 15%; text-align: right; font-size: 0.8rem; color: #94a3b8; background: rgba(255,255,255,0.02);">전기총액 (세부)</th>
+                                    <th style="width: 15%; text-align: right; font-size: 0.8rem; color: #93c5fd; background: rgba(255,255,255,0.02);">전기순액 (소계)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-fs-bs">
+                                <tr><td colspan="6" style="text-align:center; padding: 40px; color:#94a3b8;">데이터를 불러오는 중입니다...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2. 포괄손익계산서 패널 -->
+                <div class="fs-tab-pane" id="sub-fs-is" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: #f1f5f9;">포괄손익계산서 (Statement of Comprehensive Income)</h3>
+                        <span id="fs-is-period-label" style="font-size: 0.85rem; color: #94a3b8;">당기 vs 전기</span>
+                    </div>
+                    <div class="recent-table-wrapper" style="border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden;">
+                        <table class="recent-submissions-table fs-table" id="table-fs-is">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="width: 28%; text-align: left; vertical-align: middle;">계정과목</th>
+                                    <th colspan="2" style="width: 28%; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);" id="th-is-curr-group">제 14 (당) 기</th>
+                                    <th colspan="2" style="width: 28%; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);" id="th-is-prior-group">제 13 (전) 기</th>
+                                    <th rowspan="2" style="width: 8%; text-align: right; vertical-align: middle;">증감액</th>
+                                    <th rowspan="2" style="width: 8%; text-align: right; vertical-align: middle;">증감율</th>
+                                </tr>
+                                <tr>
+                                    <th style="width: 14%; text-align: right; font-size: 0.8rem; color: #94a3b8; background: rgba(255,255,255,0.02);">당기세부</th>
+                                    <th style="width: 14%; text-align: right; font-size: 0.8rem; color: #93c5fd; background: rgba(255,255,255,0.02);">당기금액</th>
+                                    <th style="width: 14%; text-align: right; font-size: 0.8rem; color: #94a3b8; background: rgba(255,255,255,0.02);">전기세부</th>
+                                    <th style="width: 14%; text-align: right; font-size: 0.8rem; color: #93c5fd; background: rgba(255,255,255,0.02);">전기금액</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-fs-is">
+                                <tr><td colspan="7" style="text-align:center; padding: 40px; color:#94a3b8;">데이터를 불러오는 중입니다...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. 자본변동표 패널 -->
+                <div class="fs-tab-pane" id="sub-fs-ce" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: #f1f5f9;">자본변동표 (Statement of Changes in Equity)</h3>
+                        <span id="fs-ce-period-label" style="font-size: 0.85rem; color: #94a3b8;">자본 구성요소별 변동내역</span>
+                    </div>
+                    <div class="recent-table-wrapper" style="border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow-x: auto;">
+                        <table class="recent-submissions-table fs-table" id="table-fs-ce">
+                            <thead>
+                                <tr>
+                                    <th style="width: 22%; text-align: left;">구분</th>
+                                    <th style="width: 13%; text-align: right;">자본금</th>
+                                    <th style="width: 13%; text-align: right;">자본잉여금</th>
+                                    <th style="width: 13%; text-align: right;">자본조정</th>
+                                    <th style="width: 13%; text-align: right;">기타포괄손익누계액</th>
+                                    <th style="width: 13%; text-align: right;">이익잉여금</th>
+                                    <th style="width: 13%; text-align: right;">자본총계</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-fs-ce">
+                                <tr><td colspan="7" style="text-align:center; padding: 40px; color:#94a3b8;">데이터를 불러오는 중입니다...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. 현금흐름표 패널 -->
+                <div class="fs-tab-pane" id="sub-fs-cf" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: #f1f5f9;">현금흐름표 (Statement of Cash Flows)</h3>
+                        <span id="fs-cf-period-label" style="font-size: 0.85rem; color: #94a3b8;">간접법에 의한 비교식 현금흐름</span>
+                    </div>
+                    <div class="recent-table-wrapper" style="border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden;">
+                        <table class="recent-submissions-table fs-table" id="table-fs-cf">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="width: 36%; text-align: left; vertical-align: middle;">계정과목</th>
+                                    <th colspan="2" style="width: 32%; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);" id="th-cf-curr-group">제 14 (당) 기</th>
+                                    <th colspan="2" style="width: 32%; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);" id="th-cf-prior-group">제 13 (전) 기</th>
+                                </tr>
+                                <tr>
+                                    <th style="width: 16%; text-align: right; font-size: 0.8rem; color: #94a3b8; background: rgba(255,255,255,0.02);">당기세부</th>
+                                    <th style="width: 16%; text-align: right; font-size: 0.8rem; color: #93c5fd; background: rgba(255,255,255,0.02);">당기소계</th>
+                                    <th style="width: 16%; text-align: right; font-size: 0.8rem; color: #94a3b8; background: rgba(255,255,255,0.02);">전기세부</th>
+                                    <th style="width: 16%; text-align: right; font-size: 0.8rem; color: #93c5fd; background: rgba(255,255,255,0.02);">전기소계</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-fs-cf">
+                                <tr><td colspan="5" style="text-align:center; padding: 40px; color:#94a3b8;">데이터를 불러오는 중입니다...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5. 주석 패널 -->
+                <div class="fs-tab-pane" id="sub-fs-notes" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; color: #f1f5f9;">재무제표 주석 (Notes to Financial Statements)</h3>
+                        <span style="font-size: 0.85rem; color: #94a3b8;">K-GAAP 표준 감사 주석</span>
+                    </div>
+                    
+                    <!-- 주석 빠른 이동 칩 네비게이터 -->
+                    <div id="fs-notes-navigator" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                        <!-- 동적으로 생성 -->
+                    </div>
+
+                    <!-- 주석 상세 카드 목록 -->
+                    <div id="fs-notes-container" style="display: flex; flex-direction: column; gap: 20px;">
+                        <div style="text-align: center; padding: 40px; color: #94a3b8;">주석 데이터를 불러오는 중입니다...</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 🏛️ 외부조회 전용 독립 뷰 -->
@@ -2660,6 +2856,485 @@
             return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+        // ==========================================
+        // 📊 재무제표 (Financial Statements) 모듈 JS
+        // ==========================================
+        let currentFsData = null;
+        let currentFsUnit = 1; // 1: 원, 1000: 천원, 1000000: 백만원, 100000000: 억원
+
+        function formatMoney(amount, isUnitDivided = true) {
+            if (amount === null || amount === undefined || isNaN(amount)) return '-';
+            let val = parseFloat(amount);
+            if (isUnitDivided && currentFsUnit > 1) {
+                val = val / currentFsUnit;
+            }
+            if (Math.abs(val) < 0.0001 && val !== 0) val = 0;
+            
+            let formatted = "";
+            if (currentFsUnit >= 1000000) {
+                formatted = val.toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            } else {
+                formatted = Math.round(val).toLocaleString('ko-KR');
+            }
+
+            if (val < 0) {
+                return `<span style="color: #f87171;">(${formatted.replace('-', '')})</span>`;
+            }
+            return formatted;
+        }
+
+        function switchFsSubTab(subTabId) {
+            document.querySelectorAll('.fs-tab-pane').forEach(p => p.style.display = 'none');
+            document.querySelectorAll('[data-fstab]').forEach(b => b.classList.remove('active'));
+            
+            const targetPane = document.getElementById(subTabId);
+            if (targetPane) targetPane.style.display = 'block';
+            
+            const targetBtn = document.querySelector(`[data-fstab="${subTabId}"]`);
+            if (targetBtn) targetBtn.classList.add('active');
+        }
+
+        function changeFsUnit(unitVal) {
+            currentFsUnit = parseFloat(unitVal) || 1;
+            if (currentFsData) {
+                renderFinancialStatements(currentFsData);
+            }
+        }
+
+        async function syncCompanyFinancialStatements(isAuto = false) {
+            const companyName = "{{ company_name }}";
+            const fiscalYear = document.getElementById('global_fiscal_year_select')?.value || '2025';
+            const badge = document.getElementById('fs-balance-badge');
+            if (badge) {
+                badge.className = 'table-chip written';
+                badge.style.background = 'rgba(99, 102, 241, 0.2)';
+                badge.style.color = '#818cf8';
+                badge.innerText = '🔄 MinIO 결산 데이터 동기화 중...';
+            }
+
+            try {
+                const res = await fetch(`/api/company/${encodeURIComponent(companyName)}/financial-statements/sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fiscal_year: fiscalYear })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || '동기화 실패');
+
+                if (!isAuto) {
+                    alert('우분투 MinIO Lakehouse 결산 데이터 동기화가 완료되었습니다.');
+                }
+                await loadCompanyFinancialStatements(true);
+            } catch (err) {
+                console.error("Sync failed:", err);
+                if (!isAuto) {
+                    alert(`동기화 중 오류가 발생했습니다: ${err.message}`);
+                }
+            }
+        }
+
+        async function loadCompanyFinancialStatements(forceRefresh = false) {
+            if (currentFsData && !forceRefresh) {
+                renderFinancialStatements(currentFsData);
+                return;
+            }
+
+            const companyName = "{{ company_name }}";
+            const fiscalYear = document.getElementById('global_fiscal_year_select')?.value || '2025';
+
+            const tbodyBs = document.getElementById('tbody-fs-bs');
+            if (tbodyBs) tbodyBs.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 40px; color:#94a3b8;"><span class="pulse-dot"></span> 우분투 AI 레이크하우스 데이터를 집계 중입니다...</td></tr>`;
+
+            try {
+                const res = await fetch(`/api/company/${encodeURIComponent(companyName)}/financial-statements?year=${fiscalYear}`);
+                if (!res.ok) throw new Error(`서버 응답 오류 (${res.status})`);
+                
+                const data = await res.json();
+                
+                // 데이터 미생성/부재 시 방어막 UI
+                if (!data.success || data.has_data === false) {
+                    currentFsData = null;
+                    const msg = data.message || '우분투 서버 MinIO에 해당 회사의 정규화 결산 데이터가 아직 없습니다.';
+                    const errorHtml = `
+                        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 30px; text-align: center; margin: 20px 0;">
+                            <span style="font-size: 2rem;">📂</span>
+                            <h4 style="margin: 10px 0; color: #f87171;">정규화 결산 데이터 동기화 필요</h4>
+                            <p style="color: #cbd5e1; font-size: 0.92rem; max-width: 600px; margin: 0 auto 20px auto;">${escapeHtml(msg)}</p>
+                            <button type="button" class="btn-table-action download" onclick="syncCompanyFinancialStatements()" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                                <span>🔄 MinIO 결산 데이터 지금 동기화 실행</span>
+                            </button>
+                        </div>
+                    `;
+                    document.querySelectorAll('.fs-tab-pane').forEach(p => p.innerHTML = errorHtml);
+                    const badge = document.getElementById('fs-balance-badge');
+                    if (badge) {
+                        badge.className = 'table-chip written';
+                        badge.innerText = '⚠️ 데이터 동기화 대기';
+                    }
+                    return;
+                }
+
+                currentFsData = data;
+                renderFinancialStatements(data);
+            } catch (err) {
+                console.error("Failed to load financial statements:", err);
+                if (tbodyBs) {
+                    tbodyBs.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 30px; color:#f87171;">재무제표 데이터를 불러오지 못했습니다: ${err.message}</td></tr>`;
+                }
+            }
+        }
+
+        function renderFinancialStatements(data) {
+            if (!data || !data.statements) return;
+
+            const st = data.statements;
+            const currLabel = data.current_period_label || '제 14 (당) 기';
+            const priorLabel = data.prior_period_label || '제 13 (전) 기';
+
+            // 1. 헤더 레이블 업데이트
+            const thBcg = document.getElementById('th-bs-curr-group'); if (thBcg) thBcg.innerText = currLabel;
+            const thBpg = document.getElementById('th-bs-prior-group'); if (thBpg) thBpg.innerText = priorLabel;
+            const thIcg = document.getElementById('th-is-curr-group') || document.getElementById('th-is-curr'); if (thIcg) thIcg.innerText = currLabel;
+            const thIpg = document.getElementById('th-is-prior-group') || document.getElementById('th-is-prior'); if (thIpg) thIpg.innerText = priorLabel;
+            const thCc = document.getElementById('th-cf-curr-group') || document.getElementById('th-cf-curr'); if (thCc) thCc.innerText = currLabel;
+            const thCp = document.getElementById('th-cf-prior-group') || document.getElementById('th-cf-prior'); if (thCp) thCp.innerText = priorLabel;
+
+            // 대차평균 일치 검증 뱃지
+            const badge = document.getElementById('fs-balance-badge');
+            if (badge && data.validation) {
+                if (data.validation.is_bs_balanced) {
+                    badge.className = 'table-chip pfile';
+                    badge.style.background = 'rgba(16, 185, 129, 0.2)';
+                    badge.style.color = '#34d399';
+                    badge.style.borderColor = 'rgba(52, 211, 153, 0.4)';
+                    badge.innerText = '✅ 대차평균 일치 (정합성 100%)';
+                } else {
+                    badge.className = 'table-chip written';
+                    badge.style.background = 'rgba(239, 68, 68, 0.2)';
+                    badge.style.color = '#f87171';
+                    badge.style.borderColor = 'rgba(248, 113, 113, 0.4)';
+                    badge.innerText = `⚠️ 대차 차액: ${Math.round(data.validation.discrepancy).toLocaleString()}원`;
+                }
+            }
+
+            // 2. 재무상태표 (BS - 4열 총액/순액) 렌더링
+            renderBalanceSheetTable('tbody-fs-bs', st.balance_sheet);
+
+            // 3. 포괄손익계산서 (IS) 렌더링
+            renderComparativeTable('tbody-fs-is', st.income_statement);
+
+            // 4. 자본변동표 (CE) 렌더링
+            renderEquityTable('tbody-fs-ce', st.equity_changes);
+
+            // 5. 현금흐름표 (CF) 렌더링
+            renderCashFlowTable('tbody-fs-cf', st.cash_flow);
+
+            // 6. 주석 (Notes) 렌더링
+            renderNotesSection(st.notes);
+        }
+
+        function renderBalanceSheetTable(tbodyId, rows) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 30px; color:#94a3b8;">표시할 재무상태표 데이터가 없습니다.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            rows.forEach(r => {
+                const isSub = r.IsSubtotal;
+                const isContra = r.IsContra;
+                const isParent = r.IsContraParent;
+                const rowStyle = isSub ? 'font-weight: 700; background: rgba(255,255,255,0.03); color: #f8fafc;' : 'color: #cbd5e1;';
+                
+                let indentStyle = '';
+                if (isContra) {
+                    indentStyle = 'padding-left: 36px; color: #94a3b8; font-size: 0.85rem;';
+                } else if (!isSub && !r.Account.startsWith(' ')) {
+                    indentStyle = 'padding-left: 20px;';
+                }
+
+                let diffPctBadge = '';
+                if (r.DiffPct !== undefined && r.Prior !== 0) {
+                    const isPos = r.DiffPct >= 0;
+                    const badgeColor = isPos ? '#34d399' : '#f87171';
+                    diffPctBadge = `<span style="font-size: 0.75rem; color: ${badgeColor}; margin-left: 4px;">(${isPos ? '+' : ''}${r.DiffPct}%)</span>`;
+                }
+
+                const cgText = r.CurrentGross !== null ? formatMoney(r.CurrentGross) : '-';
+                const cnText = r.CurrentNet !== null ? formatMoney(r.CurrentNet) : '-';
+                const pgText = r.PriorGross !== null ? formatMoney(r.PriorGross) : '-';
+                const pnText = r.PriorNet !== null ? formatMoney(r.PriorNet) : '-';
+
+                html += `
+                    <tr style="${rowStyle}">
+                        <td style="padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); ${indentStyle}">
+                            ${escapeHtml(r.Account)}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.CurrentGross !== null ? '#e2e8f0' : '#64748b'};">
+                            ${cgText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; font-weight: ${isSub ? '700' : '500'}; color: ${r.CurrentNet !== null ? (isSub ? '#93c5fd' : '#f8fafc') : '#64748b'};">
+                            ${cnText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.PriorGross !== null ? '#94a3b8' : '#64748b'};">
+                            ${pgText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.PriorNet !== null ? (isSub ? '#93c5fd' : '#cbd5e1') : '#64748b'};">
+                            ${pnText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; white-space: nowrap;">
+                            ${formatMoney(r.Diff)} ${diffPctBadge}
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderComparativeTable(tbodyId, rows) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px; color:#94a3b8;">표시할 손익계산서 데이터가 없습니다.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            rows.forEach(r => {
+                const isSub = r.IsSubtotal;
+                const rowStyle = isSub ? 'font-weight: 700; background: rgba(99, 102, 241, 0.08); color: #f8fafc;' : 'color: #cbd5e1;';
+                const indentStyle = (!isSub && !r.Account.startsWith(' ')) ? 'padding-left: 28px; color: #94a3b8; font-size: 0.86rem;' : 'padding-left: 12px; font-size: 0.94rem;';
+                
+                let diffPctText = '-';
+                if (r.DiffPct !== undefined && r.Prior !== 0) {
+                    const isPos = r.DiffPct >= 0;
+                    const color = isPos ? '#34d399' : '#f87171';
+                    diffPctText = `<span style="color: ${color}; font-family: 'JetBrains Mono', monospace;">${isPos ? '+' : ''}${r.DiffPct}%</span>`;
+                }
+
+                const cdText = (r.CurrentDetail !== null && r.CurrentDetail !== undefined) ? formatMoney(r.CurrentDetail) : '-';
+                const caText = (r.CurrentAmount !== null && r.CurrentAmount !== undefined) ? formatMoney(r.CurrentAmount) : '-';
+                const pdText = (r.PriorDetail !== null && r.PriorDetail !== undefined) ? formatMoney(r.PriorDetail) : '-';
+                const paText = (r.PriorAmount !== null && r.PriorAmount !== undefined) ? formatMoney(r.PriorAmount) : '-';
+
+                html += `
+                    <tr style="${rowStyle}">
+                        <td style="padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); ${indentStyle}">
+                            ${escapeHtml(r.Account)}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.CurrentDetail !== null && r.CurrentDetail !== undefined ? '#e2e8f0' : '#64748b'};">
+                            ${cdText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; font-weight: ${isSub ? '700' : '500'}; color: ${r.CurrentAmount !== null && r.CurrentAmount !== undefined ? (isSub ? '#93c5fd' : '#f8fafc') : '#64748b'};">
+                            ${caText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.PriorDetail !== null && r.PriorDetail !== undefined ? '#94a3b8' : '#64748b'};">
+                            ${pdText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.PriorAmount !== null && r.PriorAmount !== undefined ? (isSub ? '#93c5fd' : '#cbd5e1') : '#64748b'};">
+                            ${paText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace;">
+                            ${formatMoney(r.Diff)}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace;">
+                            ${diffPctText}
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderEquityTable(tbodyId, eqData) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!eqData || !eqData.rows || eqData.rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px; color:#94a3b8;">표시할 자본변동 내역이 없습니다.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            eqData.rows.forEach(r => {
+                const kind = r.row_kind || (r.is_header_row ? 'subtotal' : 'leaf');
+                let rowStyle = 'color: #cbd5e1;';
+                let indentStyle = 'padding-left: 14px; font-size: 0.92rem;';
+
+                if (kind === 'total') {
+                    rowStyle = 'font-weight: 700; background: rgba(99, 102, 241, 0.12); color: #93c5fd; font-size: 0.95rem;';
+                    indentStyle = 'padding-left: 14px;';
+                } else if (kind === 'subtotal' || kind === 'start') {
+                    rowStyle = 'font-weight: 700; background: rgba(255, 255, 255, 0.03); color: #f8fafc; font-size: 0.94rem;';
+                    indentStyle = 'padding-left: 14px;';
+                } else {
+                    indentStyle = 'padding-left: 32px; color: #94a3b8; font-size: 0.86rem;';
+                }
+
+                html += `
+                    <tr style="${rowStyle}">
+                        <td style="padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); ${indentStyle}">${escapeHtml(r.category)}</td>
+                        <td style="padding: 10px 14px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace;">${formatMoney(r.capital)}</td>
+                        <td style="padding: 10px 14px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace;">${formatMoney(r.surplus)}</td>
+                        <td style="padding: 10px 14px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace;">${formatMoney(r.adjustment)}</td>
+                        <td style="padding: 10px 14px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace;">${formatMoney(r.other_comp)}</td>
+                        <td style="padding: 10px 14px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace;">${formatMoney(r.retained)}</td>
+                        <td style="padding: 10px 14px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #fff;">${formatMoney(r.total)}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderCashFlowTable(tbodyId, rows) {
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            if (!rows || rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color:#94a3b8;">표시할 현금흐름 데이터가 없습니다.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            rows.forEach(r => {
+                const isSub = r.IsSubtotal;
+                const kind = r.RowKind || (isSub ? 'major' : 'leaf');
+                
+                let rowStyle = 'color: #cbd5e1;';
+                let indentStyle = '';
+
+                if (kind === 'major' || kind === 'total') {
+                    rowStyle = 'font-weight: 700; background: rgba(99, 102, 241, 0.08); color: #f8fafc; font-size: 0.94rem;';
+                    indentStyle = 'padding-left: 14px;';
+                } else if (kind === 'mid') {
+                    rowStyle = 'font-weight: 600; background: rgba(255,255,255,0.02); color: #93c5fd;';
+                    indentStyle = 'padding-left: 28px;';
+                } else {
+                    indentStyle = 'padding-left: 42px; color: #94a3b8; font-size: 0.86rem;';
+                }
+
+                const cdText = (r.CurrentDetail !== null && r.CurrentDetail !== undefined) ? formatMoney(r.CurrentDetail) : '-';
+                const csText = (r.CurrentSubtotal !== null && r.CurrentSubtotal !== undefined) ? formatMoney(r.CurrentSubtotal) : '-';
+                const pdText = (r.PriorDetail !== null && r.PriorDetail !== undefined) ? formatMoney(r.PriorDetail) : '-';
+                const psText = (r.PriorSubtotal !== null && r.PriorSubtotal !== undefined) ? formatMoney(r.PriorSubtotal) : '-';
+
+                html += `
+                    <tr style="${rowStyle}">
+                        <td style="padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); ${indentStyle}">
+                            ${escapeHtml(r.Account)}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.CurrentDetail !== null && r.CurrentDetail !== undefined ? '#e2e8f0' : '#64748b'};">
+                            ${cdText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; font-weight: ${isSub ? '700' : '500'}; color: ${r.CurrentSubtotal !== null && r.CurrentSubtotal !== undefined ? (isSub ? '#93c5fd' : '#f8fafc') : '#64748b'};">
+                            ${csText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.PriorDetail !== null && r.PriorDetail !== undefined ? '#94a3b8' : '#64748b'};">
+                            ${pdText}
+                        </td>
+                        <td style="padding: 9px 12px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.05); font-family: 'JetBrains Mono', monospace; color: ${r.PriorSubtotal !== null && r.PriorSubtotal !== undefined ? (isSub ? '#93c5fd' : '#cbd5e1') : '#64748b'};">
+                            ${psText}
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderNotesSection(notes) {
+            const nav = document.getElementById('fs-notes-navigator');
+            const container = document.getElementById('fs-notes-container');
+            if (!container) return;
+
+            if (!notes || notes.length === 0) {
+                if (nav) nav.innerHTML = '';
+                container.innerHTML = `<div style="text-align: center; padding: 30px; color: #94a3b8;">등록된 주석 정보가 없습니다.</div>`;
+                return;
+            }
+
+            if (nav) {
+                nav.innerHTML = notes.map((n, idx) => `
+                    <a href="#note-card-${idx}" style="padding: 5px 12px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.25); border-radius: 6px; font-size: 0.82rem; color: #a5b4fc; text-decoration: none; transition: all 0.2s;">
+                        ${escapeHtml(n.title)}
+                    </a>
+                `).join('');
+            }
+
+            let html = '';
+            notes.forEach((n, idx) => {
+                let tablesHtml = '';
+                if (n.tables && n.tables.length > 0) {
+                    n.tables.forEach(t => {
+                        const headerHtml = t.headers.map((h, hIdx) => `<th style="padding: 8px 12px; text-align: ${hIdx === 0 ? 'left' : 'right'}; background: rgba(255,255,255,0.04);">${escapeHtml(h)}</th>`).join('');
+                        const rowsHtml = t.rows.map(row => {
+                            const cells = row.map((c, cIdx) => `<td style="padding: 8px 12px; text-align: ${cIdx === 0 ? 'left' : 'right'}; border-bottom: 1px solid rgba(255,255,255,0.04); font-family: ${cIdx > 0 ? "'JetBrains Mono', monospace" : 'inherit'};">${escapeHtml(c)}</td>`).join('');
+                            return `<tr>${cells}</tr>`;
+                        }).join('');
+
+                        tablesHtml += `
+                            <div style="margin-top: 14px;">
+                                <h5 style="margin: 0 0 6px 0; font-size: 0.88rem; color: #93c5fd;">[${escapeHtml(t.title)}]</h5>
+                                <div class="recent-table-wrapper" style="border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden;">
+                                    <table class="recent-submissions-table" style="font-size: 0.84rem;">
+                                        <thead><tr>${headerHtml}</tr></thead>
+                                        <tbody>${rowsHtml}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `
+                    <div id="note-card-${idx}" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px;">
+                        <h4 style="margin: 0 0 10px 0; font-size: 1.05rem; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #818cf8;">📌</span> ${escapeHtml(n.title)}
+                        </h4>
+                        <p style="margin: 0; color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; white-space: pre-line;">${escapeHtml(n.content)}</p>
+                        ${tablesHtml}
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function exportCurrentFsToExcel() {
+            if (!currentFsData) {
+                alert('내보낼 재무제표 데이터가 없습니다.');
+                return;
+            }
+            const activePane = document.querySelector('.fs-tab-pane[style*="display: block"]');
+            if (!activePane) return;
+            
+            const table = activePane.querySelector('table');
+            if (!table) {
+                alert('현재 선택된 탭에 내보낼 테이블이 없습니다.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            const rows = table.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('th, td');
+                const rowData = [];
+                cols.forEach(col => {
+                    let text = col.innerText.replace(/"/g, '""').trim();
+                    rowData.push(`"${text}"`);
+                });
+                csvContent += rowData.join(",") + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            const company = "{{ company_name }}";
+            const activeTabName = activePane.id.replace('sub-fs-', '').toUpperCase();
+            link.setAttribute("download", `${company}_재무제표_${activeTabName}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         // 사이드바 메뉴 클릭 시 뷰 전환 범용 핸들러
         document.addEventListener('click', (e) => {
             const menuItem = e.target.closest('.master-menu-item[data-menu]');
@@ -2676,7 +3351,9 @@
                 menuItem.classList.add('active');
                 targetView.style.display = 'block';
 
-                if (menuName === 'partner-analysis' && typeof window.loadCompanyPortalAnalytics === 'function') {
+                if (menuName === 'partner-financials') {
+                    loadCompanyFinancialStatements();
+                } else if (menuName === 'partner-analysis' && typeof window.loadCompanyPortalAnalytics === 'function') {
                     window.loadCompanyPortalAnalytics();
                 } else if (menuName === 'partner-consulting' && typeof window.loadClientCompanyChat === 'function') {
                     window.loadClientCompanyChat();

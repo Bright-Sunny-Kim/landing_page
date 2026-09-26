@@ -142,6 +142,7 @@ landing_page/
 | `POST` | `/api/company/lakehouse/sync-tax-payroll` | **[Lakehouse] 세무/노무 대용량 ZIP 파싱 및 증분 병합 동기화 트리거** | JSON: `{ "company_name", "fiscal_year" }` | `{ "success": true, "vat_synced": true, "payroll_synced": true }` |
 | `GET` | `/api/company/lakehouse/pfile-data` | **[Lakehouse] P-File 17종 거버넌스 Master Profile(pfile_master.json) 조회** | Query: `?company_name=...` | `{ "success": true, "pfile_master": {...} }` |
 | `POST` | `/api/company/lakehouse/sync-pfiles` | **[Lakehouse] P-File 영구문서 17종 정규화 및 Master JSON 동기화 트리거** | JSON: `{ "company_name" }` | `{ "success": true, "document_count": N, "master_bundle": {...} }` |
+| `GET` | `/api/company/<company_name>/financial-statements` | **[5대 재무제표] MinIO Lakehouse 기반 BS/IS/CF/CE 5대 표준 재무제표 실시간 반환** | Query: `?year=2025` | `{ "success": true, "statements": { "bs", "is", "cf", "ce" }, "reconciliation": {...} }` |
 
 ---
 
@@ -267,6 +268,25 @@ UBUNTU_PG_PASSWORD=your_password
     - **감사팀 배정 모달 고도화**: 감사인 풀 Datalist 자동완성, 참여 회계사(Staff) 다중 체크박스 칩 선택, 기초재고실사일/보고서발행일 마일스톤 일정 입력 폼 탑재.
     - **감사팀 배정 변경 이력 모달**: 실시간 변경 일시, 회사명, 수정자, 구분, 변경 요약 모달 뷰어 탑재.
   - **E2E 전 단계 통합 검증 (`scripts/verify_step5_assign_e2e.py`)**: 5대 검증 파이프라인 100% Pass 통과.
+- [x] **Phase 13. MinIO Lakehouse 기반 5대 표준 재무제표(BS/IS/CF/CE) 실시간 연동 및 회계 표준 고도화 파이프라인 구축** (완료):
+  - **재무상태표(BS) 4열 비교식(총액/순액) 및 차감계정 분리 표시 완성**:
+    - `[계정과목 | 당기총액 | 당기순액 | 전기총액 | 전기순액 | 증감액 | 증감율]` (7개 열 구조)
+    - 차감항목(대손충당금, 감가상각누계액, 정부보조금 등)이 있는 자산 계정과목은 총액/차감액으로 분리 표기, 단독 계정은 순액 표기
+    - 퇴직급여충당부채 및 음수(-) 표기 오류 완전 해결 (양수 정상 표기 및 자본/부채 평형 일치)
+  - **포괄손익계산서(IS) 7열 표준 서식 및 2-Tier 계층 렌더링**:
+    - `[계정과목 | 당기세부 | 당기금액 | 전기세부 | 전기금액 | 증감액 | 증감율]`
+    - 매출원가 세부내역(기초재고, 당기매입, 기말재고, 타계정대체), 판관비/영업외손익 세부/소계 2-Tier 계층 표출
+  - **현금흐름표(CF) 간접법 5열 표준 및 정밀 분석 엔진 (`core/financial_pipeline.py`)**:
+    - `[계정과목 | 당기세부 | 당기소계 | 전기세부 | 전기소계]`
+    - 당기순이익에서 출발하여 4대 중분류(`1. 당기순이익`, `2. 현금유출이 없는 비용 가산`, `3. 현금유입이 없는 수익 차감`, `4. 영업활동으로 인한 자산·부채의 변동`) 간접법 완성
+    - 투자활동(유형/무형/투자자산 취득·처분 및 관련 감누/처분손익 가감), 재무활동(차입금, 자본금, 배당 등 변동) 분류
+    - 기말 현금잔액 재무상태표(BS) `현금및현금성자산`과 100% 일치 대사
+  - **자본변동표(CE) 6단계 회계 표준 매트릭스 엔진 (`core/financial_pipeline.py`, `templates/company.html`)**:
+    - `[구분 | 자본금 | 자본잉여금 | 자본조정 | 기타포괄손익누계액 | 이익잉여금 | 자본총계]` 7개 컬럼 매트릭스
+    - 6단계 회계 표준: 1.전기초(2024.01.01) ➔ 2.전기변동(당기순이익 등) ➔ 3.전기말(2024.12.31) 합계 ➔ 4.당기초(2025.01.01) 이월 ➔ 5.당기변동(당기순이익, 배당금/이익처분) ➔ 6.당기말(2025.12.31) 합계
+    - 재무상태표(BS) 전기말/당기말 자본총계 및 이익잉여금과 100% 일치(차액 0원) 검증 완료
+  - **재무제표 작성 표준 지침 수립**:
+    - [`재무제표작성지침.md`](file:///C:/Users/CLAUD/landing_page/%EC%9E%AC%EB%AC%B4%EC%A0%9C%ED%91%9C%EC%9E%91%EC%84%B1%EC%A7%80%EC%B9%A8.md) 문서 작성으로 5대 재무제표 표시 및 대사 원칙 표준화 완료
 
 ---
 
